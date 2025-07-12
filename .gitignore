@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xcuserdata/
+*.xcodeproj/project.xcworkspace/
+
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Firebase / Secrets
+GoogleService-Info.plist
+.env
+
+
