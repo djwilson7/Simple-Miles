@@ -12,7 +12,7 @@ class TripViewModel: ObservableObject {
     @Published var activeTrip: TripModel?
     @Published var tripHistory: [TripModel] = []
 
-    func classifyTrip(_ id: UUID, as type: TripModel.TripType) {
+    func classifyTrip(_ id: UUID, as type: TripType) {
         // Reclassify trip logic
     }
 }

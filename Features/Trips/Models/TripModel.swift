@@ -6,17 +6,45 @@
 //
 
 import Foundation
-import CoreLocation
 
-struct TripModel: Identifiable {
+struct TripModel: Identifiable, Codable, Hashable {
     let id: UUID
     let startTime: Date
     let endTime: Date
-    let distance: Double
-    let route: [CLLocationCoordinate2D]
-    let classification: TripType
+    var tripType: TripType
+    var distance: Double
+    var route: [Coordinate]
+    var averageSpeed: Double?
+    var userNotes: String?
+    var regionIdentifier: String?
 
-    enum TripType: String, Codable {
-        case business, personal, unclassified
+    var duration: TimeInterval {
+        return endTime.timeIntervalSince(startTime)
+    }
+
+    var isShortTrip: Bool {
+        return duration < 60 || distance < 100
+    }
+
+    init(
+        id: UUID = UUID(),
+        startTime: Date,
+        endTime: Date,
+        tripType: TripType,
+        distance: Double,
+        route: [Coordinate],
+        averageSpeed: Double? = nil,
+        userNotes: String? = nil,
+        regionIdentifier: String? = nil
+    ) {
+        self.id = id
+        self.startTime = startTime
+        self.endTime = endTime
+        self.tripType = tripType
+        self.distance = distance
+        self.route = route
+        self.averageSpeed = averageSpeed
+        self.userNotes = userNotes
+        self.regionIdentifier = regionIdentifier
     }
 }
