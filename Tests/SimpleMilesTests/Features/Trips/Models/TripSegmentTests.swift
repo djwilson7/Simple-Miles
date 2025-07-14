@@ -12,8 +12,8 @@ final class TripSegmentTests: XCTestCase {
     
     // MARK: - Helper
     
-    private func makeCoordinate(lat: Double = 37.0, lon: Double = -122.0) -> Coordinate {
-        return Coordinate(latitude: lat, longitude: lon)
+    private func makeCoordinate(lat: Double = 37.0, lon: Double = -122.0) -> CoordinateModel {
+        return CoordinateModel(latitude: lat, longitude: lon)
     }
     
     // MARK: - Tests
@@ -21,7 +21,7 @@ final class TripSegmentTests: XCTestCase {
     func testInitializationWithValidData() {
         let start = Date()
         let end = start.addingTimeInterval(60)
-        let segment = TripSegment(
+        let segment = TripSegmentModel(
             startTime: start,
             endTime: end,
             startCoordinate: makeCoordinate(),
@@ -38,7 +38,7 @@ final class TripSegmentTests: XCTestCase {
 
     func testZeroDurationReturnsZeroSpeed() {
         let now = Date()
-        let segment = TripSegment(
+        let segment = TripSegmentModel(
             startTime: now,
             endTime: now,
             startCoordinate: makeCoordinate(),
@@ -53,7 +53,7 @@ final class TripSegmentTests: XCTestCase {
     func testNegativeDistanceStillInitializes() {
         let start = Date()
         let end = start.addingTimeInterval(10)
-        let segment = TripSegment(
+        let segment = TripSegmentModel(
             startTime: start,
             endTime: end,
             startCoordinate: makeCoordinate(),
@@ -68,7 +68,7 @@ final class TripSegmentTests: XCTestCase {
     func testSpeedCalculationPrecision() {
         let start = Date()
         let end = start.addingTimeInterval(5)
-        let segment = TripSegment(
+        let segment = TripSegmentModel(
             startTime: start,
             endTime: end,
             startCoordinate: makeCoordinate(),
@@ -82,7 +82,7 @@ final class TripSegmentTests: XCTestCase {
     func testDurationCalculation() {
         let start = Date()
         let end = start.addingTimeInterval(120)
-        let segment = TripSegment(
+        let segment = TripSegmentModel(
             startTime: start,
             endTime: end,
             startCoordinate: makeCoordinate(),
@@ -98,7 +98,7 @@ final class TripSegmentTests: XCTestCase {
         let start = Date()
         let end = start.addingTimeInterval(30)
 
-        let seg1 = TripSegment(
+        let seg1 = TripSegmentModel(
             startTime: start,
             endTime: end,
             startCoordinate: makeCoordinate(),
@@ -106,7 +106,7 @@ final class TripSegmentTests: XCTestCase {
             distance: 30.0
         )
 
-        let seg2 = TripSegment(
+        let seg2 = TripSegmentModel(
             startTime: start,
             endTime: end,
             startCoordinate: makeCoordinate(),

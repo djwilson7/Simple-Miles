@@ -22,8 +22,8 @@ final class TripSerializerTests: XCTestCase {
             tripType: .business,
             distance: 1500,
             route: [
-                Coordinate(latitude: 32.7767, longitude: -96.7970),
-                Coordinate(latitude: 32.7800, longitude: -96.8000)
+                CoordinateModel(latitude: 32.7767, longitude: -96.7970),
+                CoordinateModel(latitude: 32.7800, longitude: -96.8000)
             ],
             averageSpeed: 45.0,
             userNotes: "Test trip",

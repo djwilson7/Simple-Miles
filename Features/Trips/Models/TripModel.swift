@@ -13,7 +13,7 @@ struct TripModel: Identifiable, Codable, Hashable {
     let endTime: Date
     var tripType: TripType
     var distance: Double
-    var route: [Coordinate]
+    var route: [CoordinateModel]
     var averageSpeed: Double?
     var userNotes: String?
     var regionIdentifier: String?
@@ -32,7 +32,7 @@ struct TripModel: Identifiable, Codable, Hashable {
         endTime: Date,
         tripType: TripType,
         distance: Double,
-        route: [Coordinate],
+        route: [CoordinateModel],
         averageSpeed: Double? = nil,
         userNotes: String? = nil,
         regionIdentifier: String? = nil

@@ -14,7 +14,7 @@ final class TripRecorderEdgeCaseTests: XCTestCase {
     var recorder: TripRecorder!
     var cancellables: Set<AnyCancellable> = []
     var mockRecordingStates: [Bool] = []
-    var mockSessions: [TripSession?] = []
+    var mockSessions: [TripSessionModel?] = []
 
     override func setUpWithError() throws {
         recorder = TripRecorder()

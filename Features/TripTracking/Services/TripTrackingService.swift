@@ -3,11 +3,11 @@ import CoreLocation
 import Combine
 
 final class TripTrackingService: NSObject, ObservableObject, CLLocationManagerDelegate {
-    @Published private(set) var currentSession: TripSession?
+    @Published private(set) var currentSession: TripSessionModel?
     
     private var locationManager: CLLocationManager
     private var lastCoordinate: CLLocation?
-    private var segments: [TripSegment] = []
+    private var segments: [TripSegmentModel] = []
 
     private var recentIdleDurations: [TimeInterval] = []
     private var lastMovementTimestamp: Date?
@@ -42,7 +42,7 @@ final class TripTrackingService: NSObject, ObservableObject, CLLocationManagerDe
 
     func startRecording() {
         segments.removeAll()
-        currentSession = TripSession(startTime: Date(), segments: [])
+        currentSession = TripSessionModel(startTime: Date(), segments: [])
         lastCoordinate = nil
         lastMovementTimestamp = Date()
         recording = true
@@ -76,12 +76,12 @@ final class TripTrackingService: NSObject, ObservableObject, CLLocationManagerDe
             return
         }
 
-        let segment = TripSegment(
+        let segment = TripSegmentModel(
             id: UUID(),
             startTime: last.timestamp,
             endTime: location.timestamp,
-            startCoordinate: Coordinate(from: last.coordinate),
-            endCoordinate: Coordinate(from: location.coordinate),
+            startCoordinate: CoordinateModel(from: last.coordinate),
+            endCoordinate: CoordinateModel(from: location.coordinate),
             distance: location.distance(from: last)
         )
 

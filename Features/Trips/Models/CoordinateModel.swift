@@ -8,7 +8,7 @@
 import Foundation
 import CoreLocation
 
-struct Coordinate: Codable, Hashable {
+struct CoordinateModel: Codable, Hashable {
     let latitude: Double
     let longitude: Double
 

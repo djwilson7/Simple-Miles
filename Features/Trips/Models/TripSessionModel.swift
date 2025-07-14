@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TripSession: Identifiable, Codable {
+struct TripSessionModel: Identifiable, Codable {
     let id: UUID
     let startTime: Date
     var endTime: Date?
@@ -21,14 +21,14 @@ struct TripSession: Identifiable, Codable {
     }
 
     // Segments of the trip (fine-grained data)
-    var segments: [TripSegment] = []
+    var segments: [TripSegmentModel] = []
 
     init(
         id: UUID = UUID(),
         startTime: Date = Date(),
         endTime: Date? = nil,
         distance: Double = 0.0,
-        segments: [TripSegment] = []
+        segments: [TripSegmentModel] = []
     ) {
         self.id = id
         self.startTime = startTime
@@ -37,7 +37,7 @@ struct TripSession: Identifiable, Codable {
         self.segments = segments
     }
 
-    mutating func addSegment(_ segment: TripSegment) {
+    mutating func addSegment(_ segment: TripSegmentModel) {
         segments.append(segment)
         distance += segment.distance
     }

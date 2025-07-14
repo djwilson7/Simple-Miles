@@ -74,7 +74,7 @@ final class TripModelTests: XCTestCase {
     func testCodableRoundTrip() throws {
         let start = Date()
         let end = start.addingTimeInterval(120)
-        let route = [Coordinate(latitude: 32.7767, longitude: -96.7970)]
+        let route = [CoordinateModel(latitude: 32.7767, longitude: -96.7970)]
 
         let trip = TripModel(
             startTime: start,

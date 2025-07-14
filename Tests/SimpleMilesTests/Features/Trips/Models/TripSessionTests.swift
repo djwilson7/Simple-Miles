@@ -12,17 +12,17 @@ final class TripSessionTests: XCTestCase {
     
     // MARK: - Helpers
     
-    private func makeCoordinate(lat: Double = 37.0, lon: Double = -122.0) -> Coordinate {
-        return Coordinate(latitude: lat, longitude: lon)
+    private func makeCoordinate(lat: Double = 37.0, lon: Double = -122.0) -> CoordinateModel {
+        return CoordinateModel(latitude: lat, longitude: lon)
     }
     
     private func makeSegment(
         distance: Double = 100.0,
         duration: TimeInterval = 10.0
-    ) -> TripSegment {
+    ) -> TripSegmentModel {
         let start = Date()
         let end = start.addingTimeInterval(duration)
-        return TripSegment(
+        return TripSegmentModel(
             startTime: start,
             endTime: end,
             startCoordinate: makeCoordinate(),
@@ -34,7 +34,7 @@ final class TripSessionTests: XCTestCase {
     // MARK: - Tests
     
     func testSessionInitializesWithDefaults() {
-        let session = TripSession()
+        let session = TripSessionModel()
         
         XCTAssertNotNil(session.id)
         XCTAssertNotNil(session.startTime)
@@ -45,7 +45,7 @@ final class TripSessionTests: XCTestCase {
     }
     
     func testAddSegmentAccumulatesDistance() {
-        var session = TripSession()
+        var session = TripSessionModel()
         let segment1 = makeSegment(distance: 100)
         let segment2 = makeSegment(distance: 50)
         
@@ -59,7 +59,7 @@ final class TripSessionTests: XCTestCase {
     func testAverageSpeedCalculationIsCorrect() {
         let start = Date()
         let end = start.addingTimeInterval(60)
-        var session = TripSession(startTime: start)
+        var session = TripSessionModel(startTime: start)
         session.distance = 600.0
         session.endSession(at: end)
         
@@ -67,12 +67,12 @@ final class TripSessionTests: XCTestCase {
     }
     
     func testAverageSpeedWhenEndTimeIsNil() {
-        let session = TripSession()
+        let session = TripSessionModel()
         XCTAssertEqual(session.averageSpeed, 0.0)
     }
     
     func testEndingSessionUpdatesEndTime() {
-        var session = TripSession()
+        var session = TripSessionModel()
         let now = Date()
         session.endSession(at: now)
         
@@ -80,20 +80,20 @@ final class TripSessionTests: XCTestCase {
     }
 
     func testUUIDsAreUnique() {
-        let session1 = TripSession()
-        let session2 = TripSession()
+        let session1 = TripSessionModel()
+        let session2 = TripSessionModel()
         XCTAssertNotEqual(session1.id, session2.id)
     }
 
     func testEmptySegmentsDoNotCrashAverageSpeed() {
-        var session = TripSession()
+        var session = TripSessionModel()
         session.endSession(at: Date().addingTimeInterval(1))
         XCTAssertEqual(session.segments.count, 0)
         XCTAssertEqual(session.averageSpeed, 0.0, accuracy: 0.01)
     }
 
     func testMultipleSegmentDurationsCanBeSummedViaDistance() {
-        var session = TripSession()
+        var session = TripSessionModel()
         session.addSegment(makeSegment(distance: 200))
         session.addSegment(makeSegment(distance: 300))
         session.endSession(at: session.startTime.addingTimeInterval(100))

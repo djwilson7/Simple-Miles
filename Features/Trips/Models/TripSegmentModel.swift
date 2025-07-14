@@ -7,12 +7,12 @@
 
 import Foundation
 
-struct TripSegment: Identifiable, Codable {
+struct TripSegmentModel: Identifiable, Codable {
     let id: UUID
     let startTime: Date
     let endTime: Date
-    let startCoordinate: Coordinate
-    let endCoordinate: Coordinate
+    let startCoordinate: CoordinateModel
+    let endCoordinate: CoordinateModel
     let distance: Double
     let speed: Double  // meters per second
 
@@ -24,8 +24,8 @@ struct TripSegment: Identifiable, Codable {
         id: UUID = UUID(),
         startTime: Date,
         endTime: Date,
-        startCoordinate: Coordinate,
-        endCoordinate: Coordinate,
+        startCoordinate: CoordinateModel,
+        endCoordinate: CoordinateModel,
         distance: Double
     ) {
         self.id = id

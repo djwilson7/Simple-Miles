@@ -29,7 +29,7 @@ final class TripStorageServiceTests: XCTestCase {
             endTime: Date().addingTimeInterval(600),
             tripType: type,
             distance: 1500,
-            route: [Coordinate(latitude: 37.0, longitude: -122.0)]
+            route: [CoordinateModel(latitude: 37.0, longitude: -122.0)]
         )
     }
 

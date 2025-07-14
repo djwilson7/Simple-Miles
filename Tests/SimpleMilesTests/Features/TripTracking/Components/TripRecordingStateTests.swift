@@ -49,7 +49,7 @@ final class TripRecordingStateTests: XCTestCase {
 
     func testResetClearsAllValues() {
         state.isRecording = true
-        state.session = TripSession()
+        state.session = TripSessionModel()
         state.startTimer()
 
         state.reset()
@@ -62,7 +62,7 @@ final class TripRecordingStateTests: XCTestCase {
     // MARK: - Update Integration
 
     func testUpdateReplacesCurrentSession() {
-        let original = TripSession(startTime: Date(), endTime: Date().addingTimeInterval(10))
+        let original = TripSessionModel(startTime: Date(), endTime: Date().addingTimeInterval(10))
 
         state.update(with: original)
 

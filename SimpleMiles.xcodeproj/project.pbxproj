@@ -46,12 +46,21 @@
 				Authentication/Services/FirebaseAuthSession.swift,
 				Authentication/ViewModels/AuthViewModel.swift,
 				Authentication/Views/LoginView.swift,
-				Trips/Models/Coordinate.swift,
+				Core/CoreData/CoreDataMapping.swift,
+				Core/CoreData/CoreDataStack.swift,
+				"Core/CoreData/Entities/CDCoordinate+CoreDataClass.swift",
+				"Core/CoreData/Entities/CDCoordinate+CoreDataProperties.swift",
+				"Core/CoreData/Entities/CDTripSegment+CoreDataClass.swift",
+				"Core/CoreData/Entities/CDTripSegment+CoreDataProperties.swift",
+				"Core/CoreData/Entities/CDTripSession+CoreDataClass.swift",
+				"Core/CoreData/Entities/CDTripSession+CoreDataProperties.swift",
+				Trips/Models/CoordinateModel.swift,
 				Trips/Models/TripModel.swift,
-				Trips/Models/TripSegment.swift,
-				Trips/Models/TripSession.swift,
+				Trips/Models/TripSegmentModel.swift,
+				Trips/Models/TripSessionModel.swift,
 				Trips/Models/TripType.swift,
 				Trips/Services/TripSerializer.swift,
+				Trips/Services/TripSessionStore.swift,
 				Trips/Services/TripStorageService.swift,
 				Trips/ViewModels/TripViewModel.swift,
 				TripTracking/Components/TripRecorder.swift,
@@ -83,6 +92,8 @@
 			membershipExceptions = (
 				SimpleMilesTests/Features/Authentication/Models/UserModelTests.swift,
 				SimpleMilesTests/Features/Authentication/Services/AuthServiceTests.swift,
+				SimpleMilesTests/Features/Core/CoreData/CoreDataMappingTests.swift,
+				SimpleMilesTests/Features/Core/CoreData/TripSessionStoreTests.swift,
 				SimpleMilesTests/Features/Trips/Models/CoordinateTests.swift,
 				SimpleMilesTests/Features/Trips/Models/TripModelTests.swift,
 				SimpleMilesTests/Features/Trips/Models/TripSegmentTests.swift,
@@ -108,6 +119,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Assets.xcassets,
+				SimpleMilesModel.xcdatamodeld,
 			);
 			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
 		};

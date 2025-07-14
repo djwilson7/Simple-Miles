@@ -9,7 +9,7 @@ import Foundation
 
 final class TripRecordingState: ObservableObject {
     @Published var isRecording: Bool = false
-    @Published var session: TripSession?
+    @Published var session: TripSessionModel?
     @Published var elapsedTime: TimeInterval = 0
     @Published var segmentCount: Int = 0
     @Published var totalDistance: Double = 0.0
@@ -22,7 +22,7 @@ final class TripRecordingState: ObservableObject {
     }
     #endif
     
-    func update(with session: TripSession?) {
+    func update(with session: TripSessionModel?) {
         self.session = session
         self.segmentCount = session?.segments.count ?? 0
         self.totalDistance = session?.distance ?? 0.0
