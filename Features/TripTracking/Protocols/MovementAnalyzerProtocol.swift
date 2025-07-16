@@ -6,9 +6,16 @@
 //
 import CoreLocation
 
-protocol MovementAnalyzing {
+protocol MovementAnalyzerProtocol {
     func isMoving(speed: CLLocationSpeed?) -> Bool
     func isStayingStopped(for durations: [TimeInterval]) -> Bool
     func shouldStartTrip(speed: CLLocationSpeed?, acceleration: Double?) -> Bool
-    func shouldStopTrip(recentIdleDurations: [TimeInterval], speed: CLLocationSpeed?, acceleration: Double?) -> Bool
+    func shouldStopTrip(
+        recentIdleDurations: [TimeInterval],
+        speed: CLLocationSpeed?,
+        acceleration: Double?,
+        timeSinceIdleBegan: TimeInterval
+    ) -> Bool
+    func shouldResume(from location: CLLocation, lastStoppedLocation: CLLocation?) -> Bool
 }
+

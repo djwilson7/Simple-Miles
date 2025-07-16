@@ -2,7 +2,7 @@
 //  CDTripSession+CoreDataProperties.swift
 //  SimpleMiles
 //
-//  Created by Invictus Maneo on 7/13/25.
+//  Created by Invictus Maneo on 7/14/25.
 //
 //
 
@@ -16,10 +16,11 @@ extension CDTripSession {
         return NSFetchRequest<CDTripSession>(entityName: "CDTripSession")
     }
 
+    @NSManaged public var distance: Double
     @NSManaged public var endTime: Date?
     @NSManaged public var id: UUID?
     @NSManaged public var startTime: Date?
-    @NSManaged public var distance: Double
+    @NSManaged public var tripType: String?
     @NSManaged public var segments: NSSet?
 
 }

@@ -8,26 +8,19 @@
 import Foundation
 import CoreData
 
-final class TripSessionStore {
-    
-    // MARK: - Properties
+final class TripSessionStore: TripSessionStoringProtocol {
+    static let shared = TripSessionStore()
 
     private let context: NSManagedObjectContext
-
-    // MARK: - Init
 
     init(context: NSManagedObjectContext = CoreDataStack.shared.mainContext) {
         self.context = context
     }
 
-    // MARK: - Save
-
     func save(_ model: TripSessionModel) {
         _ = CDTripSession(from: model, context: context)
         commit()
     }
-
-    // MARK: - Fetch
 
     func fetchAll() -> [TripSessionModel] {
         let request: NSFetchRequest<CDTripSession> = CDTripSession.fetchRequest()
@@ -39,8 +32,6 @@ final class TripSessionStore {
             return []
         }
     }
-
-    // MARK: - Delete
 
     func delete(sessionID: UUID) {
         let request: NSFetchRequest<CDTripSession> = CDTripSession.fetchRequest()
@@ -57,7 +48,23 @@ final class TripSessionStore {
         }
     }
 
-    // MARK: - Internal
+    func update(_ updatedTrip: TripSessionModel) {
+        delete(sessionID: updatedTrip.id)
+        save(updatedTrip)
+    }
+
+    func clearAll() {
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "CDTripSession")
+        let batchDeleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+
+        do {
+            try context.execute(batchDeleteRequest)
+            try context.save()
+            print("[Storage] All trip sessions deleted from CoreData")
+        } catch {
+            print("[Storage] Failed to clear trips: \(error.localizedDescription)")
+        }
+    }
 
     private func commit() {
         guard context.hasChanges else { return }

@@ -6,7 +6,8 @@
 //
 
 enum TripType: String, Codable, CaseIterable {
-    case business
-    case personal
-    case unclassified
+    case business = "Business"
+    case personal = "Personal"
+    case unclassified = "Unclassified"
 }
+

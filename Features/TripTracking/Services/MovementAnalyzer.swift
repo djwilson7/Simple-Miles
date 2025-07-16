@@ -8,26 +8,30 @@
 import Foundation
 import CoreLocation
 
-/// A utility responsible for interpreting motion patterns and suggesting actions.
-struct MovementAnalyzer: MovementAnalyzing {
+struct MovementAnalyzer: MovementAnalyzerProtocol {
+    var speedThreshold: CLLocationSpeed = 2.5
+    var distanceThreshold: CLLocationDistance = 50.0
     
-    /// Threshold (in meters per second) to consider a vehicle as moving.
-    private let movementSpeedThreshold: CLLocationSpeed = 5.0
-
-    /// Time interval (in seconds) that defines prolonged idleness.
     private let idleThreshold: TimeInterval = 60.0
-    
+    private let gracePeriodBeforeStop: TimeInterval = 120.0
+
     func isMoving(speed: CLLocationSpeed?) -> Bool {
         guard let speed = speed else { return false }
-        return speed >= movementSpeedThreshold
+        return speed >= speedThreshold
+    }
+
+    func shouldResume(from location: CLLocation, lastStoppedLocation: CLLocation?) -> Bool {
+        guard let last = lastStoppedLocation else { return false }
+        let dist = location.distance(from: last)
+        return dist >= distanceThreshold
     }
 
     func isStayingStopped(for recentIdleDurations: [TimeInterval]) -> Bool {
         return recentIdleDurations.suffix(3).allSatisfy { $0 > idleThreshold }
     }
 
-    func shouldStartTrip(speed: CLLocationSpeed?, acceleration: Double? = nil) -> Bool {
-        let fastEnough = (speed ?? 0) > movementSpeedThreshold
+    func shouldStartTrip(speed: CLLocationSpeed?, acceleration: Double?) -> Bool {
+        let fastEnough = (speed ?? 0) > speedThreshold
         let suddenMovement = (acceleration ?? 0) > 1.5
         return fastEnough || suddenMovement
     }
@@ -35,9 +39,12 @@ struct MovementAnalyzer: MovementAnalyzing {
     func shouldStopTrip(
         recentIdleDurations: [TimeInterval],
         speed: CLLocationSpeed?,
-        acceleration: Double? = nil
+        acceleration: Double?,
+        timeSinceIdleBegan: TimeInterval
     ) -> Bool {
         let noMotion = (speed ?? 0) < 1.0 && (acceleration ?? 0) < 0.5
-        return isStayingStopped(for: recentIdleDurations) && noMotion
+        return isStayingStopped(for: recentIdleDurations)
+            && noMotion
+            && timeSinceIdleBegan > gracePeriodBeforeStop
     }
 }

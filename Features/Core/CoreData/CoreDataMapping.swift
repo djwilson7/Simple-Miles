@@ -15,7 +15,8 @@ extension CDTripSession {
         self.id = model.id
         self.startTime = model.startTime
         self.endTime = model.endTime
-        self.distance = model.distance 
+        self.distance = model.distance
+        self.tripType = model.tripType.rawValue
         self.segments = NSSet(array: model.segments.map {
             CDTripSegment(from: $0, session: self, context: context)
         })
@@ -27,6 +28,7 @@ extension CDTripSession {
             startTime: self.startTime ?? .distantPast,
             endTime: self.endTime,
             distance: self.distance,
+            tripType: TripType(rawValue: self.tripType ?? "") ?? .unclassified,
             segments: (segments?.allObjects as? [CDTripSegment])?.map { $0.toModel() } ?? []
         )
     }

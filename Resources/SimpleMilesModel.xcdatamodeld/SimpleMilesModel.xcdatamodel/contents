@@ -21,6 +21,7 @@
         <attribute name="endTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="startTime" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="tripType" optional="YES" attributeType="String"/>
         <relationship name="segments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CDTripSegment" inverseName="session" inverseEntity="CDTripSegment"/>
     </entity>
 </model>

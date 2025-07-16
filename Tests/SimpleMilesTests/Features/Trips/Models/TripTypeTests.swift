@@ -18,9 +18,9 @@ final class TripTypeTests: XCTestCase {
 
     /// Verifies that each case’s rawValue matches its string representation.
     func testRawValues() {
-        XCTAssertEqual(TripType.business.rawValue, "business")
-        XCTAssertEqual(TripType.personal.rawValue, "personal")
-        XCTAssertEqual(TripType.unclassified.rawValue, "unclassified")
+        XCTAssertEqual(TripType.business.rawValue, "Business")
+        XCTAssertEqual(TripType.personal.rawValue, "Personal")
+        XCTAssertEqual(TripType.unclassified.rawValue, "Unclassified")
     }
 
     /// Verifies that each case can be encoded to JSON and decoded back correctly.

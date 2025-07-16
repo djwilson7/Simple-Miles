@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		6AC2F4F32E218E3C00F4064A /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6AC2F4F22E218E3C00F4064A /* FirebaseAuth */; };
 		6AC2F4F52E218E3C00F4064A /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6AC2F4F42E218E3C00F4064A /* FirebaseCore */; };
+		6ACE7CCC2E25F76D00D6F470 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 6ACE7CCB2E25F76D00D6F470 /* ZIPFoundation */; };
+		6ACE7CCE2E2693F100D6F470 /* DIRECTORYREFERENCE.md in Resources */ = {isa = PBXBuildFile; fileRef = 6ACE7CCD2E2693E100D6F470 /* DIRECTORYREFERENCE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,52 +35,11 @@
 		6AC2F4AC2E2161CA00F4064A /* SimpleMiles.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleMiles.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AC2F4B92E2161CC00F4064A /* SimpleMilesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleMilesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AC2F4C32E2161CC00F4064A /* SimpleMilesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleMilesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6ACE7CCD2E2693E100D6F470 /* DIRECTORYREFERENCE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DIRECTORYREFERENCE.md; sourceTree = "<group>"; };
+		6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SimpleMiles-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6AB55A1D2E22F86C00DCEF27 /* Exceptions for "Features" folder in "SimpleMiles" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Authentication/Models/UserModel.swift,
-				Authentication/Services/AuthProtocol.swift,
-				Authentication/Services/AuthService.swift,
-				Authentication/Services/AuthSession.swift,
-				Authentication/Services/FirebaseAuthSession.swift,
-				Authentication/ViewModels/AuthViewModel.swift,
-				Authentication/Views/LoginView.swift,
-				Core/CoreData/CoreDataMapping.swift,
-				Core/CoreData/CoreDataStack.swift,
-				"Core/CoreData/Entities/CDCoordinate+CoreDataClass.swift",
-				"Core/CoreData/Entities/CDCoordinate+CoreDataProperties.swift",
-				"Core/CoreData/Entities/CDTripSegment+CoreDataClass.swift",
-				"Core/CoreData/Entities/CDTripSegment+CoreDataProperties.swift",
-				"Core/CoreData/Entities/CDTripSession+CoreDataClass.swift",
-				"Core/CoreData/Entities/CDTripSession+CoreDataProperties.swift",
-				Trips/Models/CoordinateModel.swift,
-				Trips/Models/TripModel.swift,
-				Trips/Models/TripSegmentModel.swift,
-				Trips/Models/TripSessionModel.swift,
-				Trips/Models/TripType.swift,
-				Trips/Services/TripSerializer.swift,
-				Trips/Services/TripSessionStore.swift,
-				Trips/Services/TripStorageService.swift,
-				Trips/ViewModels/TripViewModel.swift,
-				TripTracking/Components/TripRecorder.swift,
-				TripTracking/Components/TripRecordingState.swift,
-				TripTracking/Protocols/MovementAnalyzerProtocol.swift,
-				TripTracking/Services/MovementAnalyzer.swift,
-				TripTracking/Services/TripTrackingService.swift,
-			);
-			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
-		};
-		6AB55A2D2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMiles" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Validation/EmailValidation.swift,
-				Validation/PasswordValidation.swift,
-			);
-			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
-		};
 		6AB55A2E2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMilesTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -86,51 +47,6 @@
 				Validation/PasswordValidation.swift,
 			);
 			target = 6AC2F4B82E2161CC00F4064A /* SimpleMilesTests */;
-		};
-		6AB55A3D2E22F9E300DCEF27 /* Exceptions for "Tests" folder in "SimpleMilesTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				SimpleMilesTests/Features/Authentication/Models/UserModelTests.swift,
-				SimpleMilesTests/Features/Authentication/Services/AuthServiceTests.swift,
-				SimpleMilesTests/Features/Core/CoreData/CoreDataMappingTests.swift,
-				SimpleMilesTests/Features/Core/CoreData/TripSessionStoreTests.swift,
-				SimpleMilesTests/Features/Trips/Models/CoordinateTests.swift,
-				SimpleMilesTests/Features/Trips/Models/TripModelTests.swift,
-				SimpleMilesTests/Features/Trips/Models/TripSegmentTests.swift,
-				SimpleMilesTests/Features/Trips/Models/TripSessionTests.swift,
-				SimpleMilesTests/Features/Trips/Models/TripTypeTests.swift,
-				SimpleMilesTests/Features/Trips/Services/TripSerializerTests.swift,
-				SimpleMilesTests/Features/Trips/Services/TripStorageTests.swift,
-				SimpleMilesTests/Features/TripTracking/Components/TripRecorderTests.swift,
-				SimpleMilesTests/Features/TripTracking/Components/TripRecordingStateTests.swift,
-				SimpleMilesTests/Features/TripTracking/Protocols/MovementAnalyzerProtocolTests.swift,
-				SimpleMilesTests/Features/TripTracking/Services/MovementAnalyzerTests.swift,
-				SimpleMilesTests/Features/TripTracking/Services/TripTrackingServiceTest.swift,
-				SimpleMilesTests/Mocks/MockAuth.swift,
-				SimpleMilesTests/Mocks/MockAuthSession.swift,
-				SimpleMilesTests/Mocks/MockMovementAnalyzer.swift,
-				SimpleMilesTests/Mocks/MockUserModel.swift,
-				SimpleMilesTests/Utilites/Validation/EmailValidationTests.swift,
-				SimpleMilesTests/Utilites/Validation/PasswordValidationTests.swift,
-			);
-			target = 6AC2F4B82E2161CC00F4064A /* SimpleMilesTests */;
-		};
-		6AB55A452E22FA0400DCEF27 /* Exceptions for "Resources" folder in "SimpleMiles" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Assets.xcassets,
-				SimpleMilesModel.xcdatamodeld,
-			);
-			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
-		};
-		6AB55A472E22FA2600DCEF27 /* Exceptions for "App" folder in "SimpleMiles" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				ContentView.swift,
-				"GoogleService-Info.plist",
-				Simple_MilesApp.swift,
-			);
-			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
 		};
 		6AB55A482E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -151,16 +67,12 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6AB55A122E22F84F00DCEF27 /* Features */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6AB55A1D2E22F86C00DCEF27 /* Exceptions for "Features" folder in "SimpleMiles" target */,
-			);
 			path = Features;
 			sourceTree = "<group>";
 		};
 		6AB55A252E22F90500DCEF27 /* Utilities */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				6AB55A2D2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMiles" target */,
 				6AB55A2E2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMilesTests" target */,
 			);
 			path = Utilities;
@@ -168,24 +80,17 @@
 		};
 		6AB55A2F2E22F9DA00DCEF27 /* Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6AB55A3D2E22F9E300DCEF27 /* Exceptions for "Tests" folder in "SimpleMilesTests" target */,
-			);
 			path = Tests;
 			sourceTree = "<group>";
 		};
 		6AB55A442E22F9FC00DCEF27 /* Resources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6AB55A452E22FA0400DCEF27 /* Exceptions for "Resources" folder in "SimpleMiles" target */,
-			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
 		6AB55A462E22FA2100DCEF27 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				6AB55A472E22FA2600DCEF27 /* Exceptions for "App" folder in "SimpleMiles" target */,
 				6AB55A482E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesTests" target */,
 				6AB55A492E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesUITests" target */,
 			);
@@ -201,6 +106,7 @@
 			files = (
 				6AC2F4F52E218E3C00F4064A /* FirebaseCore in Frameworks */,
 				6AC2F4F32E218E3C00F4064A /* FirebaseAuth in Frameworks */,
+				6ACE7CCC2E25F76D00D6F470 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,6 +130,7 @@
 		6AC2F4A32E2161CA00F4064A = {
 			isa = PBXGroup;
 			children = (
+				6ACE7CCD2E2693E100D6F470 /* DIRECTORYREFERENCE.md */,
 				6AB55A462E22FA2100DCEF27 /* App */,
 				6AB55A442E22F9FC00DCEF27 /* Resources */,
 				6AB55A2F2E22F9DA00DCEF27 /* Tests */,
@@ -231,6 +138,7 @@
 				6AB55A122E22F84F00DCEF27 /* Features */,
 				6AB55A102E22CC4800DCEF27 /* TODO Backend.md */,
 				6AC2F4AD2E2161CA00F4064A /* Products */,
+				6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -259,10 +167,17 @@
 			);
 			dependencies = (
 			);
+			fileSystemSynchronizedGroups = (
+				6AB55A122E22F84F00DCEF27 /* Features */,
+				6AB55A252E22F90500DCEF27 /* Utilities */,
+				6AB55A442E22F9FC00DCEF27 /* Resources */,
+				6AB55A462E22FA2100DCEF27 /* App */,
+			);
 			name = SimpleMiles;
 			packageProductDependencies = (
 				6AC2F4F22E218E3C00F4064A /* FirebaseAuth */,
 				6AC2F4F42E218E3C00F4064A /* FirebaseCore */,
+				6ACE7CCB2E25F76D00D6F470 /* ZIPFoundation */,
 			);
 			productName = "Simple Miles";
 			productReference = 6AC2F4AC2E2161CA00F4064A /* SimpleMiles.app */;
@@ -280,6 +195,9 @@
 			);
 			dependencies = (
 				6AC2F4BB2E2161CC00F4064A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6AB55A2F2E22F9DA00DCEF27 /* Tests */,
 			);
 			name = SimpleMilesTests;
 			packageProductDependencies = (
@@ -342,6 +260,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6AC2F4F12E21845F00F4064A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				6ACE7CCA2E25F76D00D6F470 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6AC2F4AD2E2161CA00F4064A /* Products */;
@@ -360,6 +279,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6ACE7CCE2E2693F100D6F470 /* DIRECTORYREFERENCE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -548,6 +468,11 @@
 				DEVELOPMENT_TEAM = 6N8KA8WNG4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "SimpleMiles-Info.plist";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "SimpleMiles uses your location to detect trips while you drive, even when the app is closed or running in the background.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "This app needs access to your location even when the app is in the background to track your trips accurately.\n";
+				INFOPLIST_KEY_NSLocationUsageDescription = "This app requires location access to detect and record your driving trips.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SimpleMiles uses your location while the app is open to identify and track trips.\n";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -576,6 +501,11 @@
 				DEVELOPMENT_TEAM = 6N8KA8WNG4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "SimpleMiles-Info.plist";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "SimpleMiles uses your location to detect trips while you drive, even when the app is closed or running in the background.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "This app needs access to your location even when the app is in the background to track your trips accurately.\n";
+				INFOPLIST_KEY_NSLocationUsageDescription = "This app requires location access to detect and record your driving trips.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SimpleMiles uses your location while the app is open to identify and track trips.\n";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -716,6 +646,14 @@
 				minimumVersion = 11.15.0;
 			};
 		};
+		6ACE7CCA2E25F76D00D6F470 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.19;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -728,6 +666,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6AC2F4F12E21845F00F4064A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		6ACE7CCB2E25F76D00D6F470 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6ACE7CCA2E25F76D00D6F470 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

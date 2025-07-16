@@ -22,18 +22,21 @@ struct TripSessionModel: Identifiable, Codable {
 
     // Segments of the trip (fine-grained data)
     var segments: [TripSegmentModel] = []
+    var tripType: TripType = .unclassified
 
     init(
         id: UUID = UUID(),
         startTime: Date = Date(),
         endTime: Date? = nil,
         distance: Double = 0.0,
+        tripType: TripType = .unclassified,
         segments: [TripSegmentModel] = []
     ) {
         self.id = id
         self.startTime = startTime
         self.endTime = endTime
         self.distance = distance
+        self.tripType = tripType
         self.segments = segments
     }
 
