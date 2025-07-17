@@ -96,7 +96,7 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
             print("[TripTrackingService] stopRecording aborted – no active session") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
             return
         }
-
+        recordingState.cancelPauseCountdown()
         trip.path = pathRecorder.coordinates
         trip.distance = computeTotalDistance(for: trip.path)
         currentSession = nil

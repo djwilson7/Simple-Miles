@@ -44,11 +44,17 @@ struct DeveloperPanelView: View {
                             .buttonStyle(.bordered)
                         }
 
-                        Button("End Session Now") {
+                        Button {
                             viewModel.forceEndTrip()
+                        } label: {
+                            Label("End Session Now", systemImage: "stop.circle.fill")
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 12)
+                                .background(Color.red)
+                                .cornerRadius(8)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .foregroundColor(.red)
 
                         VStack(alignment: .leading) {
                             Text("Speed Threshold: \(String(format: "%.1f", viewModel.resumeSpeedThreshold)) m/s")
@@ -77,7 +83,7 @@ struct DeveloperPanelView: View {
                 }
                 .frame(height: geometry.size.height * 0.5)
 
-                LiveLocationMapView()
+                LiveLocationMapView(viewModel: MapViewModel())
                     .aspectRatio(1, contentMode: .fit)
                     .padding()
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))

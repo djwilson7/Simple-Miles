@@ -5,16 +5,31 @@
 //  Created by Invictus Maneo on 7/14/25.
 //
 
+//
+//  LiveLocationMapView.swift
+//  SimpleMiles
+//
+//  Created by Invictus Maneo on 7/14/25.
+//
+
+//
+//  LiveLocationMapView.swift
+//  SimpleMiles
+//
+//  Created by Invictus Maneo on 7/14/25.
+//
+
 import SwiftUI
 import MapKit
 
 struct LiveLocationMapView: UIViewRepresentable {
+    @ObservedObject var viewModel: MapViewModel
     private let mapView = MKMapView()
 
     func makeUIView(context: Context) -> MKMapView {
         mapView.delegate = context.coordinator
         mapView.showsUserLocation = true
-        mapView.userTrackingMode = .follow  // ← enables live tracking
+        mapView.userTrackingMode = .follow
         mapView.isUserInteractionEnabled = false
 
         mapView.layer.cornerRadius = 16
@@ -24,10 +39,12 @@ struct LiveLocationMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: MKMapView, context: Context) {
+        drawLivePath(on: uiView)
+
         if let userLocation = uiView.userLocation.location {
             print("[LiveLocationMapView] - user location: ", userLocation.coordinate)
         } else {
-            print("LiveLocationMapView - user location is nil")
+            print("[LiveLocationMapView] - user location is nil")
         }
     }
 
@@ -35,10 +52,28 @@ struct LiveLocationMapView: UIViewRepresentable {
         Coordinator()
     }
 
+    private func drawLivePath(on mapView: MKMapView) {
+        mapView.removeOverlays(mapView.overlays)
+
+        let polyline = TripOverlayRenderer.polyline(from: viewModel.pathPoints)
+        mapView.addOverlay(polyline)
+
+        if let last = viewModel.pathPoints.last?.clLocationCoordinate {
+            let region = MKCoordinateRegion(center: last, latitudinalMeters: 500, longitudinalMeters: 500)
+            mapView.setRegion(region, animated: true)
+        }
+    }
+
     final class Coordinator: NSObject, MKMapViewDelegate {
-        // Optional: log or extend behavior
-        func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            //print("[LiveLocationMapView-Coordinator] - User Coordinates : \(userLocation.coordinate)")
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            guard let polyline = overlay as? MKPolyline else {
+                return MKOverlayRenderer(overlay: overlay)
+            }
+
+            let renderer = MKPolylineRenderer(polyline: polyline)
+            renderer.strokeColor = .systemGreen
+            renderer.lineWidth = 5
+            return renderer
         }
     }
 }
