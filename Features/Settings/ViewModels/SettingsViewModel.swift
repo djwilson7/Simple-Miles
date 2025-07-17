@@ -10,15 +10,20 @@ import Foundation
 import Combine
 
 final class SettingsViewModel: ObservableObject {
-    @Published var recording: RecordingSettings
-    @Published var display: DisplaySettings
-    @Published var export: ExportSettings
-    @Published var classification: ClassificationSettings
+    @Published var recording: any RecordingSettingsProtocol
+    @Published var display: any DisplaySettingsProtocol
+    @Published var export: any ExportSettingsProtocol
+    @Published var classification: any ClassificationSettingsProtocol
 
-    init(store: SettingsStoring = SettingsStore.shared) {
-        self.recording = RecordingSettings(store: store)
-        self.display = DisplaySettings(store: store)
-        self.export = ExportSettings(store: store)
-        self.classification = ClassificationSettings(store: store)
+    init(
+        recording: any RecordingSettingsProtocol = RecordingSettings(store: SettingsStore.shared),
+        display: any DisplaySettingsProtocol = DisplaySettings(store: SettingsStore.shared),
+        export: any ExportSettingsProtocol = ExportSettings(store: SettingsStore.shared),
+        classification: any ClassificationSettingsProtocol = ClassificationSettings(store: SettingsStore.shared)
+    ) {
+        self.recording = recording
+        self.display = display
+        self.export = export
+        self.classification = classification
     }
 }

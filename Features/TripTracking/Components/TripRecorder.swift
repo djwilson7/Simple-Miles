@@ -4,11 +4,12 @@
 //
 //  Created by Invictus Maneo on 7/13/25.
 //
+
 import Foundation
 
 final class TripRecorder {
     let trackingService: TripTrackingService
-    let state: TripRecordingState
+    let state: any TripRecordingStateProtocol
 
     private var stopGraceTimer: Timer?
     private var pausedSession: TripSessionModel?
@@ -24,7 +25,7 @@ final class TripRecorder {
 
     init(
         trackingService: TripTrackingService,
-        state: TripRecordingState
+        state: any TripRecordingStateProtocol
     ) {
         self.trackingService = trackingService
         self.state = state
@@ -36,7 +37,7 @@ final class TripRecorder {
         pausedSession = nil
         pauseTime = nil
 
-                trackingService.startRecording()
+        trackingService.startRecording()
         print("[TripRecorder] trackingService.startRecording triggered")
 
         state.isRecording = true
@@ -97,7 +98,7 @@ final class TripRecorder {
         trackingService.stopRecording()
         state.isRecording = false
         state.stopTimer()
-        state.resetPauseCountdown()
+        state.resetPauseCountdown(duration: 0)
         state.update(with: trackingService.currentSession)
         stopGraceTimer?.invalidate()
         print("[TripRecorder] Trip stopped and session saved")

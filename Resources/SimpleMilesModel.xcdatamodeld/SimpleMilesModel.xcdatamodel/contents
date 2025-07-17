@@ -5,6 +5,7 @@
         <attribute name="longitude" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="segment" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CDTripSegment" inverseName="coordinates" inverseEntity="CDTripSegment"/>
+        <relationship name="trip" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CDTripSession" inverseName="path" inverseEntity="CDTripSession"/>
     </entity>
     <entity name="CDTripSegment" representedClassName="CDTripSegment" syncable="YES">
         <attribute name="avgSpeed" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
@@ -22,6 +23,7 @@
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="startTime" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="tripType" optional="YES" attributeType="String"/>
+        <relationship name="path" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDCoordinate" inverseName="trip" inverseEntity="CDCoordinate"/>
         <relationship name="segments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CDTripSegment" inverseName="session" inverseEntity="CDTripSegment"/>
     </entity>
 </model>

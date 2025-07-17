@@ -6,33 +6,35 @@
 //
 
 import Foundation
-import Combine
 import CoreLocation
 import UIKit
 
-protocol PermissionsServicing {
-    func currentLocationStatus() -> CLAuthorizationStatus
-    func isBackgroundRefreshAvailable() -> Bool
-    func requestLocationAuthorization()
-}
+final class PermissionsService: NSObject, PermissionsServicingProtocol {
+    private let locationManager: CLLocationManager
+    private let app: ApplicationStateReadingProtocol
 
-final class PermissionsService: NSObject, PermissionsServicing {
-    private let locationManager = CLLocationManager()
-
-    override init() {
+    init(
+        locationManager: CLLocationManager = CLLocationManager(),
+        app: ApplicationStateReadingProtocol
+    ) {
+        print("[PermissionsService] init triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        self.locationManager = locationManager
+        self.app = app
         super.init()
-        locationManager.delegate = nil // delegate is optional at service level
     }
 
     func currentLocationStatus() -> CLAuthorizationStatus {
+        print("[PermissionsService] currentLocationStatus triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         return locationManager.authorizationStatus
     }
 
     func isBackgroundRefreshAvailable() -> Bool {
-        return UIApplication.shared.backgroundRefreshStatus == .available
+        print("[PermissionsService] isBackgroundRefreshAvailable triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        return app.backgroundRefreshStatus == .available
     }
 
     func requestLocationAuthorization() {
+        print("[PermissionsService] requestLocationAuthorization triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         locationManager.requestAlwaysAuthorization()
     }
 }

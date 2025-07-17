@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class RecordingSettings: ObservableObject {
+final class RecordingSettings: RecordingSettingsProtocol {
     @Published var autoStartEnabled: Bool {
         didSet { store.set(.autoStartEnabled, value: autoStartEnabled) }
     }

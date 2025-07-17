@@ -7,7 +7,7 @@
 
 import Foundation
 
-final class ExportLauncher: ObservableObject {
+final class ExportLauncher: ExportLaunchingProtocol {
     @Published var exportURL: URL?
     @Published var isPresenting: Bool = false
 

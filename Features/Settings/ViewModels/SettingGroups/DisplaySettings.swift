@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class DisplaySettings: ObservableObject {
+final class DisplaySettings: DisplaySettingsProtocol {
     @Published var distanceUnit: DistanceUnit {
         didSet { store.set(.distanceUnit, value: distanceUnit.rawValue) }
     }

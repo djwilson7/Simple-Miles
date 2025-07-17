@@ -7,8 +7,8 @@
 
 import Foundation
 
-enum TripExportCoordinator {
-    static func exportCSVBundle(from trips: [TripSessionModel]) -> URL? {
+final class TripExportCoordinator: CSVExportingProtocol {
+    func export(from trips: [TripSessionModel]) -> URL? {
         guard
             let summaryURL = CSVTripWriter.export(from: trips),
             let coordinatesURL = CSVCoordinateWriter.export(from: trips)
@@ -21,9 +21,10 @@ enum TripExportCoordinator {
         return FileZipper.zipFiles([summaryURL, coordinatesURL], zipName: zipName)
     }
 
-    private static func formattedDateStamp() -> String {
+    private func formattedDateStamp() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm"
         return formatter.string(from: Date())
     }
 }
+

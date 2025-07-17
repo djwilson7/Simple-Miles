@@ -2,7 +2,7 @@
 //  CDCoordinate+CoreDataProperties.swift
 //  SimpleMiles
 //
-//  Created by Invictus Maneo on 7/13/25.
+//  Created by Invictus Maneo on 7/17/25.
 //
 //
 
@@ -20,6 +20,7 @@ extension CDCoordinate {
     @NSManaged public var longitude: Double
     @NSManaged public var timestamp: Date?
     @NSManaged public var segment: CDTripSegment?
+    @NSManaged public var trip: CDTripSession?
 
 }
 

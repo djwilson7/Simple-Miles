@@ -7,9 +7,13 @@
 
 import Foundation
 
-final class JSONTripWriter {
-    static func export(from trips: [TripSessionModel]) -> URL? {
-        guard !trips.isEmpty else { return nil }
+final class JSONTripWriter: JSONExportingProtocol {
+    func export(from trips: [TripSessionModel]) -> URL? {
+        print("[JSONTripWriter] export triggered with \(trips.count) trip(s)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        guard !trips.isEmpty else {
+            print("[JSONTripWriter] export aborted – empty trip list") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+            return nil
+        }
 
         let schemaObjects = trips.map { JSONExportSchema(from: $0) }
 
@@ -22,7 +26,7 @@ final class JSONTripWriter {
             let jsonString = String(decoding: data, as: UTF8.self)
             return FileExportWriter.write(content: jsonString, fileName: "SimpleMiles_Backup", fileExtension: "json")
         } catch {
-            print("JSON encoding failed: \(error)")
+            print("[JSONTripWriter] JSON encoding failed: \(error)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
             return nil
         }
     }

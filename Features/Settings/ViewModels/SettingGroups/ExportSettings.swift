@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class ExportSettings: ObservableObject {
+final class ExportSettings: ExportSettingsProtocol {
     @Published var defaultExportFormat: ExportFormat {
         didSet { store.set(.defaultExportFormat, value: defaultExportFormat.rawValue) }
     }

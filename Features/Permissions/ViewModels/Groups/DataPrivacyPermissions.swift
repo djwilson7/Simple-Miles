@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class DataPrivacyPermissions: ObservableObject {
+final class DataPrivacyPermissions: DataPrivacyPermissionsProtocol {
     @Published var consentLevel: PrivacyConsentLevel {
         didSet { store.set(.privacyConsentLevel, value: consentLevel.rawValue) }
     }

@@ -5,22 +5,19 @@
 //  Created by Invictus Maneo on 7/13/25.
 //
 
-// TripRecordingState.swift
 import Foundation
 
-final class TripRecordingState: ObservableObject {
+final class TripRecordingState: TripRecordingStateProtocol, ObservableObject {
     @Published var isRecording: Bool = false
+    @Published var isPaused: Bool = false
+
     @Published var session: TripSessionModel?
     @Published var elapsedTime: TimeInterval = 0
-    @Published var segmentCount: Int = 0
+    @Published var loggedTripCoords: Int = 0
     @Published var totalDistance: Double = 0.0
     @Published var pauseExpiresAt: Date?
     @Published var remainingPauseTime: TimeInterval = 0
-    
-    var isPaused: Bool {
-        return pauseExpiresAt != nil
-    }
-    
+
     private var pauseCountdownTimer: Timer?
     private var timer: Timer?
 
@@ -29,17 +26,20 @@ final class TripRecordingState: ObservableObject {
         return timer
     }
     #endif
-    
+
     func update(with session: TripSessionModel?) {
         DispatchQueue.main.async {
             self.session = session
-            self.segmentCount = session?.segments.count ?? 0
+            self.isRecording = session != nil
+            self.loggedTripCoords = session?.path.count ?? 0
             self.totalDistance = session?.distance ?? 0.0
 
             if let start = session?.startTime, let end = session?.endTime {
                 self.elapsedTime = end.timeIntervalSince(start)
             } else if let start = session?.startTime {
                 self.elapsedTime = Date().timeIntervalSince(start)
+            } else {
+                self.elapsedTime = 0
             }
         }
     }
@@ -49,7 +49,7 @@ final class TripRecordingState: ObservableObject {
             self.isRecording = false
             self.session = nil
             self.elapsedTime = 0
-            self.segmentCount = 0
+            self.loggedTripCoords = 0
             self.totalDistance = 0
         }
         timer?.invalidate()
@@ -63,8 +63,6 @@ final class TripRecordingState: ObservableObject {
             let elapsed = Date().timeIntervalSince(start)
             DispatchQueue.main.async {
                 self.elapsedTime = elapsed
-                print("[State] elapsedTime updated: \(self.elapsedTime)")
-
             }
         }
     }
@@ -73,9 +71,13 @@ final class TripRecordingState: ObservableObject {
         timer?.invalidate()
         timer = nil
     }
-    
+
     func startPauseCountdown(duration: TimeInterval = 600) {
-        pauseExpiresAt = Date().addingTimeInterval(duration)
+        DispatchQueue.main.async {
+            print("[TripRecordingState] pause triggered, setting isPaused = true")
+            self.pauseExpiresAt = Date().addingTimeInterval(duration)
+            self.isPaused = true
+        }
         updatePauseTime()
 
         pauseCountdownTimer?.invalidate()
@@ -91,9 +93,10 @@ final class TripRecordingState: ObservableObject {
     func cancelPauseCountdown() {
         pauseCountdownTimer?.invalidate()
         pauseCountdownTimer = nil
-        pauseExpiresAt = nil
         DispatchQueue.main.async {
+            self.pauseExpiresAt = nil
             self.remainingPauseTime = 0
+            self.isPaused = false
         }
     }
 
@@ -109,5 +112,16 @@ final class TripRecordingState: ObservableObject {
             cancelPauseCountdown()
             TripRecorder.shared.stopTrip()
         }
+    }
+
+    var publisherValues: TripRecordingStatePublishers {
+        .init(
+            isRecording: $isRecording,
+            totalDistance: $totalDistance,
+            loggedTripCoords: $loggedTripCoords,
+            elapsedTime: $elapsedTime,
+            remainingPauseTime: $remainingPauseTime,
+            isPaused: $isPaused
+        )
     }
 }

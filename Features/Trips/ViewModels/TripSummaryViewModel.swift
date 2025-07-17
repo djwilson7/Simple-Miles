@@ -21,6 +21,7 @@ final class TripSummaryViewModel: ObservableObject {
     }
 
     func loadSummary() {
+        print("[TripSummaryViewModel] loadSummary triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         let trips = store.fetchAll()
 
         totalTrips = trips.count
@@ -31,16 +32,19 @@ final class TripSummaryViewModel: ObservableObject {
     }
 
     func tripCount(for type: TripType) -> Int {
-        classifiedTrips[type] ?? 0
+        print("[TripSummaryViewModel] tripCount triggered for type: \(type)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        return classifiedTrips[type] ?? 0
     }
 
     func percentage(for type: TripType) -> Double {
+        print("[TripSummaryViewModel] percentage triggered for type: \(type)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         guard totalTrips > 0 else { return 0 }
         let count = tripCount(for: type)
         return Double(count) / Double(totalTrips)
     }
 
     func formattedTotalDistance() -> String {
-        String(format: "%.1f mi", totalDistance / 1609.34)
+        print("[TripSummaryViewModel] formattedTotalDistance triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        return String(format: "%.1f mi", totalDistance / 1609.34)
     }
 }

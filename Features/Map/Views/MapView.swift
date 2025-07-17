@@ -10,7 +10,7 @@ import MapKit
 import CoreLocation
 
 struct MapView: UIViewRepresentable {
-    @Binding var segments: [TripSegmentModel]
+    @Binding var pathPoints: [CoordinateModel]
 
     private let mapView = MKMapView()
 
@@ -33,12 +33,13 @@ struct MapView: UIViewRepresentable {
 
     private func updateMapOverlays(on mapView: MKMapView) {
         mapView.removeOverlays(mapView.overlays)
-        
-        let overlays = TripOverlayRenderer.polylines(from: segments)
 
-        mapView.addOverlays(overlays)
-        if let bounds = calculateVisibleRegion(from: segments) {
-            mapView.setVisibleMapRect(bounds, edgePadding: UIEdgeInsets(top: 40, left: 40, bottom: 40, right: 40), animated: false)
+        let polyline = TripOverlayRenderer.polyline(from: pathPoints)
+        mapView.addOverlay(polyline)
+
+        let coords = pathPoints.map { $0.clLocationCoordinate }
+        if let region = calculateVisibleRegion(from: coords) {
+            mapView.setVisibleMapRect(region, edgePadding: UIEdgeInsets(top: 40, left: 40, bottom: 40, right: 40), animated: false)
         }
     }
 
@@ -54,9 +55,8 @@ struct MapView: UIViewRepresentable {
             return renderer
         }
     }
-    
-    private func calculateVisibleRegion(from segments: [TripSegmentModel]) -> MKMapRect? {
-        let coordinates = segments.flatMap { [$0.startCoordinate.clLocationCoordinate, $0.endCoordinate.clLocationCoordinate] }
+
+    private func calculateVisibleRegion(from coordinates: [CLLocationCoordinate2D]) -> MKMapRect? {
         guard !coordinates.isEmpty else { return nil }
 
         let mapPoints = coordinates.map { MKMapPoint($0) }
@@ -69,22 +69,9 @@ struct MapView: UIViewRepresentable {
 }
 
 #Preview {
-    MapView(segments: .constant([
-        TripSegmentModel(
-            startTime: Date(),
-            endTime: Date().addingTimeInterval(600),
-            startCoordinate: CoordinateModel(
-                latitude: 37.7749,
-                longitude: -122.4194
-            ),
-            endCoordinate: CoordinateModel(
-                latitude: 37.7849,
-                longitude: -122.4094
-            ),
-            distance: 1000
-        )
+    MapView(pathPoints: .constant([
+        CoordinateModel(latitude: 37.7749, longitude: -122.4194),
+        CoordinateModel(latitude: 37.7849, longitude: -122.4094)
     ]))
     .edgesIgnoringSafeArea(.all)
 }
-
-

@@ -22,15 +22,18 @@ final class TripClassificationViewModel: ObservableObject {
     }
 
     func updateClassification(to type: TripType) {
+        print("[TripClassificationViewModel] updateClassification triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         trip.tripType = type
         store.update(trip)
     }
 
     func currentClassificationLabel() -> String {
-        trip.tripType.rawValue
+        print("[TripClassificationViewModel] currentClassificationLabel triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        return trip.tripType.rawValue
     }
 
     func isClassified(as type: TripType) -> Bool {
-        trip.tripType == type
+        print("[TripClassificationViewModel] isClassified triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        return trip.tripType == type
     }
 }

@@ -9,22 +9,24 @@ import Foundation
 import Combine
 
 final class PermissionsViewModel: ObservableObject {
-    @Published var system: SystemLevelPermissions
-    @Published var privacy: DataPrivacyPermissions
+    @Published var system: SystemLevelPermissionsProtocol
+    @Published var privacy: DataPrivacyPermissionsProtocol
 
     init(
-        system: SystemLevelPermissions = SystemLevelPermissions(),
-        privacy: DataPrivacyPermissions = DataPrivacyPermissions()
+        system: SystemLevelPermissionsProtocol = SystemLevelPermissions(),
+        privacy: DataPrivacyPermissionsProtocol = DataPrivacyPermissions()
     ) {
         self.system = system
         self.privacy = privacy
     }
 
     func refreshSystemStatus() {
+        print("[PermissionsViewModel] refreshSystemStatus triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         system.refreshStatus()
     }
 
     func requestLocationAccess() {
+        print("[PermissionsViewModel] requestLocationAccess triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         system.requestLocationPermission()
     }
 }

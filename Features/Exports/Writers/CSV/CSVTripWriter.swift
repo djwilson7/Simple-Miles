@@ -9,7 +9,11 @@ import Foundation
 
 final class CSVTripWriter {
     static func export(from trips: [TripSessionModel]) -> URL? {
-        guard !trips.isEmpty else { return nil }
+        print("[CSVTripWriter] export triggered with \(trips.count) trip(s)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        guard !trips.isEmpty else {
+            print("[CSVTripWriter] export aborted – empty trip list") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+            return nil
+        }
 
         let schemaRows = trips.map { CSVExportSchema(from: $0) }
         let headerLine = CSVExportSchema.headers.joined(separator: ",")

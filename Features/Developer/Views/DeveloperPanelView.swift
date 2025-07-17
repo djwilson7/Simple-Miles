@@ -24,7 +24,7 @@ struct DeveloperPanelView: View {
                         }
 
                         Text("Distance: \(String(format: "%.2f", viewModel.currentDistance * 0.000621371)) mi")
-                        Text("Segments: \(viewModel.currentSegmentCount)")
+                        Text("Logged Coords: \(viewModel.loggedTripCoords)")
                         Text("Elapsed Time: \(formattedTime(viewModel.elapsedTime))")
                     }
 
@@ -85,7 +85,7 @@ struct DeveloperPanelView: View {
                     .overlay(
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Debug Distance: \(viewModel.currentDistance)")
-                            Text("Debug Segments: \(viewModel.currentSegmentCount)")
+                            Text("Debug Logged Coords: \(viewModel.loggedTripCoords)")
                             Text("Debug Elapsed: \(formattedTime(viewModel.elapsedTime))")
                             Text("Debug Paused: \(viewModel.isPaused.description)")
                             Text("Debug Tracking: \(viewModel.isTracking.description)")
@@ -138,5 +138,7 @@ struct DeveloperPanelView: View {
 }
 
 #Preview {
-    DeveloperPanelView(viewModel: DeveloperPanelViewModel())
+    NavigationView {
+        DeveloperPanelView(viewModel: DeveloperPanelViewModel())
+    }
 }

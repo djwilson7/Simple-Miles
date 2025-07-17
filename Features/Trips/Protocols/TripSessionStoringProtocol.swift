@@ -11,5 +11,6 @@ protocol TripSessionStoringProtocol {
     func save(_ model: TripSessionModel)
     func delete(sessionID: UUID)
     func update(_ updatedTrip: TripSessionModel)
+    func clearAll() // ✅ REQUIRED FOR TripPersistenceManager
 }
 

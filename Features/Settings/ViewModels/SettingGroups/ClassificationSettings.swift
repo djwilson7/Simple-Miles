@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class ClassificationSettings: ObservableObject {
+final class ClassificationSettings: ClassificationSettingsProtocol {
     @Published var defaultTripType: TripType {
         didSet { store.set(.defaultTripType, value: defaultTripType.rawValue) }
     }

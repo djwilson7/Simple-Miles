@@ -2,7 +2,7 @@
 //  CDCoordinate+CoreDataClass.swift
 //  SimpleMiles
 //
-//  Created by Invictus Maneo on 7/13/25.
+//  Created by Invictus Maneo on 7/17/25.
 //
 //
 

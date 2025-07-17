@@ -20,7 +20,7 @@ struct CSVExportSchema {
     let distanceMeters: Double
     let distanceMiles: Double
     let durationMinutes: Double
-    let segmentCount: Int
+    let loggedTripCoords: Int
 
     init(from model: TripSessionModel) {
         self.tripID = model.id
@@ -32,26 +32,26 @@ struct CSVExportSchema {
         self.startTime = CSVExportSchema.timeFormatter.string(from: start)
         self.endTime = CSVExportSchema.timeFormatter.string(from: end)
 
-        let first = model.segments.first
-        let last = model.segments.last
+        let first = model.path.first
+        let last = model.path.last
 
-        self.startLat = first?.startCoordinate.latitude ?? 0
-        self.startLon = first?.startCoordinate.longitude ?? 0
-        self.endLat = last?.endCoordinate.latitude ?? 0
-        self.endLon = last?.endCoordinate.longitude ?? 0
+        self.startLat = first?.latitude ?? 0
+        self.startLon = first?.longitude ?? 0
+        self.endLat = last?.latitude ?? 0
+        self.endLon = last?.longitude ?? 0
 
         self.tripType = model.tripType.rawValue
         self.distanceMeters = model.distance
         self.distanceMiles = model.distance / 1609.34
         self.durationMinutes = (end.timeIntervalSince(start)) / 60
-        self.segmentCount = model.segments.count
+        self.loggedTripCoords = model.path.count
     }
 
     static let headers = [
         "trip_id", "date", "start_time", "end_time",
         "start_lat", "start_lon", "end_lat", "end_lon",
         "trip_type", "distance_meters", "distance_miles",
-        "duration_minutes", "segment_count"
+        "duration_minutes", "logged_trip_coords"
     ]
 
     func toCSVRow() -> String {
@@ -68,7 +68,7 @@ struct CSVExportSchema {
             String(format: "%.2f", distanceMeters),
             String(format: "%.2f", distanceMiles),
             String(format: "%.1f", durationMinutes),
-            "\(segmentCount)"
+            "\(loggedTripCoords)"
         ].joined(separator: ",")
     }
 

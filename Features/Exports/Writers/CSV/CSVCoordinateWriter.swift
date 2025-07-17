@@ -9,13 +9,14 @@ import Foundation
 
 enum CSVCoordinateWriter {
     static func export(from trips: [TripSessionModel]) -> URL? {
+        print("[CSVCoordinateWriter] export triggered with \(trips.count) trip(s)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+
         let headers = "tripID,flattenedPath"
         var rows: [String] = [headers]
 
         for trip in trips {
             let tripID = trip.id.uuidString
-            let path = trip.segments
-                .flatMap { [$0.startCoordinate, $0.endCoordinate] }
+            let path = trip.path
                 .map { "\($0.latitude),\($0.longitude)" }
                 .joined(separator: ";")
 

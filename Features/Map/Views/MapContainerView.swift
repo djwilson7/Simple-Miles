@@ -12,7 +12,7 @@ struct MapContainerView: View {
 
     var body: some View {
         ZStack {
-            MapView(segments: $viewModel.segments)
+            MapView(pathPoints: $viewModel.pathPoints)
                 .edgesIgnoringSafeArea(.all)
 
             // Placeholder for floating controls
@@ -47,7 +47,7 @@ struct MapContainerView: View {
             }
         }
         .onAppear {
-            viewModel.loadSegments()
+            viewModel.loadPathPoints()
         }
     }
 }

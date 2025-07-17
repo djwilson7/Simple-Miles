@@ -1,14 +1,18 @@
-//
-//  TripTrackingServiceProtocol.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/14/25.
-//
-
 import Foundation
+import Combine
+import CoreLocation
 
 protocol TripTrackingServiceProtocol: AnyObject {
-    var currentSession: TripSessionModel? { get }
+    var currentSessionPublisher: Published<TripSessionModel?>.Publisher { get }
+    var recordingState: any TripRecordingStateProtocol { get }
+    var onTripSaved: (() -> Void)? { get set }
+
     func startRecording()
     func stopRecording()
+    func startPassiveMonitoring()
+    func updateAnalyzerThresholds(speed: Double, distance: Double)
+    func resumeRecording(from session: TripSessionModel)
+    func clearAllTrips()
+
 }
+

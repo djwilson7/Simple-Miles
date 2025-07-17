@@ -10,10 +10,13 @@ import CoreData
 final class CoreDataStack {
     static let shared = CoreDataStack()
 
-    private init() {}
+    private init() {
+        print("[CoreDataStack] init triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+    }
 
     lazy var persistentContainer: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: "SimpleMilesModel")  // Matches your .xcdatamodeld name
+        print("[CoreDataStack] loading persistent container") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        let container = NSPersistentContainer(name: "SimpleMilesModel")
         container.loadPersistentStores { _, error in
             if let error = error {
                 fatalError("CoreData failed to load: \(error.localizedDescription)")
@@ -24,21 +27,27 @@ final class CoreDataStack {
     }()
 
     var mainContext: NSManagedObjectContext {
-        persistentContainer.viewContext
+        print("[CoreDataStack] accessing mainContext") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        return persistentContainer.viewContext
     }
 
     func backgroundContext() -> NSManagedObjectContext {
-        persistentContainer.newBackgroundContext()
+        print("[CoreDataStack] creating new background context") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        return persistentContainer.newBackgroundContext()
     }
 
     func saveMainContext() {
+        print("[CoreDataStack] saveMainContext triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         let context = mainContext
         if context.hasChanges {
             do {
                 try context.save()
+                print("[CoreDataStack] mainContext saved successfully") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
             } catch {
-                print("Error saving CoreData context: \(error)")
+                print("[CoreDataStack] Error saving CoreData context: \(error)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
             }
+        } else {
+            print("[CoreDataStack] save skipped – no changes detected") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         }
     }
 }

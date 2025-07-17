@@ -11,27 +11,30 @@ import Combine
 final class DeveloperPanelViewModel: ObservableObject {
     @Published var isTracking: Bool = false
     @Published var currentDistance: Double = 0
-    @Published var currentSegmentCount: Int = 0
+    @Published var loggedTripCoords: Int = 0
     @Published var elapsedTime: TimeInterval = 0
-    @Published var exportLauncher = ExportLauncher()
     @Published var savedTripCount: Int = 0
     @Published var remainingPauseTime: TimeInterval = 0
     @Published var isPaused: Bool = false
     @Published var resumeSpeedThreshold: Double = 2.5
     @Published var resumeDistanceThreshold: Double = 50.0
+    @Published var exportLauncher: ExportLaunchingProtocol
 
-    private let tripService: TripTrackingService
-    private let recordingState: TripRecordingState
-    private let exportViewModel: TripExportViewModel
+    private let tripService: TripTrackingServiceProtocol
+    private let recordingState: any TripRecordingStateProtocol
+    private let exportViewModel: TripExportViewModelProtocol
     private var cancellables = Set<AnyCancellable>()
 
     init(
-        tripService: TripTrackingService = .shared,
-        exportViewModel: TripExportViewModel = TripExportViewModel()
+        tripService: TripTrackingServiceProtocol = TripTrackingService.shared,
+        exportViewModel: TripExportViewModelProtocol = TripExportViewModel(),
+        exportLauncher: ExportLaunchingProtocol = ExportLauncher()
     ) {
+        print("[DeveloperPanelViewModel] init triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         self.tripService = tripService
         self.recordingState = tripService.recordingState
         self.exportViewModel = exportViewModel
+        self.exportLauncher = exportLauncher
         bindLiveTripState()
         tripService.onTripSaved = { [weak self] in
             self?.refreshTripCount()
@@ -46,58 +49,54 @@ final class DeveloperPanelViewModel: ObservableObject {
     }
 
     private func bindLiveTripState() {
-        recordingState.$isRecording
+        let publishers = recordingState.publisherValues
+
+        publishers.isRecording
             .assign(to: &$isTracking)
 
-        recordingState.$totalDistance
+        publishers.totalDistance
             .assign(to: &$currentDistance)
 
-        recordingState.$segmentCount
-            .assign(to: &$currentSegmentCount)
+        publishers.loggedTripCoords
+            .assign(to: &$loggedTripCoords)
 
-        recordingState.$elapsedTime
+        publishers.elapsedTime
             .assign(to: &$elapsedTime)
-        
-        recordingState.$remainingPauseTime
+
+        publishers.remainingPauseTime
             .assign(to: &$remainingPauseTime)
 
-        recordingState.$pauseExpiresAt
-            .map { $0 != nil }
+        publishers.isPaused
             .assign(to: &$isPaused)
     }
 
     func toggleTracking() {
-        print("[DeveloperPanelViewModel] toggleTracking triggered")
         isTracking ? tripService.stopRecording() : tripService.startRecording()
     }
 
     func exportAllTripsAsCSV() {
-        print("[DeveloperPanelViewModel] exportAllTripsAsCSV triggered")
         if let url = exportViewModel.generateCSVExport() {
             exportLauncher.launch(for: url)
-            savedTripCount = 0 //reset count after export trigger
+            savedTripCount = 0
         }
     }
 
     func exportAllTripsAsJSON() {
-        print("[DeveloperPanelViewModel] exportAllTripsAsJSON triggered")
         if let url = exportViewModel.generateJSONBackup() {
             exportLauncher.launch(for: url)
-            savedTripCount = 0 //reset count after export trigger
+            savedTripCount = 0
         }
     }
-    
+
     func refreshTripCount() {
         savedTripCount = exportViewModel.store.fetchAll().count
     }
-    
+
     func resetPauseTimer() {
-        print("[DeveloperPanelViewModel] resetPauseTimer triggered")
-        recordingState.resetPauseCountdown()
+        recordingState.resetPauseCountdown(duration: 600)
     }
 
     func forceEndTrip() {
-        print("[DeveloperPanelViewModel] forceEndTrip triggered")
         tripService.stopRecording()
         tripService.recordingState.reset()
         isPaused = false
@@ -105,7 +104,6 @@ final class DeveloperPanelViewModel: ObservableObject {
     }
 
     func clearAllTrips() {
-        print("[DeveloperPanelViewModel] clearAllTrips triggered")
         tripService.clearAllTrips()
     }
 }

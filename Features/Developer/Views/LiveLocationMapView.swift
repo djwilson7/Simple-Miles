@@ -25,9 +25,9 @@ struct LiveLocationMapView: UIViewRepresentable {
 
     func updateUIView(_ uiView: MKMapView, context: Context) {
         if let userLocation = uiView.userLocation.location {
-            //print("[LiveLocationMapView] - user location: ", userLocation.coordinate)
+            print("[LiveLocationMapView] - user location: ", userLocation.coordinate)
         } else {
-            //print("LiveLocationMapView - user location is nil")
+            print("LiveLocationMapView - user location is nil")
         }
     }
 

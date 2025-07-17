@@ -10,7 +10,7 @@ import Combine
 import CoreLocation
 import UIKit
 
-final class SystemLevelPermissions: NSObject, ObservableObject {
+final class SystemLevelPermissions: NSObject, ObservableObject, SystemLevelPermissionsProtocol {
     @Published var locationStatus: CLAuthorizationStatus = .notDetermined
     @Published var backgroundRefreshEnabled: Bool = true // assumed enabled unless overridden
 

@@ -9,21 +9,34 @@ import Foundation
 import Combine
 
 final class MapViewModel: ObservableObject {
-    @Published var segments: [TripSegmentModel] = []
+    @Published var pathPoints: [CoordinateModel] = []
 
     private let sessionStore: TripSessionStoringProtocol
     private var cancellables = Set<AnyCancellable>()
 
     init(sessionStore: TripSessionStoringProtocol = TripSessionStore()) {
         self.sessionStore = sessionStore
-        loadSegments()
+        bindLiveSession()
     }
 
-    func loadSegments(filter type: TripType? = nil) {
+    /// For showing historical trips (e.g., trip history mode)
+    func loadPathPoints(filter type: TripType? = nil) {
+        print("[MapViewModel] loadPathPoints triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         let sessions = sessionStore.fetchAll()
-        let filteredSegments = sessions.flatMap { session in
-            type == nil || session.tripType == type ? session.segments : []
-        }
-        self.segments = filteredSegments
+        let points = sessions
+            .filter { type == nil || $0.tripType == type }
+            .flatMap { $0.path }
+
+        self.pathPoints = points
+    }
+
+    /// For real-time recording UI
+    private func bindLiveSession() {
+        TripTrackingService.shared.currentSessionPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] session in
+                self?.pathPoints = session?.path ?? []
+            }
+            .store(in: &cancellables)
     }
 }

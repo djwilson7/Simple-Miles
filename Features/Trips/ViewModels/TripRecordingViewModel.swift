@@ -4,25 +4,33 @@
 //
 //  Created by Invictus Maneo on 7/14/25.
 //
+
 import Foundation
 import Combine
 
+@MainActor
 final class TripRecordingViewModel: ObservableObject {
+    enum Status {
+        case idle
+        case recording
+    }
 
-    @Published private(set) var status: TripRecordingStatus = .idle
-    @Published private(set) var distance: Double = 0.0
-    @Published private(set) var duration: TimeInterval = 0.0
-    @Published private(set) var segmentCount: Int = 0
+    @Published var status: Status = .idle
+    @Published var segmentCount: Int = 0
+    @Published var distance: Double = 0
+    @Published var duration: TimeInterval = 0
 
-    private let tracker: TripTrackingService
-    private let store: TripSessionStoringProtocol
-
-    private var timer: AnyCancellable?
+    private var timer: Timer?
+    private var timerCancellable: AnyCancellable?
     private var cancellables = Set<AnyCancellable>()
+    @Published private(set) var currentSession: TripSessionModel?
+
+    private let tracker: any TripTrackingServiceProtocol
+    private let store: TripPersistenceManager
 
     init(
-        tracker: TripTrackingService = TripTrackingService.shared,
-        store: TripSessionStoringProtocol = TripSessionStore.shared
+        tracker: some TripTrackingServiceProtocol,
+        store: some TripPersistenceManager
     ) {
         self.tracker = tracker
         self.store = store
@@ -30,44 +38,51 @@ final class TripRecordingViewModel: ObservableObject {
     }
 
     func start() {
+        print("[TripRecordingViewModel] start triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         tracker.startRecording()
         status = .recording
         startTimer()
     }
 
     func stop() {
+        print("[TripRecordingViewModel] stop triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         tracker.stopRecording()
         status = .idle
         stopTimer()
 
-        if let session = tracker.currentSession {
+        if let session = currentSession {
+            print("[TripRecordingViewModel] saving session on stop") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
             store.save(session)
         }
     }
 
+    private func bind() {
+        tracker.currentSessionPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] session in
+                print("[TripRecordingViewModel] session updated")
+                self?.currentSession = session
+                self?.distance = session?.distance ?? 0
+                self?.segmentCount = session?.path.count ?? 0
+            }
+            .store(in: &cancellables)
+    }
+
     private func startTimer() {
+        print("[TripRecordingViewModel] startTimer triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         stopTimer()
-        timer = Timer
+
+        timerCancellable = Timer
             .publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                guard let start = self?.tracker.currentSession?.startTime else { return }
+                guard let start = self?.currentSession?.startTime else { return }
                 self?.duration = Date().timeIntervalSince(start)
             }
     }
 
     private func stopTimer() {
-        timer?.cancel()
-        timer = nil
-    }
-
-    private func bind() {
-        tracker.$currentSession
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] (session: TripSessionModel?) in
-                self?.distance = session?.distance ?? 0
-                self?.segmentCount = session?.segments.count ?? 0
-            }
-            .store(in: &cancellables)
+        timerCancellable?.cancel()
+        timerCancellable = nil
     }
 }
