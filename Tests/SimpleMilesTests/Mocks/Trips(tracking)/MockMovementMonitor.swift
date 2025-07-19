@@ -1,4 +1,3 @@
-//
 //  MockMovementMonitor.swift
 //  SimpleMiles
 //
@@ -18,6 +17,7 @@ final class MockMovementMonitor: MovementMonitoringProtocol {
     var onShouldStartTrip: (() -> Void)?
     var onShouldResumeTrip: (() -> Void)?
     var onShouldPauseTrip: (() -> Void)?
+    var onShouldStopTrip: (() -> Void)? // Newly added
 
     func updateThresholds(speed: CLLocationSpeed, distance: CLLocationDistance) {
         lastSpeed = speed
@@ -28,7 +28,7 @@ final class MockMovementMonitor: MovementMonitoringProtocol {
         didStartPassive = true
     }
 
-    func analyze(location: CLLocation, isRecording: Bool, isPaused: Bool) {
+    func analyze(location: CLLocation) {
         didAnalyze = true
     }
 

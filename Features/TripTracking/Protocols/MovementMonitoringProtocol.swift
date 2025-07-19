@@ -16,4 +16,5 @@ protocol MovementMonitoringProtocol: AnyObject {
     var onShouldStartTrip: (() -> Void)? { get set }
     var onShouldResumeTrip: (() -> Void)? { get set }
     var onShouldPauseTrip: (() -> Void)? { get set }
+    var onShouldStopTrip: (() -> Void)? { get set } // ✅ Newly added
 }

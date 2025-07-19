@@ -1,4 +1,3 @@
-//
 //  MockTripSessionModel.swift
 //  SimpleMiles
 //
@@ -13,9 +12,9 @@ struct MockTripSessionModel {
         id: UUID = UUID(),
         startTime: Date = Date(),
         endTime: Date? = nil,
-        distance: Double = 100,
-        tripType: TripType = .personal,
-        segments: [TripSegmentModel] = []
+        distance: Double = 0.0,
+        tripType: TripType = .unclassified,
+        path: [CoordinateModel] = []
     ) -> TripSessionModel {
         TripSessionModel(
             id: id,
@@ -23,7 +22,7 @@ struct MockTripSessionModel {
             endTime: endTime,
             distance: distance,
             tripType: tripType,
-            segments: segments
+            path: path
         )
     }
 }

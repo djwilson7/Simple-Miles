@@ -1,4 +1,3 @@
-//
 //  DeveloperPanelViewModel.swift
 //  SimpleMiles
 //
@@ -19,6 +18,8 @@ final class DeveloperPanelViewModel: ObservableObject {
     @Published var resumeSpeedThreshold: Double = 2.5
     @Published var resumeDistanceThreshold: Double = 50.0
     @Published var exportLauncher: ExportLaunchingProtocol
+    @Published var showToast: Bool = false
+    @Published var toastMessage: String = ""
 
     private let tripService: TripTrackingServiceProtocol
     private let recordingState: any TripRecordingStateProtocol
@@ -30,12 +31,23 @@ final class DeveloperPanelViewModel: ObservableObject {
         exportViewModel: TripExportViewModelProtocol = TripExportViewModel(),
         exportLauncher: ExportLaunchingProtocol = ExportLauncher()
     ) {
-        print("[DeveloperPanelViewModel] init triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         self.tripService = tripService
         self.recordingState = tripService.recordingState
         self.exportViewModel = exportViewModel
         self.exportLauncher = exportLauncher
+
         bindLiveTripState()
+
+        if let concreteService = tripService as? TripTrackingService {
+            concreteService.$status
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] status in
+                    self?.isPaused = (status == .paused)
+                    self?.isTracking = (status == .recording)
+                }
+                .store(in: &cancellables)
+        }
+
         tripService.onTripSaved = { [weak self] in
             self?.refreshTripCount()
         }
@@ -46,28 +58,26 @@ final class DeveloperPanelViewModel: ObservableObject {
                 self?.tripService.updateAnalyzerThresholds(speed: speed, distance: distance)
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .didClearTripData)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.savedTripCount = 0
+                self?.toastMessage = "Trip data cleared successfully"
+                self?.showToast = true
+            }
+            .store(in: &cancellables)
     }
 
     private func bindLiveTripState() {
         let publishers = recordingState.publisherValues
 
-        publishers.isRecording
-            .assign(to: &$isTracking)
-
-        publishers.totalDistance
-            .assign(to: &$currentDistance)
-
-        publishers.loggedTripCoords
-            .assign(to: &$loggedTripCoords)
-
-        publishers.elapsedTime
-            .assign(to: &$elapsedTime)
-
-        publishers.remainingPauseTime
-            .assign(to: &$remainingPauseTime)
-
-        publishers.isPaused
-            .assign(to: &$isPaused)
+        publishers.isRecording.assign(to: &$isTracking)
+        publishers.totalDistance.assign(to: &$currentDistance)
+        publishers.loggedTripCoords.assign(to: &$loggedTripCoords)
+        publishers.elapsedTime.assign(to: &$elapsedTime)
+        publishers.remainingPauseTime.assign(to: &$remainingPauseTime)
+        publishers.isPaused.assign(to: &$isPaused)
     }
 
     func toggleTracking() {
@@ -78,6 +88,9 @@ final class DeveloperPanelViewModel: ObservableObject {
         if let url = exportViewModel.generateCSVExport() {
             exportLauncher.launch(for: url)
             savedTripCount = 0
+        } else {
+            toastMessage = "CSV export failed"
+            showToast = true
         }
     }
 
@@ -85,6 +98,9 @@ final class DeveloperPanelViewModel: ObservableObject {
         if let url = exportViewModel.generateJSONBackup() {
             exportLauncher.launch(for: url)
             savedTripCount = 0
+        } else {
+            toastMessage = "JSON export failed"
+            showToast = true
         }
     }
 

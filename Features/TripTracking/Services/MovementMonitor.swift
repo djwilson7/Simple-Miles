@@ -1,25 +1,14 @@
-//
-//  MovementMonitor.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/16/25.
-//
-
-//
-//  MovementMonitor.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/16/25.
-//
+// MovementMonitor.swift
+// SimpleMiles
 
 import Foundation
 import CoreLocation
 
 final class MovementMonitor: MovementMonitoringProtocol {
-    private var analyzer: MovementAnalyzer
-    private let stationaryThresholdDuration: TimeInterval = 5
+    private var analyzer: MovementAnalyzerProtocol
+    private let stationaryThresholdDuration: TimeInterval = 0.5
     private let endSessionDuration: TimeInterval = 600
-    private let stationaryDistanceThreshold: CLLocationDistance = 10
+    private let stationaryDistanceThreshold: CLLocationDistance = 12
 
     private var lastLocation: CLLocation?
     private var pausedLocation: CLLocation?
@@ -30,8 +19,9 @@ final class MovementMonitor: MovementMonitoringProtocol {
     var onShouldStartTrip: (() -> Void)?
     var onShouldResumeTrip: (() -> Void)?
     var onShouldPauseTrip: (() -> Void)?
+    var onShouldStopTrip: (() -> Void)?
 
-    init(analyzer: MovementAnalyzer) {
+    init(analyzer: MovementAnalyzerProtocol) {
         self.analyzer = analyzer
     }
 
@@ -50,13 +40,13 @@ final class MovementMonitor: MovementMonitoringProtocol {
     }
 
     func updateThresholds(speed: CLLocationSpeed, distance: CLLocationDistance) {
-        print("[MovementMonitor] updateThresholds triggered with speed: \(speed), distance: \(distance)")
+        print("[MovementMonitor] updateThresholds: speed=\(speed), distance=\(distance)")
         analyzer.speedThreshold = speed
         analyzer.distanceThreshold = distance
     }
 
     func analyze(location: CLLocation) {
-        print("[MovementMonitor] analyze triggered: \(location)")
+        print("[MovementMonitor] analyze triggered: \(location.coordinate)")
 
         defer { lastLocation = location }
 
@@ -65,10 +55,10 @@ final class MovementMonitor: MovementMonitoringProtocol {
             return
         }
 
-        let distance = location.distance(from: last)
+        let distanceFromLast = location.distance(from: last)
         let now = Date()
+        print("[MovementMonitor] distance from last: \(distanceFromLast)")
 
-        // Session hasn't started yet
         if sessionStartTime == nil {
             if analyzer.shouldStartTrip(speed: location.speed, acceleration: nil) {
                 print("[MovementMonitor] onShouldStartTrip triggered")
@@ -79,12 +69,10 @@ final class MovementMonitor: MovementMonitoringProtocol {
             return
         }
 
-        // Movement is detected
         if analyzer.isMoving(speed: location.speed) {
             print("[MovementMonitor] movement detected")
             lastMovementTime = now
 
-            // Resume if paused
             if pausedLocation != nil {
                 print("[MovementMonitor] onShouldResumeTrip triggered")
                 pausedLocation = nil
@@ -95,31 +83,35 @@ final class MovementMonitor: MovementMonitoringProtocol {
             return
         }
 
-        // No movement, check for stationary conditions
         if pausedLocation == nil {
+            if distanceFromLast >= stationaryDistanceThreshold {
+                print("[MovementMonitor] jitter too high for pause — reset (\(distanceFromLast)m)")
+                stationaryStartTime = nil
+                return
+            }
+
             if stationaryStartTime == nil {
-                print("[MovementMonitor] establishing stationary reference")
+                print("[MovementMonitor] starting stationary timer")
                 stationaryStartTime = now
                 return
             }
 
             let duration = now.timeIntervalSince(stationaryStartTime!)
             if duration >= stationaryThresholdDuration {
-                print("[MovementMonitor] onShouldPauseTrip triggered")
+                print("[MovementMonitor] onShouldPauseTrip triggered — stationary \(duration)s")
                 pausedLocation = location
                 stationaryStartTime = nil
                 onShouldPauseTrip?()
             } else {
-                print("[MovementMonitor] stationary time accumulating: \(duration)")
+                print("[MovementMonitor] accumulating stationary time: \(duration)s")
             }
         }
 
-        // Optionally, could trigger stopSession if desired
         if let lastMove = lastMovementTime {
             let idleTime = now.timeIntervalSince(lastMove)
             if idleTime >= endSessionDuration {
-                print("[MovementMonitor] Trip should be ended (idleTime: \(idleTime)s within radius)")
-                // Optional: Emit a future onShouldStopTrip?()
+                print("[MovementMonitor] onShouldStopTrip triggered — idle for \(idleTime)s")
+                onShouldStopTrip?()
             }
         }
     }

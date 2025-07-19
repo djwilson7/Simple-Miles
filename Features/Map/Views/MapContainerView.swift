@@ -1,57 +1,57 @@
+////
+////  MapContainerView.swift
+////  SimpleMiles
+////
+////  Created by Invictus Maneo on 7/14/25.
+////
 //
-//  MapContainerView.swift
-//  SimpleMiles
+//import SwiftUI
 //
-//  Created by Invictus Maneo on 7/14/25.
+//struct MapContainerView: View {
+//    @StateObject private var viewModel = MapViewModel()
 //
-
-import SwiftUI
-
-struct MapContainerView: View {
-    @StateObject private var viewModel = MapViewModel()
-
-    var body: some View {
-        ZStack {
-            MapView(pathPoints: $viewModel.pathPoints)
-                .edgesIgnoringSafeArea(.all)
-
-            // Placeholder for floating controls
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        // Settings action
-                    }) {
-                        Image(systemName: "gearshape")
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .padding()
-                }
-
-                Spacer()
-
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        // Main menu action
-                    }) {
-                        Image(systemName: "line.3.horizontal")
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .padding()
-                }
-            }
-        }
-        .onAppear {
-            viewModel.loadPathPoints()
-        }
-    }
-}
-
-#Preview {
-    MapContainerView()
-}
+//    var body: some View {
+//        ZStack {
+//            MapView(pathPoints: $viewModel.pathPoints)
+//                .edgesIgnoringSafeArea(.all)
+//
+//            // Placeholder for floating controls
+//            VStack {
+//                HStack {
+//                    Spacer()
+//                    Button(action: {
+//                        // Settings action
+//                    }) {
+//                        Image(systemName: "gearshape")
+//                            .padding()
+//                            .background(.ultraThinMaterial)
+//                            .clipShape(Circle())
+//                    }
+//                    .padding()
+//                }
+//
+//                Spacer()
+//
+//                HStack {
+//                    Spacer()
+//                    Button(action: {
+//                        // Main menu action
+//                    }) {
+//                        Image(systemName: "line.3.horizontal")
+//                            .padding()
+//                            .background(.ultraThinMaterial)
+//                            .clipShape(Circle())
+//                    }
+//                    .padding()
+//                }
+//            }
+//        }
+//        .onAppear {
+//            viewModel.loadPathPoints()
+//        }
+//    }
+//}
+//
+//#Preview {
+//    MapContainerView()
+//}

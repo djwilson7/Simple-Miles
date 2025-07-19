@@ -21,7 +21,7 @@ final class TripLifecycleManagerTests: XCTestCase {
         XCTAssertNotNil(session)
         XCTAssertNotNil(session?.startTime)
         XCTAssertNil(session?.endTime)
-        XCTAssertEqual(session?.segments.count, 0)
+        XCTAssertEqual(session?.path.count, 0)
     }
 
     func test_stopSession_setsEndTime() {

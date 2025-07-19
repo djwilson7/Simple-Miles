@@ -27,4 +27,6 @@ protocol TripRecordingStateProtocol: AnyObject, ObservableObject {
     func startPauseCountdown(duration: TimeInterval)
     func resetPauseCountdown(duration: TimeInterval)
     func cancelPauseCountdown()
+    func setRecording(_ active: Bool) // ✅ Newly added
 }
+

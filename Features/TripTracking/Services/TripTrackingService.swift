@@ -1,3 +1,6 @@
+// TripTrackingService.swift
+// SimpleMiles
+
 import Foundation
 import CoreLocation
 import Combine
@@ -7,6 +10,8 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
 
     @Published private(set) var currentSession: TripSessionModel?
     var currentSessionPublisher: Published<TripSessionModel?>.Publisher { $currentSession }
+
+    @Published private(set) var status: TripRecordingStatus = .idle
 
     var recordingState: any TripRecordingStateProtocol
     var onTripSaved: (() -> Void)?
@@ -35,7 +40,6 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
     }
 
     private func bindSession() {
-        print("[TripTrackingService] bindSession triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         $currentSession
             .sink { [weak self] session in
                 self?.recordingState.update(with: session)
@@ -44,7 +48,6 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
     }
 
     private func configureLocationManager() {
-        print("[TripTrackingService] configureLocationManager triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         locationManager.delegate = self
         locationManager.requestAlwaysAuthorization()
         locationManager.activityType = .automotiveNavigation
@@ -55,91 +58,73 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
     }
 
     private func wireMovementCallbacks() {
-        print("[TripTrackingService] wireMovementCallbacks triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
-
-        movementMonitor.onShouldStartTrip = { [weak self] in
-            print("[TripTrackingService] onShouldStartTrip triggered")
-            self?.startRecording()
-        }
-
-        movementMonitor.onShouldPauseTrip = { [weak self] in
-            print("[TripTrackingService] onShouldPauseTrip triggered")
-            self?.recordingState.startPauseCountdown(duration: 600)
-            print("[TripTrackingService] isPaused after trigger: \(self?.recordingState.isPaused ?? false)")
-        }
-
-        movementMonitor.onShouldResumeTrip = { [weak self] in
-            print("[TripTrackingService] onShouldResumeTrip triggered")
-            self?.recordingState.cancelPauseCountdown()
-            print("[TripTrackingService] isPaused after cancel: \(self?.recordingState.isPaused ?? false)")
-        }
+        movementMonitor.onShouldStartTrip = { [weak self] in self?.startRecording() }
+        movementMonitor.onShouldPauseTrip = { [weak self] in self?.pauseTracking() }
+        movementMonitor.onShouldResumeTrip = { [weak self] in self?.resumeTracking() }
+        movementMonitor.onShouldStopTrip = { [weak self] in self?.stopRecording() }
     }
 
-
     func startRecording() {
-        guard !recordingState.isRecording else {
-            print("[TripTrackingService] startRecording ignored – already recording") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
-            return
-        }
-
-        print("[TripTrackingService] startRecording triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
+        guard !recordingState.isRecording else { return }
         lifecycleManager.startSession()
         currentSession = lifecycleManager.currentSession
         pathRecorder.reset()
-        locationManager.startUpdatingLocation()
+        recordingState.setRecording(true)
+        status = .recording
     }
 
     func stopRecording() {
-        print("[TripTrackingService] stopRecording triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         lifecycleManager.stopSession()
-        guard var trip = lifecycleManager.currentSession else {
-            print("[TripTrackingService] stopRecording aborted – no active session") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
-            return
-        }
+        guard var trip = lifecycleManager.currentSession else { return }
+
         recordingState.cancelPauseCountdown()
+        recordingState.setRecording(false)
+        status = .idle
+
         trip.path = pathRecorder.coordinates
         trip.distance = computeTotalDistance(for: trip.path)
         currentSession = nil
-        locationManager.stopUpdatingLocation()
+
         persistenceManager.save(trip)
         onTripSaved?()
+
+        startPassiveMonitoring()
+    }
+
+    func pauseTracking() {
+        recordingState.startPauseCountdown(duration: 600)
+        recordingState.setRecording(false)
+        status = .paused
+    }
+
+    private func resumeTracking() {
+        recordingState.cancelPauseCountdown()
+        recordingState.setRecording(true)
+        status = .recording
     }
 
     func startPassiveMonitoring() {
-        print("[TripTrackingService] startPassiveMonitoring triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         movementMonitor.startPassiveMonitoring()
         locationManager.startUpdatingLocation()
     }
 
     func updateAnalyzerThresholds(speed: Double, distance: Double) {
-        print("[TripTrackingService] updateAnalyzerThresholds triggered with speed: \(speed), distance: \(distance)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
         movementMonitor.updateThresholds(speed: speed, distance: distance)
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else {
-            print("[TripTrackingService] no valid location received") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
-            return
-        }
-
+        guard let location = locations.last else { return }
         movementMonitor.analyze(location: location)
 
-        guard currentSession != nil else {
-            print("[TripTrackingService] location update ignored – no active session") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
-            return
-        }
-
-        if pathRecorder.coordinates.isEmpty {
-            print("[TripTrackingService] trip started at: \(location.coordinate)") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
-        }
+        guard recordingState.isRecording, lifecycleManager.currentSession != nil else { return }
 
         pathRecorder.append(location.coordinate)
-        
-        if var session = currentSession {
-            session.path = pathRecorder.coordinates
-            session.distance = computeTotalDistance(for: session.path)
-            currentSession = session
-        }
+
+        guard let active = lifecycleManager.currentSession else { return }
+        var updated = active
+        updated.path = pathRecorder.coordinates
+        updated.distance = computeTotalDistance(for: updated.path)
+        currentSession = updated
     }
 
     private func computeTotalDistance(for path: [CoordinateModel]) -> Double {
@@ -154,13 +139,38 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
     }
 
     func resumeRecording(from session: TripSessionModel) {
-        print("[TripTrackingService] resumeRecording triggered")
         currentSession = session
-    }
-    
-    func clearAllTrips() {
-        print("[TripTrackingService] clearAllTrips triggered") //DEBUG PRINT STATEMENT TO BE REMOVED FOR PRODUCTION.
-        persistenceManager.clearAllTrips()
+        recordingState.setRecording(true)
+        status = .recording
     }
 
+    func clearAllTrips() {
+        persistenceManager.clearAllTrips()
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .didClearTripData, object: nil)
+        }
+    }
+    
+    #if DEBUG
+    init(
+        lifecycleManager: TripLifecycleManagingProtocol,
+        pathRecorder: TripPathRecorder,
+        persistenceManager: TripPersistenceManagingProtocol,
+        movementMonitor: MovementMonitoringProtocol,
+        recordingState: any TripRecordingStateProtocol
+
+    ) {
+        self.lifecycleManager = lifecycleManager
+        self.pathRecorder = pathRecorder
+        self.persistenceManager = persistenceManager
+        self.movementMonitor = movementMonitor
+        self.recordingState = recordingState
+        super.init()
+        bindSession()
+        configureLocationManager()
+        wireMovementCallbacks()
+    }
+    #endif
+
 }
+

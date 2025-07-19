@@ -5,6 +5,8 @@
 //  Created by Invictus Maneo on 7/13/25.
 //
 
+// TripRecordingState.swift
+
 import Foundation
 
 final class TripRecordingState: TripRecordingStateProtocol, ObservableObject {
@@ -97,6 +99,12 @@ final class TripRecordingState: TripRecordingStateProtocol, ObservableObject {
             self.pauseExpiresAt = nil
             self.remainingPauseTime = 0
             self.isPaused = false
+        }
+    }
+
+    func setRecording(_ active: Bool) {
+        DispatchQueue.main.async {
+            self.isRecording = active
         }
     }
 

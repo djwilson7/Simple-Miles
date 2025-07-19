@@ -41,6 +41,11 @@ struct LiveLocationMapView: UIViewRepresentable {
     func updateUIView(_ uiView: MKMapView, context: Context) {
         drawLivePath(on: uiView)
 
+        // Always re-enable follow mode after UI updates
+        if uiView.userTrackingMode != .follow {
+            uiView.setUserTrackingMode(.follow, animated: true)
+        }
+
         if let userLocation = uiView.userLocation.location {
             print("[LiveLocationMapView] - user location: ", userLocation.coordinate)
         } else {
@@ -57,11 +62,6 @@ struct LiveLocationMapView: UIViewRepresentable {
 
         let polyline = TripOverlayRenderer.polyline(from: viewModel.pathPoints)
         mapView.addOverlay(polyline)
-
-        if let last = viewModel.pathPoints.last?.clLocationCoordinate {
-            let region = MKCoordinateRegion(center: last, latitudinalMeters: 500, longitudinalMeters: 500)
-            mapView.setRegion(region, animated: true)
-        }
     }
 
     final class Coordinator: NSObject, MKMapViewDelegate {

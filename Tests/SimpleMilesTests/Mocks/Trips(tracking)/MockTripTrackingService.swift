@@ -1,4 +1,3 @@
-//
 //  MockTripTrackingService.swift
 //  SimpleMiles
 //
@@ -6,6 +5,7 @@
 //
 
 import Combine
+import CoreLocation
 @testable import SimpleMiles
 
 final class MockTripTrackingService: TripTrackingServiceProtocol {
@@ -13,13 +13,15 @@ final class MockTripTrackingService: TripTrackingServiceProtocol {
     var currentSessionPublisher: Published<TripSessionModel?>.Publisher { $currentSession }
 
     var recordingState: any TripRecordingStateProtocol = MockTripRecordingState()
+    var status: TripRecordingStatus = .idle
+
     var onTripSaved: (() -> Void)?
 
     private(set) var didStartRecording = false
     private(set) var didStopRecording = false
     private(set) var didClearTrips = false
     private(set) var didStartPassiveMonitoring = false
-    private(set) var receivedThresholds: (speed: Double, distance: Double)?
+    private(set) var receivedThresholds: (speed: Double, distance: CLLocationDistance)?
     private(set) var resumedSession: TripSessionModel?
 
     func startRecording() {
@@ -38,7 +40,7 @@ final class MockTripTrackingService: TripTrackingServiceProtocol {
         didStartPassiveMonitoring = true
     }
 
-    func updateAnalyzerThresholds(speed: Double, distance: Double) {
+    func updateAnalyzerThresholds(speed: Double, distance: CLLocationDistance) {
         receivedThresholds = (speed, distance)
     }
 
@@ -46,7 +48,8 @@ final class MockTripTrackingService: TripTrackingServiceProtocol {
         resumedSession = session
     }
 
-    func publishSession(_ session: TripSessionModel) {
+    // Helper for tests: manually publish a session change.
+    func publishSession(_ session: TripSessionModel?) {
         currentSession = session
     }
 }

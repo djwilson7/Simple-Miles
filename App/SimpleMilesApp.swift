@@ -20,12 +20,13 @@ struct SimpleMilesApp: App {
     
     var body: some Scene {
         WindowGroup {
-            DeveloperPanelView(
-                viewModel: DeveloperPanelViewModel(
-                    tripService: TripTrackingService.shared,
-                    exportViewModel: TripExportViewModel()
-                )
-            )
+            MainMapView()
+//            DeveloperPanelView(
+//                viewModel: DeveloperPanelViewModel(
+//                    tripService: TripTrackingService.shared,
+//                    exportViewModel: TripExportViewModel()
+//                )
+//            )
 //            if isLoggedIn {
 //                ContentView()
 //            } else {
