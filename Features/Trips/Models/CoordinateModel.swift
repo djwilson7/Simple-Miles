@@ -28,4 +28,8 @@ struct CoordinateModel: Codable, Hashable {
         self.latitude = latitude
         self.longitude = longitude
     }
+    
+    var locationCoordinate: CLLocationCoordinate2D {
+            CLLocationCoordinate2D(latitude: self.latitude, longitude: self.longitude)
+        }
 }

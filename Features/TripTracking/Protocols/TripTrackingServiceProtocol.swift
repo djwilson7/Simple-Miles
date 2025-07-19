@@ -7,6 +7,7 @@ protocol TripTrackingServiceProtocol: AnyObject {
     var recordingState: any TripRecordingStateProtocol { get }
     var status: TripRecordingStatus { get } // ✅ Add this line
     var onTripSaved: (() -> Void)? { get set }
+    var statusPublisher: Published<TripRecordingStatus>.Publisher { get }
 
     func startRecording()
     func stopRecording()

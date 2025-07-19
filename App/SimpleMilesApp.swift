@@ -11,27 +11,17 @@ import FirebaseCore
 @main
 struct SimpleMilesApp: App {
     @AppStorage("isLoggedIn") var isLoggedIn = false
+    let tripNotifier = TripStatusNotifier()
     
     init() {
         FirebaseApp.configure()
         print("[App] Simple_MilesApp launched")
         TripTrackingService.shared.startPassiveMonitoring()
     }
-    
+
     var body: some Scene {
         WindowGroup {
-            MainMapView()
-//            DeveloperPanelView(
-//                viewModel: DeveloperPanelViewModel(
-//                    tripService: TripTrackingService.shared,
-//                    exportViewModel: TripExportViewModel()
-//                )
-//            )
-//            if isLoggedIn {
-//                ContentView()
-//            } else {
-//                LoginView()
-//            }
+            MapContainerView(viewModel: MapContainerViewModel())
         }
     }
 }

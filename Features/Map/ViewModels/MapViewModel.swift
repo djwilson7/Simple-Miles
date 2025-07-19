@@ -1,17 +1,15 @@
-//
-//  MapViewModel.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/14/25.
-//
-
 import Foundation
 import Combine
 import CoreLocation
+import MapKit
+import SwiftUI
 
 final class MapViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var pathPoints: [CoordinateModel] = []
     @Published var currentLocation: CLLocation?
+    @Published var cameraPosition: MapCameraPosition
+    @Published var autoFollowEnabled: Bool = false
+    @Published var manualRecenterRequested: Bool = false
 
     private let sessionStore: TripSessionStoringProtocol
     private let tripTrackingService: TripTrackingServiceProtocol
@@ -24,9 +22,12 @@ final class MapViewModel: NSObject, ObservableObject, CLLocationManagerDelegate 
     ) {
         self.sessionStore = sessionStore
         self.tripTrackingService = tripTrackingService
+        self.cameraPosition = .automatic
         super.init()
         bindLiveSession()
+        bindTripStatus()
         configureLocationManager()
+        bindLocationToCamera()
     }
 
     func requestLocationPermission() {
@@ -37,17 +38,75 @@ final class MapViewModel: NSObject, ObservableObject, CLLocationManagerDelegate 
         locationManager.startUpdatingLocation()
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let latest = locations.last else { return }
-        DispatchQueue.main.async {
-            self.currentLocation = latest
+    func recenter() {
+        guard let location = currentLocation else { return }
+        autoFollowEnabled = true
+        withAnimation {
+            self.cameraPosition = .camera(
+                MapCamera(
+                    centerCoordinate: location.coordinate,
+                    distance: 500,
+                    heading: 0,
+                    pitch: 0
+                )
+            )
         }
     }
 
     private func configureLocationManager() {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 10 // meters
+        locationManager.distanceFilter = 10
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let latest = locations.last else { return }
+        DispatchQueue.main.async {
+            if self.currentLocation == nil {
+                self.cameraPosition = .camera(
+                    MapCamera(
+                        centerCoordinate: latest.coordinate,
+                        distance: 500,
+                        heading: 0,
+                        pitch: 0
+                    )
+                )
+            }
+
+            self.currentLocation = latest
+        }
+    }
+
+    private func bindLocationToCamera() {
+        $currentLocation
+            .compactMap { $0 }
+            .sink { [weak self] location in
+                guard let self = self, self.autoFollowEnabled else { return }
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    self.cameraPosition = .camera(
+                        MapCamera(
+                            centerCoordinate: location.coordinate,
+                            distance: 500,
+                            heading: 0,
+                            pitch: 0
+                        )
+                    )
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func bindTripStatus() {
+        tripTrackingService.statusPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                guard let self = self else { return }
+                if status == .recording {
+                    self.autoFollowEnabled = true
+                    self.recenter()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func loadPathPoints(filter type: TripType? = nil) {

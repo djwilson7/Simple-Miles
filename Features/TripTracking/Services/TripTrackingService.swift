@@ -15,6 +15,7 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
 
     var recordingState: any TripRecordingStateProtocol
     var onTripSaved: (() -> Void)?
+    var statusPublisher: Published<TripRecordingStatus>.Publisher { $status }
 
     private let locationManager = CLLocationManager()
     private var cancellables = Set<AnyCancellable>()
@@ -71,6 +72,7 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
         pathRecorder.reset()
         recordingState.setRecording(true)
         status = .recording
+        NotificationCenter.default.post(name: .tripDidStart, object: nil)
     }
 
     func stopRecording() {
@@ -89,18 +91,21 @@ final class TripTrackingService: NSObject, CLLocationManagerDelegate, TripTracki
         onTripSaved?()
 
         startPassiveMonitoring()
+        NotificationCenter.default.post(name: .tripDidEnd, object: nil)
     }
 
     func pauseTracking() {
         recordingState.startPauseCountdown(duration: 600)
         recordingState.setRecording(false)
         status = .paused
+        NotificationCenter.default.post(name: .tripDidPause, object: nil)
     }
 
     private func resumeTracking() {
         recordingState.cancelPauseCountdown()
         recordingState.setRecording(true)
         status = .recording
+        NotificationCenter.default.post(name: .tripDidResume, object: nil)
     }
 
     func startPassiveMonitoring() {
