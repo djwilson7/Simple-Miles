@@ -1,22 +1,17 @@
-//
-//  ClassificationSettings.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/14/25.
-//
-
 import Foundation
-import Combine
 
 final class ClassificationSettings: ClassificationSettingsProtocol {
-    @Published var defaultTripType: TripType {
-        didSet { store.set(.defaultTripType, value: defaultTripType.rawValue) }
-    }
+    @Published var defaultTripType: TripType
+    @Published var businessModeEnabled: Bool
+    @Published var useProbabilisticTagging: Bool
+    @Published var classificationMode: ClassificationMode
+    @Published var customLabels: [String]
 
-    private let store: SettingsStoring
-
-    init(store: SettingsStoring) {
-        self.store = store
-        defaultTripType = store.getEnum(.defaultTripType, default: .unclassified)
+    init(store: SettingsStoreProtocol) {
+        self.defaultTripType = store.defaultTripType
+        self.businessModeEnabled = store.businessModeEnabled
+        self.useProbabilisticTagging = store.useProbabilisticTagging
+        self.classificationMode = store.classificationMode
+        self.customLabels = store.customLabels
     }
 }

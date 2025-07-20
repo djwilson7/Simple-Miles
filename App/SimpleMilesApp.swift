@@ -16,7 +16,7 @@ struct SimpleMilesApp: App {
     init() {
         FirebaseApp.configure()
         print("[App] Simple_MilesApp launched")
-        TripTrackingService.shared.startPassiveMonitoring()
+        LocationService.shared.initialize()
     }
 
     var body: some Scene {

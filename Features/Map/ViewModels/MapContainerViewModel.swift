@@ -24,7 +24,7 @@ final class MapContainerViewModel: ObservableObject {
     var onShare: (() -> Void)?
     var onSettings: (() -> Void)?
     var onSummary: (() -> Void)?
-
+    
     // MARK: - Internal
 
     private var cancellables = Set<AnyCancellable>()
@@ -49,6 +49,8 @@ final class MapContainerViewModel: ObservableObject {
         let seconds = Int(remainingPauseTime) % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
+
+
 
     // MARK: - Init
 
@@ -125,4 +127,5 @@ final class MapContainerViewModel: ObservableObject {
     func summaryTapped() {
         onSummary?()
     }
+
 }

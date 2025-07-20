@@ -8,23 +8,31 @@
 import Foundation
 
 enum SettingsKey: String, CaseIterable {
-    // Recording
-    case autoStartEnabled
-    case autoStopEnabled
+    // MARK: - Recording
     case motionSensitivity
+    case pauseDuration
+    case minimumTripDistance
+    case baseSpeedThreshold
+    case baseDistanceThreshold
 
-    // Display
+    // MARK: - Display
     case distanceUnit
     case timeFormat
+    case primaryColorTheme
+    case secondaryColorTheme
 
-    // Export
-    case defaultExportFormat
+    // MARK: - Export
     case includeRawCoordinates
+    case exportFieldOptions
     case defaultExportFileNamePrefix
 
-    // Classification
+    // MARK: - Classification
     case defaultTripType
-    
-    // Data Privacy
+    case businessModeEnabled
+    case useProbabilisticTagging
+    case classificationMode
+    case customLabels
+
+    // MARK: - Data Privacy
     case privacyConsentLevel
 }

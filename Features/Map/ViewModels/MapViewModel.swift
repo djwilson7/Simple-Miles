@@ -4,85 +4,79 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
-final class MapViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
+final class MapViewModel: NSObject, ObservableObject {
     @Published var pathPoints: [CoordinateModel] = []
     @Published var currentLocation: CLLocation?
     @Published var cameraPosition: MapCameraPosition
     @Published var autoFollowEnabled: Bool = false
     @Published var manualRecenterRequested: Bool = false
+    @Published var currentHeading: CLLocationDirection = 0
+    @Published private(set) var lastCamera: MapCamera? = nil
+        
+    enum MapOrientationMode {
+        case northUp
+        case headingUp
+        case free
+    }
+
+    @Published var orientationMode: MapOrientationMode = .northUp
+    
+    var locationIconName: String {
+        switch orientationMode {
+        case .northUp:
+            return "location.north.line"
+        case .headingUp:
+            return "location.north.line.fill"
+        case .free:
+            return "circle.fill"
+        }
+    }
 
     private let sessionStore: TripSessionStoringProtocol
     private let tripTrackingService: TripTrackingServiceProtocol
+    private let locationService: LocationServiceProtocol
     private var cancellables = Set<AnyCancellable>()
-    private let locationManager = CLLocationManager()
+
+    var mapHeading: CLLocationDirection {
+        lastCamera?.heading ?? 0
+    }
 
     init(
         sessionStore: TripSessionStoringProtocol = TripSessionStore(),
-        tripTrackingService: TripTrackingServiceProtocol = TripTrackingService.shared
+        tripTrackingService: TripTrackingServiceProtocol = TripTrackingService.shared,
+        locationService: LocationServiceProtocol = LocationService.shared
     ) {
         self.sessionStore = sessionStore
         self.tripTrackingService = tripTrackingService
+        self.locationService = locationService
         self.cameraPosition = .automatic
         super.init()
         bindLiveSession()
         bindTripStatus()
-        configureLocationManager()
-        bindLocationToCamera()
-    }
-
-    func requestLocationPermission() {
-        locationManager.requestWhenInUseAuthorization()
-    }
-
-    func startTracking() {
-        locationManager.startUpdatingLocation()
+        bindLocationStream()
     }
 
     func recenter() {
         guard let location = currentLocation else { return }
+
         autoFollowEnabled = true
-        withAnimation {
-            self.cameraPosition = .camera(
-                MapCamera(
-                    centerCoordinate: location.coordinate,
-                    distance: 500,
-                    heading: 0,
-                    pitch: 0
-                )
-            )
+
+        if orientationMode == .free {
+            orientationMode = .headingUp
+        } else {
+            orientationMode = (orientationMode == .headingUp) ? .northUp : .headingUp
         }
+
+        updateCameraPosition(to: location.coordinate)
     }
 
-    private func configureLocationManager() {
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 10
-    }
-
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let latest = locations.last else { return }
-        DispatchQueue.main.async {
-            if self.currentLocation == nil {
-                self.cameraPosition = .camera(
-                    MapCamera(
-                        centerCoordinate: latest.coordinate,
-                        distance: 500,
-                        heading: 0,
-                        pitch: 0
-                    )
-                )
-            }
-
-            self.currentLocation = latest
-        }
-    }
-
-    private func bindLocationToCamera() {
-        $currentLocation
-            .compactMap { $0 }
+    private func bindLocationStream() {
+        locationService.locationPublisher
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] location in
-                guard let self = self, self.autoFollowEnabled else { return }
-                withAnimation(.easeInOut(duration: 0.5)) {
+                guard let self else { return }
+
+                if self.currentLocation == nil {
                     self.cameraPosition = .camera(
                         MapCamera(
                             centerCoordinate: location.coordinate,
@@ -92,21 +86,58 @@ final class MapViewModel: NSObject, ObservableObject, CLLocationManagerDelegate 
                         )
                     )
                 }
+
+                self.currentLocation = location
+
+                if self.autoFollowEnabled {
+                    if self.orientationMode != .free {
+                        self.updateCameraPosition(to: location.coordinate)
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            self.cameraPosition = .automatic
+                        }
+                    }
+                }
             }
             .store(in: &cancellables)
+
+        locationService.headingPublisher
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$currentHeading)
     }
 
     private func bindTripStatus() {
         tripTrackingService.statusPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
-                guard let self = self else { return }
                 if status == .recording {
-                    self.autoFollowEnabled = true
-                    self.recenter()
+                    self?.autoFollowEnabled = true
                 }
             }
             .store(in: &cancellables)
+    }
+
+    private func updateCameraPosition(to coordinate: CLLocationCoordinate2D) {
+        switch orientationMode {
+        case .headingUp, .northUp:
+            let heading = (orientationMode == .headingUp) ? currentHeading : 0
+            let camera = MapCamera(
+                centerCoordinate: coordinate,
+                distance: 500,
+                heading: heading,
+                pitch: 0
+            )
+            withAnimation(.easeInOut(duration: 0.5)) {
+                self.cameraPosition = .camera(camera)
+                self.lastCamera = camera
+            }
+
+        case .free:
+            withAnimation(.easeInOut(duration: 0.5)) {
+                self.cameraPosition = .automatic
+                self.lastCamera = nil
+            }
+        }
     }
 
     func loadPathPoints(filter type: TripType? = nil) {

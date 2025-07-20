@@ -4,6 +4,8 @@ import MapKit
 struct MapContainerView: View {
     @StateObject var viewModel: MapContainerViewModel
     @StateObject private var mapViewModel = MapViewModel()
+    @State private var showSettingsModal = false
+    @StateObject private var settingsViewModel = SettingsViewModel()
 
     @State private var statusBarHeight: CGFloat = 0
 
@@ -45,8 +47,12 @@ struct MapContainerView: View {
             viewModel.onRecenter = {
                 mapViewModel.recenter()
             }
-            mapViewModel.requestLocationPermission()
-            mapViewModel.startTracking()
+        }
+        .overlay {
+            SettingsOverlayModalView(
+                viewModel: settingsViewModel,
+                isVisible: $showSettingsModal
+            )
         }
     }
 
@@ -150,7 +156,7 @@ struct MapContainerView: View {
         Button(action: {
             viewModel.recenterTapped()
         }) {
-            Image(systemName: "location.fill")
+            Image(systemName: mapViewModel.locationIconName)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(12)
@@ -176,7 +182,7 @@ struct MapContainerView: View {
 
     private var settingsButton: some View {
         Button(action: {
-            viewModel.settingsTapped()
+            showSettingsModal = true
         }) {
             Image(systemName: "gearshape")
                 .font(.system(size: 18, weight: .semibold))
@@ -201,4 +207,8 @@ struct MapContainerView: View {
                 .shadow(radius: 4)
         }
     }
+}
+
+#Preview {
+    MapContainerView(viewModel: MapContainerViewModel())
 }

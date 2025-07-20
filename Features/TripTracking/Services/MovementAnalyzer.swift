@@ -10,6 +10,8 @@ import CoreLocation
 
 struct MovementAnalyzer: MovementAnalyzerProtocol {
     var speedThreshold: CLLocationSpeed = 2.5
+    
+
     var distanceThreshold: CLLocationDistance = 50.0
     
     private let idleThreshold: TimeInterval = 60.0

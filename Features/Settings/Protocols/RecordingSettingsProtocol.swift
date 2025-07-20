@@ -1,13 +1,10 @@
-//
-//  RecordingSettingsProtocol.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/16/25.
-//
 import Foundation
+import CoreLocation
 
 protocol RecordingSettingsProtocol: ObservableObject {
-    var autoStartEnabled: Bool { get set }
-    var autoStopEnabled: Bool { get set }
     var motionSensitivity: MotionSensitivityLevel { get set }
+    var pauseDuration: TimeInterval { get set }
+    var minimumTripDistance: Double { get set }
+    var baseSpeedThreshold: CLLocationSpeed { get set }
+    var baseDistanceThreshold: CLLocationDistance { get set }
 }
