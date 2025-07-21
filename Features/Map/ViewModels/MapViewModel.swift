@@ -19,6 +19,7 @@ final class MapViewModel: NSObject, ObservableObject {
     @Published var displayedArrowRotation: CLLocationDirection = 0
 
     private var hasInitializedHeading = false
+    private var lastOrientationMode: MapOrientationMode = .northUp
 
     var trueHeading: CLLocationDirection {
         arrowHeadingStore.trueHeading
@@ -110,7 +111,20 @@ final class MapViewModel: NSObject, ObservableObject {
         )
         print("[MapViewModel] OrientationResolver - user: \(trueHeading), cam: \(camera.heading), arrow: \(arrowRotation)")
         print("Arrow: user \(trueHeading), cam \(camera.heading), result \(arrowRotation)")
-        self.cameraPosition = .camera(MapCamera(centerCoordinate: camera.centerCoordinate, distance: camera.altitude, heading: camera.heading, pitch: camera.pitch))
+
+        let newCameraPosition = MapCamera(centerCoordinate: camera.centerCoordinate, distance: camera.altitude, heading: camera.heading, pitch: camera.pitch)
+
+        if (cameraController.orientationMode == .headingUp && lastOrientationMode == .northUp) ||
+           (cameraController.orientationMode == .northUp && lastOrientationMode == .headingUp) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                self.cameraPosition = .camera(newCameraPosition)
+            }
+        } else {
+            self.cameraPosition = .camera(newCameraPosition)
+        }
+
+        self.lastOrientationMode = cameraController.orientationMode
+
         print("[MapViewModel] Camera updated: \(camera)")
         self.lastCamera = MapCamera(centerCoordinate: camera.centerCoordinate, distance: camera.altitude, heading: camera.heading, pitch: camera.pitch)
         // Normalize heading delta to prevent sharp jumps near 360/0 transition
@@ -190,7 +204,9 @@ final class MapViewModel: NSObject, ObservableObject {
 
                 print("[MapViewModel] OrientationStateUpdate → headingPublisher update. autoFollow: \(self.autoFollowEnabled), orientationMode: \(self.cameraController.orientationMode)")
                 switch self.cameraController.orientationMode {
-                case .headingUp, .northUp:
+                case .headingUp:
+                    self.updateCameraPosition(to: self.currentLocation?.coordinate ?? .init())
+                case .northUp:
                     if self.autoFollowEnabled || !self.hasInitializedHeading {
                         self.hasInitializedHeading = true
                         self.updateCameraPosition(to: self.currentLocation?.coordinate ?? .init())
