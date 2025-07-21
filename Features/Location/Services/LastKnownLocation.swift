@@ -9,6 +9,7 @@ final class LastKnownLocationStore {
 
     func update(_ location: CLLocation) {
         cachedLocation = location
+        persist()
     }
 
     func persist() {

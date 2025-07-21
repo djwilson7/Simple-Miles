@@ -27,37 +27,29 @@ struct MapView: View {
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: []))
             .edgesIgnoringSafeArea(.all)
-            .onMapCameraChange(frequency: .onEnd) { (context: MapCameraUpdateContext) in
-                let center = context.camera.centerCoordinate
-                let span = MKCoordinateSpan(
-                    latitudeDelta: context.camera.distance / 111_000,
-                    longitudeDelta: context.camera.distance / 111_000
-                )
-                let region = MKCoordinateRegion(center: center, span: span)
-                viewModel.updateZoomRegion(region)
+            .onMapCameraChange(frequency: .continuous) { context in
+                viewModel.updateUserDefinedHeadingIfRotating(context.camera.heading)
                 viewModel.transitionToUserDefinedIfRotated(currentCameraHeading: context.camera.heading)
             }
-            .onMapCameraChange(frequency: .continuous) { (context: MapCameraUpdateContext) in
-                viewModel.transitionToUserDefinedIfRotated(currentCameraHeading: context.camera.heading)
-            }
+            
             .simultaneousGesture(
                 TapGesture()
                     .onEnded {
                         viewModel.autoFollowEnabled = false
-                        viewModel.orientationMode = .free
+                        viewModel.cameraController.setOrientationMode(.free)
                     }
                     .exclusively(before:
                         DragGesture()
                             .onChanged { _ in
                                 viewModel.autoFollowEnabled = false
-                                viewModel.orientationMode = .free
+                                viewModel.cameraController.setOrientationMode(.free)
                             }
                     )
                     .exclusively(before:
                         LongPressGesture(minimumDuration: 0.05)
                             .onEnded { _ in
                                 viewModel.autoFollowEnabled = false
-                                viewModel.orientationMode = .free
+                                viewModel.cameraController.setOrientationMode(.free)
                             }
                     )
             )
