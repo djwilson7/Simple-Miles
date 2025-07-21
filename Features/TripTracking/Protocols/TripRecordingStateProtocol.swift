@@ -1,10 +1,3 @@
-//
-//  TriprecordingStateProtocol.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/16/25.
-//
-
 import Foundation
 import Combine
 
@@ -20,6 +13,8 @@ protocol TripRecordingStateProtocol: AnyObject, ObservableObject {
 
     var publisherValues: TripRecordingStatePublishers { get }
 
+    var onPauseTimeout: (() -> Void)? { get set } // ✅ Newly added
+
     func update(with session: TripSessionModel?)
     func reset()
     func startTimer()
@@ -27,6 +22,5 @@ protocol TripRecordingStateProtocol: AnyObject, ObservableObject {
     func startPauseCountdown(duration: TimeInterval)
     func resetPauseCountdown(duration: TimeInterval)
     func cancelPauseCountdown()
-    func setRecording(_ active: Bool) // ✅ Newly added
+    func setRecording(_ active: Bool)
 }
-

@@ -47,15 +47,22 @@ final class SettingsStore: SettingsStoreProtocol {
         set { set(.timeFormat, value: newValue.rawValue) }
     }
 
-    var primaryColorTheme: ColorTheme {
-        get { getEnum(.primaryColorTheme, default: .system) }
-        set { set(.primaryColorTheme, value: newValue.rawValue) }
+    var systemColorTheme: SystemColorTheme {
+        get { getEnum(.systemColorTheme, default: .system) }
+        set { set(.systemColorTheme, value: newValue.rawValue) }
     }
 
-    var secondaryColorTheme: ColorTheme {
-        get { getEnum(.secondaryColorTheme, default: .system) }
-        set { set(.secondaryColorTheme, value: newValue.rawValue) }
+    var accessibilityColorTheme: AccessibilityColorTheme {
+        get { getEnum(.accessibilityColorTheme, default: .normal) }
+        set { set(.accessibilityColorTheme, value: newValue.rawValue) }
     }
+
+    var appColorTheme: AppColorTheme {
+        get { getEnum(.appColorTheme, default: .classic) }
+        set { set(.appColorTheme, value: newValue.rawValue) }
+    }
+
+
 
     // MARK: - Export
     var includeRawCoordinates: Bool {

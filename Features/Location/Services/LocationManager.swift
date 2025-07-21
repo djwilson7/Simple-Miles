@@ -1,3 +1,5 @@
+// LocationService.swift
+
 import Foundation
 import CoreLocation
 import Combine
@@ -8,6 +10,7 @@ final class LocationService: NSObject, LocationServiceProtocol, CLLocationManage
     private let locationManager = CLLocationManager()
     private let locationSubject = PassthroughSubject<CLLocation, Never>()
     private let headingSubject = PassthroughSubject<CLLocationDirection, Never>()
+    private let lastKnownStore = LastKnownLocationStore()
 
     var locationPublisher: AnyPublisher<CLLocation, Never> {
         locationSubject.eraseToAnyPublisher()
@@ -15,6 +18,10 @@ final class LocationService: NSObject, LocationServiceProtocol, CLLocationManage
 
     var headingPublisher: AnyPublisher<CLLocationDirection, Never> {
         headingSubject.eraseToAnyPublisher()
+    }
+
+    var lastKnownLocation: CLLocation? {
+        lastKnownStore.latestLocation
     }
 
     private override init() {
@@ -27,51 +34,55 @@ final class LocationService: NSObject, LocationServiceProtocol, CLLocationManage
     }
 
     func initialize() {
-        print("[Location Manager] - initialize() called")
         locationManager.requestWhenInUseAuthorization()
-        print("[Location Manager] - Requested When In Use Authorization")
         locationManager.requestAlwaysAuthorization()
-        print("[Location Manager] - Requested Always Authorization")
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.pausesLocationUpdatesAutomatically = false
         locationManager.startUpdatingLocation()
+
+        if let current = locationManager.location {
+            locationSubject.send(current)
+            lastKnownStore.update(current)
+        } else if let last = lastKnownStore.latestLocation {
+            locationSubject.send(last)
+        }
+
         locationManager.startUpdatingHeading()
-        print("[Location Manager] - Started Location and Heading Updates")
+        locationManager.requestLocation()
     }
 
     func stopTracking() {
         locationManager.stopUpdatingLocation()
         locationManager.stopUpdatingHeading()
-        print("[Location Manager] - Stopped Location and Heading Updates")
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let latest = locations.last else { return }
         locationSubject.send(latest)
-        print("[Location Manager] - Location Update: Lat(\(latest.coordinate.latitude)), Lon(\(latest.coordinate.longitude))")
+        lastKnownStore.update(latest)
 
         if latest.course >= 0 {
             headingSubject.send(latest.course)
-            print("[Location Manager] - Course Heading Update: \(latest.course)")
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         let heading = newHeading.trueHeading > 0 ? newHeading.trueHeading : newHeading.magneticHeading
         headingSubject.send(heading)
-        print("[Location Manager] - Compass Heading Update: \(heading)")
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        print("[Location Manager] - Authorization Changed: \(manager.authorizationStatus.rawValue)")
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             locationManager.startUpdatingLocation()
             locationManager.startUpdatingHeading()
-            print("[Location Manager] - Authorized, starting location + heading updates")
         case .notDetermined:
             locationManager.requestWhenInUseAuthorization()
-            print("[Location Manager] - Authorization not determined, requesting")
         default:
-            print("[Location Manager] - Authorization denied or restricted")
+            break
         }
+    }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Location error: \(error.localizedDescription)")
     }
 }

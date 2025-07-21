@@ -1,5 +1,4 @@
 // TripTrackingService.swift
-// SimpleMiles
 
 import Foundation
 import CoreLocation
@@ -12,78 +11,92 @@ final class TripTrackingService: NSObject, TripTrackingServiceProtocol {
     var currentSessionPublisher: Published<TripSessionModel?>.Publisher { $currentSession }
 
     @Published private(set) var status: TripRecordingStatus = .idle
-    @Published var currentHeading: CLLocationDirection = 0
+    @Published private(set) var currentHeading: CLLocationDirection = 0
 
-    var recordingState: any TripRecordingStateProtocol
+    private(set) var recordingState: any TripRecordingStateProtocol
     var onTripSaved: (() -> Void)?
     var statusPublisher: Published<TripRecordingStatus>.Publisher { $status }
 
     private var cancellables = Set<AnyCancellable>()
-    private var pathRecorder = TripPathRecorder()
+    private let pathRecorder = TripPathRecorder()
     private var hasStartedPassiveMonitoring = false
 
     private let lifecycleManager: TripLifecycleManagingProtocol
     private let persistenceManager: TripPersistenceManagingProtocol
     private let movementMonitor: MovementMonitoringProtocol
     private let locationService: LocationServiceProtocol
+    private let motionService: MotionService
 
     init(
         lifecycleManager: TripLifecycleManagingProtocol = TripLifecycleManager(),
         persistenceManager: TripPersistenceManagingProtocol = TripPersistenceManager(),
         movementMonitor: MovementMonitoringProtocol = MovementMonitor(analyzer: MovementAnalyzer()),
-        locationService: LocationServiceProtocol = LocationService.shared
+        locationService: LocationServiceProtocol = LocationService.shared,
+        motionService: MotionService = MotionService.shared
     ) {
-        self.recordingState = TripRecordingState() as any TripRecordingStateProtocol
         self.lifecycleManager = lifecycleManager
         self.persistenceManager = persistenceManager
         self.movementMonitor = movementMonitor
         self.locationService = locationService
+        self.motionService = motionService
+        self.recordingState = TripRecordingState() as any TripRecordingStateProtocol
         super.init()
         bindSession()
         bindLocationUpdates()
         wireMovementCallbacks()
+        // Observe remainingPauseTime and auto-stop when it runs out while paused
+        recordingState.publisherValues.remainingPauseTime
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] remaining in
+                guard let self else { return }
+                if self.status == .paused && remaining <= 0 {
+                    self.stopRecording()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     private func bindSession() {
         $currentSession
-            .sink { [weak self] session in
+            .sink(receiveValue: { [weak self] session in
                 self?.recordingState.update(with: session)
-            }
+            })
             .store(in: &cancellables)
     }
 
     private func bindLocationUpdates() {
         locationService.locationPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] (location: CLLocation) in
+            .sink(receiveValue: { [weak self] location in
                 guard let self = self else { return }
 
-                if !self.recordingState.isRecording && !self.hasStartedPassiveMonitoring {
-                    self.hasStartedPassiveMonitoring = true
-                    self.startPassiveMonitoring()
+                if !recordingState.isRecording && !hasStartedPassiveMonitoring {
+                    hasStartedPassiveMonitoring = true
+                    startPassiveMonitoring()
                 }
 
-                self.handleLocationUpdate(location)
-            }
+                movementMonitor.updateLastLocation(location)
+
+                let coord = CoordinateModel(
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    state: self.recordingState.isRecording ? .active : .paused
+                )
+
+                pathRecorder.append(coord)
+
+                guard self.recordingState.isRecording,
+                      var session = self.lifecycleManager.currentSession else { return }
+
+                session.path = self.pathRecorder.coordinates
+                session.distance = self.computeTotalDistance(for: session.path)
+                self.currentSession = session
+            })
             .store(in: &cancellables)
 
         locationService.headingPublisher
             .receive(on: DispatchQueue.main)
             .assign(to: &$currentHeading)
-    }
-
-    private func handleLocationUpdate(_ location: CLLocation) {
-        movementMonitor.analyze(location: location)
-
-        guard recordingState.isRecording, lifecycleManager.currentSession != nil else { return }
-
-        pathRecorder.append(location.coordinate)
-
-        guard let active = lifecycleManager.currentSession else { return }
-        var updated = active
-        updated.path = pathRecorder.coordinates
-        updated.distance = computeTotalDistance(for: updated.path)
-        currentSession = updated
     }
 
     private func wireMovementCallbacks() {
@@ -117,8 +130,8 @@ final class TripTrackingService: NSObject, TripTrackingServiceProtocol {
 
         persistenceManager.save(trip)
         onTripSaved?()
-
         hasStartedPassiveMonitoring = false
+        startPassiveMonitoring()
         NotificationCenter.default.post(name: .tripDidEnd, object: nil)
     }
 
@@ -137,22 +150,17 @@ final class TripTrackingService: NSObject, TripTrackingServiceProtocol {
     }
 
     func startPassiveMonitoring() {
+        motionService.startUpdates()
         movementMonitor.startPassiveMonitoring()
-    }
-
-    func updateAnalyzerThresholds(speed: Double, distance: Double) {
-        movementMonitor.updateThresholds(speed: speed, distance: distance)
     }
 
     private func computeTotalDistance(for path: [CoordinateModel]) -> Double {
         guard path.count > 1 else { return 0 }
-        var total: Double = 0
-        for i in 1..<path.count {
-            let prev = CLLocation(latitude: path[i-1].latitude, longitude: path[i-1].longitude)
-            let next = CLLocation(latitude: path[i].latitude, longitude: path[i].longitude)
-            total += prev.distance(from: next)
+        return zip(path.dropLast(), path.dropFirst()).reduce(0) { total, pair in
+            let start = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
+            let end = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude)
+            return total + start.distance(from: end)
         }
-        return total
     }
 
     func resumeRecording(from session: TripSessionModel) {
@@ -167,26 +175,4 @@ final class TripTrackingService: NSObject, TripTrackingServiceProtocol {
             NotificationCenter.default.post(name: .didClearTripData, object: nil)
         }
     }
-
-    #if DEBUG
-    init(
-        lifecycleManager: TripLifecycleManagingProtocol,
-        pathRecorder: TripPathRecorder,
-        persistenceManager: TripPersistenceManagingProtocol,
-        movementMonitor: MovementMonitoringProtocol,
-        recordingState: any TripRecordingStateProtocol,
-        locationService: LocationServiceProtocol = LocationService.shared
-    ) {
-        self.lifecycleManager = lifecycleManager
-        self.pathRecorder = pathRecorder
-        self.persistenceManager = persistenceManager
-        self.movementMonitor = movementMonitor
-        self.recordingState = recordingState
-        self.locationService = locationService
-        super.init()
-        bindSession()
-        bindLocationUpdates()
-        wireMovementCallbacks()
-    }
-    #endif
 }

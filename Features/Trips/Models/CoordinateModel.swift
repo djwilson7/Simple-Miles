@@ -8,28 +8,33 @@
 import Foundation
 import CoreLocation
 
+enum CoordinateState: String, Codable {
+    case active
+    case paused
+}
+
 struct CoordinateModel: Codable, Hashable {
     let latitude: Double
     let longitude: Double
+    let state: CoordinateState
 
-    // Convert to CLLocationCoordinate2D (for MapKit or overlays)
     var clLocationCoordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    // Convert from CLLocationCoordinate2D
-    init(from clLocation: CLLocationCoordinate2D) {
-        self.latitude = clLocation.latitude
-        self.longitude = clLocation.longitude
+    var locationCoordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    // Default initializer
-    init(latitude: Double, longitude: Double) {
+    init(latitude: Double, longitude: Double, state: CoordinateState = .active) {
         self.latitude = latitude
         self.longitude = longitude
+        self.state = state
     }
-    
-    var locationCoordinate: CLLocationCoordinate2D {
-            CLLocationCoordinate2D(latitude: self.latitude, longitude: self.longitude)
-        }
+
+    init(from clLocation: CLLocationCoordinate2D, state: CoordinateState = .active) {
+        self.latitude = clLocation.latitude
+        self.longitude = clLocation.longitude
+        self.state = state
+    }
 }

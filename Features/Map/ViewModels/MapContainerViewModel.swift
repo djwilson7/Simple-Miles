@@ -1,10 +1,3 @@
-//
-//  MapContainerViewModel.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 7/19/25.
-//
-
 import Foundation
 import Combine
 import SwiftUI
@@ -45,12 +38,8 @@ final class MapContainerViewModel: ObservableObject {
     }
 
     var pauseCountdownFormatted: String {
-        let minutes = Int(remainingPauseTime) / 60
-        let seconds = Int(remainingPauseTime) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+        String(format: "%d:%02d", Int(remainingPauseTime) / 60, Int(remainingPauseTime) % 60)
     }
-
-
 
     // MARK: - Init
 
@@ -67,26 +56,17 @@ final class MapContainerViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .assign(to: &$tripStatus)
 
-        tripService.recordingState
-            .publisherValues.totalDistance
+        tripService.recordingState.publisherValues.totalDistance
             .receive(on: DispatchQueue.main)
-            .map { meters in
-                let miles = meters * 0.000621371
-                return String(format: "%.1f miles", miles)
-            }
+            .map { String(format: "%.1f miles", $0 * 0.000621371) }
             .assign(to: &$tripDistance)
 
-        tripService.recordingState
-            .publisherValues.elapsedTime
+        tripService.recordingState.publisherValues.elapsedTime
             .receive(on: DispatchQueue.main)
-            .map { time in
-                let minutes = Int(time / 60)
-                return "\(minutes)m"
-            }
+            .map { "\(Int($0 / 60))m" }
             .assign(to: &$tripDuration)
 
-        tripService.recordingState
-            .publisherValues.remainingPauseTime
+        tripService.recordingState.publisherValues.remainingPauseTime
             .receive(on: DispatchQueue.main)
             .assign(to: &$remainingPauseTime)
     }
@@ -99,33 +79,19 @@ final class MapContainerViewModel: ObservableObject {
         Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] now in
-                guard let self = self, self.isPaused else {
-                    startTime = Date()
+                guard let self, self.isPaused else {
+                    startTime = now
                     return
                 }
-
-                let elapsed = now.timeIntervalSince(startTime)
-                self.sweepProgress = CGFloat((elapsed.truncatingRemainder(dividingBy: 60)) / 60)
+                self.sweepProgress = CGFloat((now.timeIntervalSince(startTime).truncatingRemainder(dividingBy: 60)) / 60)
             }
             .store(in: &cancellables)
     }
 
     // MARK: - Button Events
 
-    func recenterTapped() {
-        onRecenter?()
-    }
-
-    func shareTapped() {
-        onShare?()
-    }
-
-    func settingsTapped() {
-        onSettings?()
-    }
-
-    func summaryTapped() {
-        onSummary?()
-    }
-
+    func recenterTapped() { onRecenter?() }
+    func shareTapped()    { onShare?() }
+    func settingsTapped() { onSettings?() }
+    func summaryTapped()  { onSummary?() }
 }

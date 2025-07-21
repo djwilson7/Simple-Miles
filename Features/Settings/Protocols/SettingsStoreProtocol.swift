@@ -19,8 +19,9 @@ protocol SettingsStoreProtocol {
     // MARK: - Display
     var distanceUnit: DistanceUnit { get set }
     var timeFormat: TimeFormat { get set }
-    var primaryColorTheme: ColorTheme { get set }
-    var secondaryColorTheme: ColorTheme { get set }
+    var systemColorTheme: SystemColorTheme { get set }
+    var accessibilityColorTheme: AccessibilityColorTheme { get set }
+    var appColorTheme: AppColorTheme { get set }
 
     // MARK: - Export
     var includeRawCoordinates: Bool { get set }

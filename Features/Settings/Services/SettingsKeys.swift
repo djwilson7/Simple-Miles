@@ -18,8 +18,9 @@ enum SettingsKey: String, CaseIterable {
     // MARK: - Display
     case distanceUnit
     case timeFormat
-    case primaryColorTheme
-    case secondaryColorTheme
+    case systemColorTheme
+    case accessibilityColorTheme
+    case appColorTheme
 
     // MARK: - Export
     case includeRawCoordinates

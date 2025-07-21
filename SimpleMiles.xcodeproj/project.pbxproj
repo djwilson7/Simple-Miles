@@ -31,6 +31,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		6A94EC792E2D9A51007A01E3 /* MapKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapKit.swift; sourceTree = "<group>"; };
 		6AB55A102E22CC4800DCEF27 /* TODO Backend.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "TODO Backend.md"; sourceTree = "<group>"; };
 		6AC2F4AC2E2161CA00F4064A /* SimpleMiles.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleMiles.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AC2F4B92E2161CC00F4064A /* SimpleMilesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleMilesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -130,6 +131,7 @@
 		6AC2F4A32E2161CA00F4064A = {
 			isa = PBXGroup;
 			children = (
+				6A94EC792E2D9A51007A01E3 /* MapKit.swift */,
 				6ACE7CCD2E2693E100D6F470 /* DIRECTORYREFERENCE.md */,
 				6AB55A462E22FA2100DCEF27 /* App */,
 				6AB55A442E22F9FC00DCEF27 /* Resources */,

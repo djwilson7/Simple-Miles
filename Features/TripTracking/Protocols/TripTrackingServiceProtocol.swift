@@ -12,9 +12,6 @@ protocol TripTrackingServiceProtocol: AnyObject {
     func startRecording()
     func stopRecording()
     func startPassiveMonitoring()
-    func updateAnalyzerThresholds(speed: Double, distance: CLLocationDistance)
     func resumeRecording(from session: TripSessionModel)
     func clearAllTrips()
 }
-
-

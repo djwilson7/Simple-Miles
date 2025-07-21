@@ -1,12 +1,3 @@
-//
-//  TripRecordingState.swift
-//  Simple Miles
-//
-//  Created by Invictus Maneo on 7/13/25.
-//
-
-// TripRecordingState.swift
-
 import Foundation
 
 final class TripRecordingState: TripRecordingStateProtocol, ObservableObject {
@@ -22,6 +13,8 @@ final class TripRecordingState: TripRecordingStateProtocol, ObservableObject {
 
     private var pauseCountdownTimer: Timer?
     private var timer: Timer?
+
+    var onPauseTimeout: (() -> Void)?
 
     #if DEBUG
     var debugTimer: Timer? {
@@ -118,7 +111,7 @@ final class TripRecordingState: TripRecordingStateProtocol, ObservableObject {
 
         if remaining <= 0 {
             cancelPauseCountdown()
-            TripRecorder.shared.stopTrip()
+            onPauseTimeout?()
         }
     }
 

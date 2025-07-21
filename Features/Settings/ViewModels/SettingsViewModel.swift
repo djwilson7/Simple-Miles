@@ -49,6 +49,7 @@ final class SettingsViewModel: ObservableObject {
     }
 
     // MARK: - Display Bindings
+    // MARK: - Display Bindings
     var distanceUnit: DistanceUnit {
         get { displayStore.distanceUnit }
         set { displayStore.distanceUnit = newValue; objectWillChange.send() }
@@ -59,15 +60,21 @@ final class SettingsViewModel: ObservableObject {
         set { displayStore.timeFormat = newValue; objectWillChange.send() }
     }
 
-    var primaryColorTheme: ColorTheme {
-        get { displayStore.primaryColorTheme }
-        set { displayStore.primaryColorTheme = newValue; objectWillChange.send() }
+    var systemColorTheme: SystemColorTheme {
+        get { displayStore.systemColorTheme }
+        set { displayStore.systemColorTheme = newValue; objectWillChange.send() }
     }
 
-    var secondaryColorTheme: ColorTheme {
-        get { displayStore.secondaryColorTheme }
-        set { displayStore.secondaryColorTheme = newValue; objectWillChange.send() }
+    var accessibilityColorTheme: AccessibilityColorTheme {
+        get { displayStore.accessibilityColorTheme }
+        set { displayStore.accessibilityColorTheme = newValue; objectWillChange.send() }
     }
+
+    var appColorTheme: AppColorTheme {
+        get { displayStore.appColorTheme }
+        set { displayStore.appColorTheme = newValue; objectWillChange.send() }
+    }
+
 
     // MARK: - Export Bindings
     var includeRawCoordinates: Bool {

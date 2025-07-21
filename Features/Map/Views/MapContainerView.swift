@@ -4,14 +4,13 @@ import MapKit
 struct MapContainerView: View {
     @StateObject var viewModel: MapContainerViewModel
     @StateObject private var mapViewModel = MapViewModel()
-    @State private var showSettingsModal = false
     @StateObject private var settingsViewModel = SettingsViewModel()
-
+    @State private var showSettingsModal = false
     @State private var statusBarHeight: CGFloat = 0
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            MainMapView(viewModel: mapViewModel)
+            MapView(viewModel: mapViewModel)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -34,25 +33,32 @@ struct MapContainerView: View {
                 )
         }
         .overlay(alignment: .bottomTrailing) {
-            VStack(spacing: 10) {
-                settingsButton
-                shareButton
-                summaryButton
-                recenterButton
-            }
-            .padding(.trailing, 20)
-            .padding(.bottom, statusBarHeight + 20)
-        }
-        .onAppear {
-            viewModel.onRecenter = {
-                mapViewModel.recenter()
-            }
+            controlButtons
+                .padding(.trailing, 20)
+                .padding(.bottom, statusBarHeight + 20)
         }
         .overlay {
             SettingsOverlayModalView(
                 viewModel: settingsViewModel,
                 isVisible: $showSettingsModal
             )
+        }
+        .onAppear {
+            viewModel.onRecenter = {
+                mapViewModel.recenter()
+            }
+            viewModel.onSettings = {
+                showSettingsModal = true
+            }
+        }
+    }
+
+    private var controlButtons: some View {
+        VStack(spacing: 10) {
+            settingsButton
+            shareButton
+            summaryButton
+            recenterButton
         }
     }
 
@@ -105,7 +111,7 @@ struct MapContainerView: View {
 
     private var statusBar: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .center, spacing: 2) {
+            VStack(spacing: 2) {
                 Text("Status")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -115,12 +121,11 @@ struct MapContainerView: View {
             }
             .frame(maxWidth: .infinity)
 
-            Rectangle()
-                .fill(Color.secondary.opacity(0.4))
+            Divider()
                 .frame(width: 1, height: 28)
-                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.4))
 
-            VStack(alignment: .center, spacing: 2) {
+            VStack(spacing: 2) {
                 Text("Distance")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -130,12 +135,11 @@ struct MapContainerView: View {
             }
             .frame(maxWidth: .infinity)
 
-            Rectangle()
-                .fill(Color.secondary.opacity(0.4))
+            Divider()
                 .frame(width: 1, height: 28)
-                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.4))
 
-            VStack(alignment: .center, spacing: 2) {
+            VStack(spacing: 2) {
                 Text("Trip Time")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -181,9 +185,9 @@ struct MapContainerView: View {
     }
 
     private var settingsButton: some View {
-        Button(action: {
-            showSettingsModal = true
-        }) {
+        Button {
+            viewModel.settingsTapped() // hook still available
+        } label: {
             Image(systemName: "gearshape")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.white)
@@ -208,7 +212,6 @@ struct MapContainerView: View {
         }
     }
 }
-
 #Preview {
     MapContainerView(viewModel: MapContainerViewModel())
 }
