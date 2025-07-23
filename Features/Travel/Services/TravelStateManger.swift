@@ -10,7 +10,7 @@ final class TravelStateManager: ObservableObject {
     @Published private(set) var state: TravelState = .idle
     @Published var pauseTimerInterval: TimeInterval = 120
     @Published private(set) var totalPauseTimerDuration: TimeInterval = 120
-    private let pauseTime = 20.0
+    private let pauseTime = 1200.0
     // MARK: - State Enum
     enum TravelState {
         case idle

@@ -60,7 +60,7 @@ final class DrivingStateManager: ObservableObject {
     private func resetEvaluationTimer() {
         evaluationTimer?.invalidate()
         print("[DrivingStateManager] (Timer) - Evaluation timer reset. Waiting 120s for movement before setting state to FALSE.")
-        evaluationTimer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: false) { [weak self] _ in
+        evaluationTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
             guard let self = self else { return }
             if self.state {
                 print("[DrivingStateManager] (Timer) - Timer expired with no movement detected. Transitioning to FALSE.")
