@@ -5,7 +5,6 @@ import MapKit
 import SwiftUI
 
 final class MapViewModel: NSObject, ObservableObject {
-    @Published var pathPoints: [CoordinateModel] = []
     @Published var currentLocation: CLLocation?
     @Published var cameraPosition: MapCameraPosition
     @Published var autoFollowEnabled: Bool = false
@@ -14,15 +13,13 @@ final class MapViewModel: NSObject, ObservableObject {
     @Published var currentRegion: MKCoordinateRegion?
     @Published var isUserInteracting: Bool = false
     @Published private(set) var lastCamera: MapCamera?
-    @Published var travelHeading: CLLocationDirection = 0
     @Published var displayedArrowRotation: CLLocationDirection = 0
+    @Published var currentSegment: [CLLocationCoordinate2D] = []
+    private var traceOrigin: CLLocationCoordinate2D?
 
     private var hasInitializedHeading = false
     private var lastOrientationMode: MapOrientationMode = .northUp
-
-    var trueHeading: CLLocationDirection {
-        arrowHeadingStore.trueHeading
-    }
+    private let traceStore: TripTraceStore
 
     var locationIconName: String {
         switch cameraController.orientationMode {
@@ -32,11 +29,8 @@ final class MapViewModel: NSObject, ObservableObject {
         }
     }
 
-    private let arrowHeadingStore: ArrowHeadingStore
     let cameraController = MapCameraController()
-    private let sessionStore: TripSessionStoringProtocol
-    private let tripTrackingService: TripTrackingServiceProtocol
-    private let locationService: LocationServiceProtocol
+    private let locationManager: LocationManager
     private let zoomStore: ZoomLevelStore
     private var cancellables = Set<AnyCancellable>()
 
@@ -45,17 +39,14 @@ final class MapViewModel: NSObject, ObservableObject {
     }
 
     init(
-        sessionStore: TripSessionStoringProtocol = TripSessionStore(),
-        tripTrackingService: TripTrackingServiceProtocol = TripTrackingService.shared,
-        locationService: LocationServiceProtocol = LocationService.shared,
+        locationManager: LocationManager,
         zoomStore: ZoomLevelStore = ZoomLevelStore(),
-        arrowHeadingStore: ArrowHeadingStore? = nil
+        traceStore: TripTraceStore
     ) {
-        self.sessionStore = sessionStore
-        self.tripTrackingService = tripTrackingService
-        self.locationService = locationService
+        print("[MapViewModel] (init) - Initializing map view model and binding location/heading streams")
+        self.locationManager = locationManager
         self.zoomStore = zoomStore
-        self.arrowHeadingStore = arrowHeadingStore ?? ArrowHeadingStore(headingPublisher: locationService.headingPublisher)
+        self.traceStore = traceStore
         self.cameraPosition = zoomStore.load().map { .region($0) } ?? .automatic
         super.init()
         cameraController.setOrientationMode(.northUp)
@@ -63,6 +54,7 @@ final class MapViewModel: NSObject, ObservableObject {
     }
 
     func recenter() {
+        print("[MapViewModel] (recenter) - Recenter triggered; updating camera orientation and position")
         guard let location = currentLocation else { return }
 
         autoFollowEnabled = true
@@ -79,38 +71,29 @@ final class MapViewModel: NSObject, ObservableObject {
         let span = zoomStore.load()?.span ?? MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
         let distance = span.latitudeDelta * 111_000
         updateCameraPosition(to: location.coordinate, distance: distance)
-
-        print("[MapViewModel] OrientationStateUpdate → Recenter tapped. Mode: \(next), AutoFollow: \(autoFollowEnabled)")
     }
 
     func updateZoomRegion(_ region: MKCoordinateRegion) {
+        print("[MapViewModel] (updateZoomRegion) - Zoom region updated and saved")
         zoomStore.save(region: region)
         currentRegion = region
     }
 
-    func loadPathPoints(filter type: TripType? = nil) {
-        pathPoints = sessionStore.fetchAll()
-            .filter { type == nil || $0.tripType == type }
-            .flatMap(\.path)
-    }
 
     private func updateCameraPosition(to coordinate: CLLocationCoordinate2D, distance: CLLocationDistance? = nil) {
+        //print("[MapViewModel] (updateCameraPosition) - Updating camera based on location and heading")
         guard let location = currentLocation else { return }
-        print("[MapViewModel] Updating camera position with location: \(location.coordinate)")
-
+        
         let resolvedDistance = distance ?? (zoomStore.load()?.span.latitudeDelta ?? 0.02) * 111_000
 
         let (camera, arrowRotation) = OrientationResolver.resolve(
-            userHeading: trueHeading,
-            travelHeading: travelHeading,
+            userHeading: locationManager.trueHeading,
+            travelHeading: locationManager.travelHeading,
             coordinate: coordinate,
             speed: location.speed,
             distance: resolvedDistance,
             cameraController: cameraController
         )
-        print("[MapViewModel] OrientationResolver - user: \(trueHeading), cam: \(camera.heading), arrow: \(arrowRotation)")
-        print("Arrow: user \(trueHeading), cam \(camera.heading), result \(arrowRotation)")
-
         let newCameraPosition = MapCamera(centerCoordinate: camera.centerCoordinate, distance: camera.altitude, heading: camera.heading, pitch: camera.pitch)
 
         if (cameraController.orientationMode == .headingUp && lastOrientationMode == .northUp) ||
@@ -124,7 +107,6 @@ final class MapViewModel: NSObject, ObservableObject {
 
         self.lastOrientationMode = cameraController.orientationMode
 
-        print("[MapViewModel] Camera updated: \(camera)")
         self.lastCamera = MapCamera(centerCoordinate: camera.centerCoordinate, distance: camera.altitude, heading: camera.heading, pitch: camera.pitch)
         // Normalize heading delta to prevent sharp jumps near 360/0 transition
         let rotationTarget = arrowRotation
@@ -134,12 +116,12 @@ final class MapViewModel: NSObject, ObservableObject {
         if delta < -180 { delta += 360 }
         let normalizedRotation = previous + delta
         self.displayedArrowRotation = normalizedRotation
-        print("[MapViewModel] Arrow rotation updated: \(normalizedRotation)")
     }
 
     private func updateArrowRotationOnly() {
+        //print("[MapViewModel] (updateArrowRotationOnly) - Updating rotation of travel arrow based on heading")
         if cameraController.orientationMode == .userDefinedRotation {
-            let userHeading = trueHeading
+            let userHeading = locationManager.trueHeading
             let mapHeading = cameraController.currentCameraHeading
             let rotationTarget = OrientationResolver.normalizedAngle(userHeading - mapHeading)
             let previous = displayedArrowRotation
@@ -147,15 +129,14 @@ final class MapViewModel: NSObject, ObservableObject {
             if delta > 180 { delta -= 360 }
             if delta < -180 { delta += 360 }
             self.displayedArrowRotation = previous + delta
-            print("[MapViewModel] [ArrowOnly] → delta: \(delta), updated: \(displayedArrowRotation)")
             return
         }
 
         guard let location = currentLocation else { return }
 
         let (_, arrowRotation) = OrientationResolver.resolve(
-            userHeading: trueHeading,
-            travelHeading: travelHeading,
+            userHeading: locationManager.trueHeading,
+            travelHeading: locationManager.travelHeading,
             coordinate: location.coordinate,
             speed: location.speed,
             distance: (zoomStore.load()?.span.latitudeDelta ?? 0.02) * 111_000,
@@ -167,67 +148,75 @@ final class MapViewModel: NSObject, ObservableObject {
         if delta > 180 { delta -= 360 }
         if delta < -180 { delta += 360 }
         self.displayedArrowRotation = previous + delta
-        print("[MapViewModel] [ArrowOnly] → delta: \(delta), updated: \(displayedArrowRotation)")
     }
 
     private func bindStreams() {
-        locationService.locationPublisher
+        print("[MapViewModel] (bindStreams) - Binding location and heading streams")
+        locationManager.$currentLocation
             .receive(on: DispatchQueue.main)
             .sink { [weak self] location in
-                guard let self else { return }
-                print("[MapViewModel] Received location: \(location.coordinate)")
+                guard let self, let location else { return }
+
+                print("[MapViewModel] (bindStreams - currentLocation) - Received location update: \(location.coordinate.latitude), \(location.coordinate.longitude)")
 
                 if self.currentLocation == nil {
-                    self.cameraPosition = .camera(MapCamera(centerCoordinate: location.coordinate, distance: 1500, heading: 0, pitch: 0))
-                }
-
-                if let previous = self.currentLocation {
-                    self.travelHeading = self.calculateBearing(from: previous.coordinate, to: location.coordinate)
+                    if let savedRegion = zoomStore.load() {
+                        self.cameraPosition = .region(savedRegion)
+                    } else {
+                        self.cameraPosition = .camera(MapCamera(centerCoordinate: location.coordinate, distance: 1500, heading: 0, pitch: 0))
+                    }
                 }
 
                 self.currentLocation = location
+                print("[MapViewModel] (bindStreams - currentLocation) - Updated currentLocation.")
 
-                print("[MapViewModel] OrientationStateUpdate → autoFollowEnabled: \(self.autoFollowEnabled), orientationMode: \(self.cameraController.orientationMode)")
                 if autoFollowEnabled && cameraController.orientationMode != .free {
                     updateCameraPosition(to: location.coordinate)
+                    print("[MapViewModel] (bindStreams - currentLocation) - Camera position updated.")
                 }
             }
             .store(in: &cancellables)
 
-        locationService.headingPublisher
+        locationManager.$trueHeading
             .receive(on: DispatchQueue.main)
             .sink { [weak self] heading in
+                //print("[MapViewModel] (bindStreams - trueHeading) - Received true heading: \(heading)")
                 guard let self else { return }
-                print("[MapViewModel] Received heading: \(heading)")
                 self.currentHeading = heading
+                //print("[MapViewModel] (bindStreams - trueHeading) - Updated current heading.")
 
-                print("[MapViewModel] OrientationStateUpdate → headingPublisher update. autoFollow: \(self.autoFollowEnabled), orientationMode: \(self.cameraController.orientationMode)")
                 switch self.cameraController.orientationMode {
                 case .headingUp:
                     self.updateCameraPosition(to: self.currentLocation?.coordinate ?? .init())
+                    //print("[MapViewModel] (bindStreams - trueHeading) - Camera position updated based on orientation mode.")
                 case .northUp:
                     if self.autoFollowEnabled || !self.hasInitializedHeading {
                         self.hasInitializedHeading = true
                         self.updateCameraPosition(to: self.currentLocation?.coordinate ?? .init())
+                        //print("[MapViewModel] (bindStreams - trueHeading) - Camera position updated based on orientation mode.")
                     }
                 case .userDefinedRotation:
                     self.updateCameraPosition(to: self.currentLocation?.coordinate ?? .init())
+                    //print("[MapViewModel] (bindStreams - trueHeading) - Camera position updated based on orientation mode.")
                 case .free:
                     break
                 }
                 self.updateArrowRotationOnly()
+                //print("[MapViewModel] (bindStreams - trueHeading) - Arrow rotation updated.")
             }
             .store(in: &cancellables)
 
-        tripTrackingService.currentSessionPublisher
+        traceStore.$lastSegment
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                self?.pathPoints = $0?.path ?? []
+            .sink { [weak self] segment in
+                guard let self, let segment else { return }
+                self.currentSegment = [segment.0, segment.1]
             }
             .store(in: &cancellables)
     }
 
     private func calculateBearing(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> CLLocationDirection {
+        //print("[MapViewModel] (calculateBearing) - Calculating bearing between two coordinates")
         let fromLat = from.latitude.degreesToRadians
         let fromLon = from.longitude.degreesToRadians
         let toLat = to.latitude.degreesToRadians
@@ -243,12 +232,12 @@ final class MapViewModel: NSObject, ObservableObject {
     }
 
     func handleUserRotation(to heading: CLLocationDirection) {
+        //print("[MapViewModel] (handleUserRotation) - User rotated map manually; updating camera and disabling auto-follow")
         cameraController.updateUserDefinedCameraHeading(heading)
 
         if cameraController.orientationMode != .userDefinedRotation {
             cameraController.setOrientationMode(.userDefinedRotation)
             autoFollowEnabled = false
-            print("[MapViewModel] OrientationStateUpdate → User rotated map. Switching to userDefinedRotation. Heading: \(heading)")
         }
 
         // Only used for initial positioning
@@ -258,10 +247,9 @@ final class MapViewModel: NSObject, ObservableObject {
 
     /// Detects manual rotation and transitions to user-defined mode if appropriate.
     func transitionToUserDefinedIfRotated(currentCameraHeading: CLLocationDirection) {
+        //print("[MapViewModel] (transitionToUserDefinedIfRotated) - Evaluating manual rotation to switch orientation mode")
         let delta = abs(currentCameraHeading - mapHeading).truncatingRemainder(dividingBy: 360)
-        print("[MapViewModel] Transition check → mapHeading: \(mapHeading), currentHeading: \(currentCameraHeading), delta: \(delta)")
         guard delta >= 5 else { return }
-        print("[MapViewModel] OrientationStateUpdate → Rotation delta: \(delta), Current Mode: \(cameraController.orientationMode)")
 
         switch cameraController.orientationMode {
         case .northUp, .headingUp, .userDefinedRotation:
@@ -273,14 +261,9 @@ final class MapViewModel: NSObject, ObservableObject {
 
     /// Updates the user-defined heading and arrow rotation if currently rotating.
     public func updateUserDefinedHeadingIfRotating(_ heading: CLLocationDirection) {
-        print("[MapViewModel] [LiveRotation] Heading input: \(heading), TrueHeading: \(trueHeading)")
+        //print("[MapViewModel] (updateUserDefinedHeadingIfRotating) - Updating heading and arrow when user is rotating map")
         guard cameraController.orientationMode == .userDefinedRotation else { return }
         cameraController.updateUserDefinedCameraHeading(heading)
         updateArrowRotationOnly()
     }
-}
-
-extension Double {
-    var degreesToRadians: Double { self * .pi / 180 }
-    var radiansToDegrees: Double { self * 180 / .pi }
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-final class ExportLauncher: ExportLaunchingProtocol {
+final class ExportLauncher {
     @Published var exportURL: URL?
     @Published var isPresenting: Bool = false
 

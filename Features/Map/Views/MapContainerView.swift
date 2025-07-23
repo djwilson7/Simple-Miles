@@ -2,9 +2,8 @@ import SwiftUI
 import MapKit
 
 struct MapContainerView: View {
-    @StateObject var viewModel: MapContainerViewModel
-    @StateObject private var mapViewModel = MapViewModel()
-    @StateObject private var settingsViewModel = SettingsViewModel()
+    @ObservedObject var viewModel: MapContainerViewModel
+    @ObservedObject var mapViewModel: MapViewModel
     @State private var showSettingsModal = false
     @State private var statusBarHeight: CGFloat = 0
 
@@ -37,12 +36,7 @@ struct MapContainerView: View {
                 .padding(.trailing, 20)
                 .padding(.bottom, statusBarHeight + 20)
         }
-        .overlay {
-            SettingsOverlayModalView(
-                viewModel: settingsViewModel,
-                isVisible: $showSettingsModal
-            )
-        }
+        
         .onAppear {
             viewModel.onRecenter = {
                 mapViewModel.recenter()
@@ -75,22 +69,22 @@ struct MapContainerView: View {
                     if rawEnd <= 1.0 {
                         RoundedRectangle(cornerRadius: 16)
                             .trim(from: start, to: rawEnd)
-                            .stroke(Color.orange.opacity(viewModel.isPaused ? 0.9 : 0), lineWidth: 3)
+                            .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
                     } else {
                         RoundedRectangle(cornerRadius: 16)
                             .trim(from: start, to: 1.0)
-                            .stroke(Color.orange.opacity(viewModel.isPaused ? 0.9 : 0), lineWidth: 3)
+                            .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
 
                         RoundedRectangle(cornerRadius: 16)
                             .trim(from: 0.0, to: rawEnd - 1.0)
-                            .stroke(Color.orange.opacity(viewModel.isPaused ? 0.9 : 0), lineWidth: 3)
+                            .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
                     }
                 }
 
                 HStack {
                     Spacer()
                     (
-                        viewModel.isPaused
+                        viewModel.tripState == .paused
                         ? Text("Ending Trip In: ")
                             .foregroundColor(.primary)
                             + Text(viewModel.pauseCountdownFormatted)
@@ -115,9 +109,9 @@ struct MapContainerView: View {
                 Text("Status")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Text(viewModel.tripStatusText)
+                Text(viewModel.tripStateText)
                     .font(.body)
-                    .foregroundColor(viewModel.tripStatusColor)
+                    .foregroundColor(viewModel.tripStateColor)
             }
             .frame(maxWidth: .infinity)
 
@@ -211,7 +205,4 @@ struct MapContainerView: View {
                 .shadow(radius: 4)
         }
     }
-}
-#Preview {
-    MapContainerView(viewModel: MapContainerViewModel())
 }

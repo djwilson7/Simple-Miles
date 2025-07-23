@@ -3,10 +3,13 @@ import MapKit
 
 struct MapView: View {
     @ObservedObject var viewModel: MapViewModel
+    @State private var drawnCoordinates: [CLLocationCoordinate2D] = []
 
     var body: some View {
         MapReader { _ in
             Map(position: $viewModel.cameraPosition, interactionModes: .all) {
+                MapPolyline(coordinates: drawnCoordinates)
+                    .stroke(.green, lineWidth: 7)
                 if let coordinate = viewModel.currentLocation?.coordinate {
                     Annotation("", coordinate: coordinate, anchor: .center) {
                         Image(systemName: viewModel.locationIconName)
@@ -18,12 +21,6 @@ struct MapView: View {
                             .foregroundStyle(.primary)
                     }
                 }
-
-                if viewModel.pathPoints.count > 1 {
-                    let coords = viewModel.pathPoints.map { $0.locationCoordinate }
-                    MapPolyline(coordinates: coords)
-                        .stroke(Color.green, lineWidth: 5)
-                }
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: []))
             .edgesIgnoringSafeArea(.all)
@@ -31,7 +28,13 @@ struct MapView: View {
                 viewModel.updateUserDefinedHeadingIfRotating(context.camera.heading)
                 viewModel.transitionToUserDefinedIfRotated(currentCameraHeading: context.camera.heading)
             }
-            
+            .onReceive(viewModel.$currentSegment) { segment in
+                if drawnCoordinates.isEmpty {
+                    drawnCoordinates.append(contentsOf: segment)
+                } else if let newPoint = segment.last {
+                    drawnCoordinates.append(newPoint)
+                }
+            }
             .simultaneousGesture(
                 TapGesture()
                     .onEnded {
