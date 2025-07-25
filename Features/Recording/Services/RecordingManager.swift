@@ -48,7 +48,6 @@ final class RecordingManager {
                 let distance = last.distance(from: location)
                 self.tripDistance += distance
                 self.lastRecordedLocation = location
-                print("[RecordingManager] → Distance Added: \(distance) → Total: \(self.tripDistance)")
             }
             .store(in: &cancellables)
 
@@ -60,11 +59,9 @@ final class RecordingManager {
     }
 
     private func handleTravelStateUpdate(_ state: TravelStateManager.TravelState) {
-        print("[RecordingManager] → handleTravelStateUpdate(\(state))")
         switch state {
         case .traveling:
             guard let location = currentLocation else { return }
-            print("[RecordingManager] → .traveling → received location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
 
             if previousState == .idle {
             }
@@ -80,7 +77,6 @@ final class RecordingManager {
                                   self.isRecording,
                                   let start = self.tripStartTime else { return }
                             self.tripDuration = Date().timeIntervalSince(start)
-                            print("[RecordingManager] tripDuration: \(self.tripDuration)")
                         }
                 }
                 tripDistance = 0
@@ -102,7 +98,6 @@ final class RecordingManager {
             tripDistance = 0
             durationTimer?.cancel()
             durationTimer = nil
-            print("[RecordingManager] → .idle → Trip ended. Final duration: \(tripDuration), Final distance: \(tripDistance)")
         }
         previousState = state
         isRecording = (state == .traveling)

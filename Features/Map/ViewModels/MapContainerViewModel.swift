@@ -25,6 +25,10 @@ final class MapContainerViewModel: ObservableObject {
     private let travelStateManager: TravelStateManager
     private let cameraManager: CameraManager
 
+    // MARK: - Private Properties
+
+    private var pauseStartUptime: TimeInterval?
+
     // MARK: - Computed Bindings
 
     var tripStateText: String {
@@ -54,6 +58,11 @@ final class MapContainerViewModel: ObservableObject {
     private func setupBindings() {
         travelStateManager.$state
             .receive(on: DispatchQueue.main)
+            .handleEvents(receiveOutput: { [weak self] state in
+                if state == .paused {
+                    self?.pauseStartUptime = ProcessInfo.processInfo.systemUptime
+                }
+            })
             .assign(to: &$tripState)
 
 
@@ -71,12 +80,12 @@ final class MapContainerViewModel: ObservableObject {
             }
             .assign(to: &$tripDuration)
 
-        travelStateManager.$pauseTimerInterval
+        travelStateManager.$pauseRemainingTime
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
             .assign(to: &$remainingPauseTime)
-        
-        travelStateManager.$totalPauseTimerDuration
+
+        travelStateManager.$pauseTotalDuration
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
             .assign(to: &$totalPauseTime)
@@ -91,12 +100,13 @@ final class MapContainerViewModel: ObservableObject {
                 guard let self,
                       self.tripState == .paused,
                       let total = self.totalPauseTime,
-                      let remaining = self.remainingPauseTime,
-                      total > 0 else {
+                      let pauseStart = self.pauseStartUptime else {
+                    self?.sweepProgress = 0
                     return
                 }
 
-                self.sweepProgress = CGFloat(1.0 - (remaining / total))
+                let elapsed = ProcessInfo.processInfo.systemUptime - pauseStart
+                self.sweepProgress = min(CGFloat(elapsed / total), 1.0)
             }
             .store(in: &cancellables)
     }
@@ -118,5 +128,9 @@ final class MapContainerViewModel: ObservableObject {
     
     func summaryTapped()  {
         onSummary?()
+    }
+
+    func extendPauseTapped() {
+        travelStateManager.extendPauseTimer()
     }
 }

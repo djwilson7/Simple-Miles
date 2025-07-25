@@ -13,7 +13,6 @@ final class DrivingStateManager: ObservableObject {
     @Published private(set) var state: Bool = false
     private var lastMovementTime: Date = Date()
     private var evaluationTimer: Timer?
-    private var lastEvaluationStartTime: Date?
 
     private var cancellables = Set<AnyCancellable>()
     private let locationManager: LocationManager
@@ -42,14 +41,15 @@ final class DrivingStateManager: ObservableObject {
                 print("Moved Far Enough: \(movedFarEnough), speedOK \(speedOK)")
 
                 if movedFarEnough && speedOK {
+                    self.resetEvaluationTimer()
                     if self.state == false {
                         self.state = true
                         self.lastMovementTime = Date()
-                        self.resetEvaluationTimer()
                     }
                 } else {
                     if current.distance(from: last) >= self.pauseDistanceThreshold {
                         self.lastMovementTime = Date()
+                        print("\(self.lastMovementTime)")
                     }
                 }
             }
@@ -58,13 +58,9 @@ final class DrivingStateManager: ObservableObject {
 
     private func resetEvaluationTimer() {
         evaluationTimer?.invalidate()
-        lastEvaluationStartTime = Date()
         evaluationTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
             guard let self = self else { return }
-            if self.state,
-               let lastLoc = self.locationManager.currentLocation?.timestamp,
-               let timerStart = self.lastEvaluationStartTime,
-               lastLoc <= timerStart {
+            if self.state && Date().timeIntervalSince(self.lastMovementTime) > 10 {
                 self.state = false
             }
         }

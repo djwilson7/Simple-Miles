@@ -15,6 +15,11 @@ struct MapContainerView: View {
             VStack(spacing: 0) {
                 titleBar
                     .padding(.top, 12)
+
+                if viewModel.tripState == .paused {
+                    extendPauseButton
+                }
+
                 Spacer()
             }
 
@@ -36,7 +41,6 @@ struct MapContainerView: View {
                 .padding(.trailing, 20)
                 .padding(.bottom, statusBarHeight + 20)
         }
-        
         .onAppear {
             viewModel.onSettings = {
                 showSettingsModal = true
@@ -82,10 +86,12 @@ struct MapContainerView: View {
                     Spacer()
                     (
                         viewModel.tripState == .paused
-                        ? Text("Ending Trip In: ")
-                            .foregroundColor(.primary)
+                        ? (
+                            Text("Ending Trip In: ")
+                                .foregroundColor(.primary)
                             + Text(viewModel.pauseCountdownFormatted)
-                            .foregroundColor(.orange)
+                                .foregroundColor(.orange)
+                        )
                         : Text("Simple Miles")
                             .foregroundColor(.primary)
                     )
@@ -177,7 +183,7 @@ struct MapContainerView: View {
 
     private var settingsButton: some View {
         Button {
-            viewModel.settingsTapped() // hook still available
+            viewModel.settingsTapped()
         } label: {
             Image(systemName: "gearshape")
                 .font(.system(size: 18, weight: .semibold))
@@ -201,5 +207,26 @@ struct MapContainerView: View {
                 .clipShape(Circle())
                 .shadow(radius: 4)
         }
+    }
+
+    private var extendPauseButton: some View {
+        Button(action: {
+            viewModel.extendPauseTapped()
+        }) {
+            Text("Extend Pause")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.orange)
+                .padding(.horizontal, 16)
+                .frame(height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: 44)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 44)
+                        .stroke(Color.orange, lineWidth: 1.5)
+                )
+        }
+        .padding(.top, 8)
     }
 }

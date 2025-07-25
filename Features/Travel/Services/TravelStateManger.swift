@@ -8,9 +8,10 @@ import CoreML
 final class TravelStateManager: ObservableObject {
     // MARK: - Published Properties
     @Published private(set) var state: TravelState = .idle
-    @Published var pauseTimerInterval: TimeInterval = 120
-    @Published private(set) var totalPauseTimerDuration: TimeInterval = 120
-    private let pauseTime = 1200.0
+    @Published var pauseRemainingTime: TimeInterval? = nil
+    @Published private(set) var pauseTotalDuration: TimeInterval? = nil
+    private var pauseTimer: Timer?
+    private let defaultPauseDuration: TimeInterval = 1200.0
     // MARK: - State Enum
     enum TravelState {
         case idle
@@ -37,8 +38,6 @@ final class TravelStateManager: ObservableObject {
     // MARK: - Private Properties
     private var drivingStateCancellable: AnyCancellable?
     private var locationManager: LocationManager?
-    private var pauseStartTime: Date?
-    private var pauseTimer: Timer?
 
     // MARK: - Init
     init(
@@ -46,6 +45,9 @@ final class TravelStateManager: ObservableObject {
         locationManager: LocationManager
     ) {
         self.locationManager = locationManager
+        // Ensure pause times are nil on init for clean state
+        pauseRemainingTime = nil
+        pauseTotalDuration = nil
         subscribeToDrivingState(publisher: drivingStatePublisher)
     }
 
@@ -74,8 +76,8 @@ final class TravelStateManager: ObservableObject {
             print("[TravelStateManager] (handleDrivingStarted) - Already in .traveling, skipping.")
             return
         }
-        pauseTimerInterval = pauseTime
-        totalPauseTimerDuration = pauseTime
+        pauseRemainingTime = defaultPauseDuration
+        pauseTotalDuration = defaultPauseDuration
 
         // TripStartModel prediction logic
 //        if let modelURL = ModelStore.shared.modelURL {
@@ -106,8 +108,18 @@ final class TravelStateManager: ObservableObject {
         markAsPaused()
     }
 
-    func extendPauseTimer(by interval: TimeInterval) {
-        pauseTimerInterval += interval
+    func extendPauseTimer(by interval: TimeInterval = 600) {
+        if let current = pauseRemainingTime {
+            pauseRemainingTime = current + interval
+        } else {
+            pauseRemainingTime = interval
+        }
+
+        if let total = pauseTotalDuration {
+            pauseTotalDuration = total + interval
+        } else {
+            pauseTotalDuration = interval
+        }
     }
 
     // MARK: - State Mutation
@@ -119,31 +131,29 @@ final class TravelStateManager: ObservableObject {
 
     func markAsPaused() {
         state = .paused
-        pauseTimerInterval = pauseTime
-        totalPauseTimerDuration = pauseTime
-        pauseStartTime = Date()
-        schedulePauseProgressUpdater()
-    }
+        pauseTimer?.invalidate()
+        pauseRemainingTime = defaultPauseDuration
+        pauseTotalDuration = defaultPauseDuration
 
-    func markAsIdle() {
-        state = .idle
-    }
+        pauseTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self else { return }
+            guard let remaining = self.pauseRemainingTime else { return }
 
-    private func schedulePauseProgressUpdater() {
-        pauseTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] timer in
-            guard let self, let start = self.pauseStartTime else {
+            if remaining <= 1 {
                 timer.invalidate()
-                return
-            }
-
-            let elapsed = Date().timeIntervalSince(start)
-            let remaining = max(self.pauseTime - elapsed, 0)
-            self.pauseTimerInterval = remaining
-
-            if remaining <= 0 {
-                timer.invalidate()
+                self.pauseRemainingTime = nil
+                self.pauseTotalDuration = nil
                 self.markAsIdle()
+            } else {
+                self.pauseRemainingTime = remaining - 1
             }
         }
     }
+
+    func markAsIdle() {
+        pauseRemainingTime = nil
+        pauseTotalDuration = nil
+        state = .idle
+    }
+
 }
