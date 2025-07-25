@@ -38,9 +38,6 @@ struct MapContainerView: View {
         }
         
         .onAppear {
-            viewModel.onRecenter = {
-                mapViewModel.recenter()
-            }
             viewModel.onSettings = {
                 showSettingsModal = true
             }

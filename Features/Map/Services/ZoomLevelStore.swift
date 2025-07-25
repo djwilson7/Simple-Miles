@@ -3,6 +3,7 @@ import MapKit
 
 final class ZoomLevelStore {
     private let storageKey = "com.simplemiles.zoomLevel"
+    private let altitudeKey = "com.simplemiles.zoomAltitude"
     private var inMemoryRegion: MKCoordinateRegion?
 
     func save(region: MKCoordinateRegion) {
@@ -32,8 +33,18 @@ final class ZoomLevelStore {
         )
     }
 
+    func save(altitude: CLLocationDistance) {
+        UserDefaults.standard.set(altitude, forKey: altitudeKey)
+    }
+
+    func loadAltitude() -> CLLocationDistance? {
+        let value = UserDefaults.standard.double(forKey: altitudeKey)
+        return value > 0 ? value : nil
+    }
+
     func clear() {
         inMemoryRegion = nil
         UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: altitudeKey)
     }
 }

@@ -51,8 +51,8 @@ final class TravelStateManager: ObservableObject {
 
     // MARK: - Subscriptions
     private func subscribeToDrivingState(publisher: Published<Bool>.Publisher) {
-        print("[TravelStateManager] (subscribeToDrivingState) - Subscribing to driving state changes")
         drivingStateCancellable = publisher
+            .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isDriving in
                 self?.handleDrivingStateChange(isDriving)
@@ -61,7 +61,6 @@ final class TravelStateManager: ObservableObject {
 
     // MARK: - Driving State Handling
     private func handleDrivingStateChange(_ isDriving: Bool) {
-        print("[TravelStateManager] (handleDrivingStateChange) - Driving state changed: \(isDriving)")
         switch isDriving {
         case true:
             handleDrivingStarted()
@@ -75,27 +74,26 @@ final class TravelStateManager: ObservableObject {
             print("[TravelStateManager] (handleDrivingStarted) - Already in .traveling, skipping.")
             return
         }
-        print("[TravelStateManager] (handleDrivingStarted) - Driving started, transitioning to traveling")
         pauseTimerInterval = pauseTime
         totalPauseTimerDuration = pauseTime
 
         // TripStartModel prediction logic
-        if let modelURL = ModelStore.shared.modelURL {
-            do {
-                let mlModel = try MLModel(contentsOf: modelURL)
-                let model = TripStartModel(model: mlModel)
-                if let event = MotionManager.shared.currentEvent(label: "pre_check") {
-                    let prediction = model.predict(samples: event.samples)
-                    print("[TravelStateManager] (TripStartModel Prediction) - result: \(prediction)")
-                } else {
-                    print("[TravelStateManager] (TripStartModel Prediction) - Failed to get prediction, event is nil")
-                }
-            } catch {
-                print("[TravelStateManager] (TripStartModel Prediction) - Prediction failed: \(error)")
-            }
-        } else {
-            print("[TravelStateManager] (TripStartModel Prediction) - No model available, using fallback logic")
-        }
+//        if let modelURL = ModelStore.shared.modelURL {
+//            do {
+//                let mlModel = try MLModel(contentsOf: modelURL)
+//                let model = TripStartModel(model: mlModel)
+//                if let event = MotionManager.shared.currentEvent(label: "pre_check") {
+//                    let prediction = model.predict(samples: event.samples)
+//                    print("[TravelStateManager] (TripStartModel Prediction) - result: \(prediction)")
+//                } else {
+//                    print("[TravelStateManager] (TripStartModel Prediction) - Failed to get prediction, event is nil")
+//                }
+//            } catch {
+//                print("[TravelStateManager] (TripStartModel Prediction) - Prediction failed: \(error)")
+//            }
+//        } else {
+//            print("[TravelStateManager] (TripStartModel Prediction) - No model available, using fallback logic")
+//        }
         markAsTraveling()
     }
 
@@ -109,20 +107,17 @@ final class TravelStateManager: ObservableObject {
     }
 
     func extendPauseTimer(by interval: TimeInterval) {
-        print("[TravelStateManager] (extendPauseTimer) - Extending pause timer by \(interval) seconds")
         pauseTimerInterval += interval
     }
 
     // MARK: - State Mutation
     func markAsTraveling() {
-        print("[TravelStateManager] (markAsTraveling) - State updated to .traveling")
         pauseTimer?.invalidate()
         pauseTimer = nil
         state = .traveling
     }
 
     func markAsPaused() {
-        print("[TravelStateManager] (markAsPaused) - State updated to .paused")
         state = .paused
         pauseTimerInterval = pauseTime
         totalPauseTimerDuration = pauseTime
@@ -131,7 +126,6 @@ final class TravelStateManager: ObservableObject {
     }
 
     func markAsIdle() {
-        print("[TravelStateManager] (markAsIdle) - State updated to .idle")
         state = .idle
     }
 

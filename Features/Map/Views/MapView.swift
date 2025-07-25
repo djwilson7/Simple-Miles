@@ -3,19 +3,19 @@ import MapKit
 
 struct MapView: View {
     @ObservedObject var viewModel: MapViewModel
-    @State private var drawnCoordinates: [CLLocationCoordinate2D] = []
-
     var body: some View {
-        MapReader { _ in
-            Map(position: $viewModel.cameraPosition, interactionModes: .all) {
-                MapPolyline(coordinates: drawnCoordinates)
-                    .stroke(.green, lineWidth: 7)
+        Map(position: $viewModel.cameraPosition, interactionModes: .all){
+                ForEach(viewModel.traceSegments.indices, id: \.self) { index in
+                    MapPolyline(coordinates: viewModel.traceSegments[index])
+                        .stroke(.green, lineWidth: 7)
+                }
+
                 if let coordinate = viewModel.currentLocation?.coordinate {
                     Annotation("", coordinate: coordinate, anchor: .center) {
                         Image(systemName: viewModel.locationIconName)
                             .resizable()
                             .frame(width: 28, height: 28)
-                            .rotationEffect(.degrees(viewModel.displayedArrowRotation))
+                            .rotationEffect(Angle(degrees: viewModel.displayedArrowRotation), anchor: .center)
                             .animation(.easeInOut(duration: 0.3), value: viewModel.displayedArrowRotation)
                             .symbolRenderingMode(.monochrome)
                             .foregroundStyle(.primary)
@@ -25,38 +25,8 @@ struct MapView: View {
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: []))
             .edgesIgnoringSafeArea(.all)
             .onMapCameraChange(frequency: .continuous) { context in
-                viewModel.updateUserDefinedHeadingIfRotating(context.camera.heading)
-                viewModel.transitionToUserDefinedIfRotated(currentCameraHeading: context.camera.heading)
+                viewModel.cameraManager.updateZoomLevel(context.camera.distance)
             }
-            .onReceive(viewModel.$currentSegment) { segment in
-                if drawnCoordinates.isEmpty {
-                    drawnCoordinates.append(contentsOf: segment)
-                } else if let newPoint = segment.last {
-                    drawnCoordinates.append(newPoint)
-                }
-            }
-            .simultaneousGesture(
-                TapGesture()
-                    .onEnded {
-                        viewModel.autoFollowEnabled = false
-                        viewModel.cameraController.setOrientationMode(.free)
-                    }
-                    .exclusively(before:
-                        DragGesture()
-                            .onChanged { _ in
-                                viewModel.autoFollowEnabled = false
-                                viewModel.cameraController.setOrientationMode(.free)
-                            }
-                    )
-                    .exclusively(before:
-                        LongPressGesture(minimumDuration: 0.05)
-                            .onEnded { _ in
-                                viewModel.autoFollowEnabled = false
-                                viewModel.cameraController.setOrientationMode(.free)
-                            }
-                    )
-            )
-        }
     }
 
     func recenterOnUser() {

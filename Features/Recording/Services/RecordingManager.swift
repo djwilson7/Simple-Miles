@@ -20,83 +20,89 @@ final class RecordingManager {
     private var currentLocation: CLLocation?
     private var lastLocation: CLLocation?
     private var previousState: TravelStateManager.TravelState?
+    private var durationTimer: AnyCancellable?
 
     init(
         travelStatePublisher: Published<TravelStateManager.TravelState>.Publisher,
         currentLocationPublisher: Published<CLLocation?>.Publisher,
         lastLocationPublisher: Published<CLLocation?>.Publisher
     ) {
-        print("[RecordingManager] (init) - Initializing subscriptions to state and location publishers.")
         self.travelStatePublisher = travelStatePublisher
         self.currentLocationPublisher = currentLocationPublisher
         self.lastLocationPublisher = lastLocationPublisher
 
         travelStatePublisher
             .sink { [weak self] state in
-                print("[RecordingManager] (travelStatePublisher) - State changed to: \(state)")
                 self?.handleTravelStateUpdate(state)
             }
             .store(in: &cancellables)
 
         currentLocationPublisher
             .sink { [weak self] location in
-                print("[RecordingManager] (currentLocationPublisher) - Updated current location: \(String(describing: location))")
                 self?.currentLocation = location
+                guard let self = self,
+                      self.isRecording,
+                      let last = self.lastRecordedLocation,
+                      let location = location else { return }
+
+                let distance = last.distance(from: location)
+                self.tripDistance += distance
+                self.lastRecordedLocation = location
+                print("[RecordingManager] → Distance Added: \(distance) → Total: \(self.tripDistance)")
             }
             .store(in: &cancellables)
 
         lastLocationPublisher
             .sink { [weak self] location in
-                print("[RecordingManager] (lastLocationPublisher) - Updated last location: \(String(describing: location))")
                 self?.lastLocation = location
             }
             .store(in: &cancellables)
     }
 
     private func handleTravelStateUpdate(_ state: TravelStateManager.TravelState) {
-        print("[RecordingManager] (handleTravelStateUpdate) - Handling travel state: \(state)")
+        print("[RecordingManager] → handleTravelStateUpdate(\(state))")
         switch state {
         case .traveling:
             guard let location = currentLocation else { return }
+            print("[RecordingManager] → .traveling → received location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
 
             if previousState == .idle {
-                print("[RecordingManager] (handleTravelStateUpdate) - First traveling update.")
             }
 
             if firstLocation == nil {
                 firstLocation = location
                 tripStartTime = location.timestamp
+                if durationTimer == nil {
+                    durationTimer = Timer.publish(every: 1.0, on: .main, in: .common)
+                        .autoconnect()
+                        .sink { [weak self] _ in
+                            guard let self = self,
+                                  self.isRecording,
+                                  let start = self.tripStartTime else { return }
+                            self.tripDuration = Date().timeIntervalSince(start)
+                            print("[RecordingManager] tripDuration: \(self.tripDuration)")
+                        }
+                }
                 tripDistance = 0
                 tripDuration = 0
                 lastRecordedLocation = location
-                print("[RecordingManager] (handleTravelStateUpdate) - First location set. Resetting trip metrics.")
-            } else if let last = lastRecordedLocation {
-                let distance = last.distance(from: location)
-                tripDistance += distance
-                lastRecordedLocation = location
-                print("[RecordingManager] (handleTravelStateUpdate) - Added distance: \(distance). Total: \(tripDistance)")
-            }
-
-            if let startTime = tripStartTime {
-                tripDuration = location.timestamp.timeIntervalSince(startTime)
-                print("[RecordingManager] (handleTravelStateUpdate) - Updated duration: \(tripDuration)")
             }
 
             RecordingStore.updateLivePath(location)
         case .paused:
-            // Do nothing during pause
-            break
+            durationTimer?.cancel()
+            durationTimer = nil
         case .idle:
             if let location = currentLocation {
-                print("[RecordingManager] (handleTravelStateUpdate) - Finalizing trip with last location.")
                 RecordingStore.finalizeLivePath(location)
             }
             firstLocation = nil
             lastRecordedLocation = nil
             tripStartTime = nil
             tripDistance = 0
-            tripDuration = 0
-            print("[RecordingManager] (handleTravelStateUpdate) - Trip metrics reset.")
+            durationTimer?.cancel()
+            durationTimer = nil
+            print("[RecordingManager] → .idle → Trip ended. Final duration: \(tripDuration), Final distance: \(tripDistance)")
         }
         previousState = state
         isRecording = (state == .traveling)

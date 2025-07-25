@@ -14,7 +14,6 @@ final class MapContainerViewModel: ObservableObject {
 
     // MARK: - Action Hooks
 
-    var onRecenter: (() -> Void)?
     var onShare: (() -> Void)?
     var onSettings: (() -> Void)?
     var onSummary: (() -> Void)?
@@ -24,6 +23,7 @@ final class MapContainerViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let recordingManager: RecordingManager
     private let travelStateManager: TravelStateManager
+    private let cameraManager: CameraManager
 
     // MARK: - Computed Bindings
 
@@ -41,10 +41,10 @@ final class MapContainerViewModel: ObservableObject {
     }
 
     // MARK: - Init
-    init(recordingManager: RecordingManager, travelStateManager: TravelStateManager) {
-        print("[MapContainerViewModel] (init) - Initializing and setting up bindings and sweep loop")
+    init(recordingManager: RecordingManager, travelStateManager: TravelStateManager, cameraManager: CameraManager) {
         self.recordingManager = recordingManager
         self.travelStateManager = travelStateManager
+        self.cameraManager = cameraManager
         setupBindings()
         startSweepLoop()
     }
@@ -52,37 +52,28 @@ final class MapContainerViewModel: ObservableObject {
     // MARK: - State Binding
 
     private func setupBindings() {
-        print("[MapContainerViewModel] (setupBindings) - Binding travel state, trip distance, duration, and pause timer")
         travelStateManager.$state
             .receive(on: DispatchQueue.main)
-            .handleEvents(receiveOutput: { _ in
-                print("[MapContainerViewModel] (setupBindings) - Received updated value for tripState")
-            })
             .assign(to: &$tripState)
 
 
         recordingManager.$tripDistance
             .receive(on: DispatchQueue.main)
             .map { String(format: "%.1f miles", $0 * 0.000621371) }
-            .handleEvents(receiveOutput: { _ in
-                print("[MapContainerViewModel] (setupBindings) - Received updated value for tripDistance")
-            })
             .assign(to: &$tripDistance)
 
         recordingManager.$tripDuration
             .receive(on: DispatchQueue.main)
-            .map { "\(Int($0 / 60))m" }
-            .handleEvents(receiveOutput: { _ in
-                print("[MapContainerViewModel] (setupBindings) - Received updated value for tripDuration")
-            })
+            .map {
+                let minutes = Int($0) / 60
+                let seconds = Int($0) % 60
+                return String(format: "%02d:%02d", minutes, seconds)
+            }
             .assign(to: &$tripDuration)
 
         travelStateManager.$pauseTimerInterval
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
-            .handleEvents(receiveOutput: { _ in
-                print("[MapContainerViewModel] (setupBindings) - Received updated value for remainingPauseTime")
-            })
             .assign(to: &$remainingPauseTime)
         
         travelStateManager.$totalPauseTimerDuration
@@ -94,7 +85,6 @@ final class MapContainerViewModel: ObservableObject {
     // MARK: - Sweep Progress (Looping Clock-Face)
 
     private func startSweepLoop() {
-        print("[MapContainerViewModel] (startSweepLoop) - Starting sweep loop for pause countdown visualization")
         Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -114,19 +104,19 @@ final class MapContainerViewModel: ObservableObject {
     // MARK: - Button Events
 
     func recenterTapped() {
-        print("[MapContainerViewModel] (recenterTapped) - Recenter button tapped")
-        onRecenter?()
+        let currentMode = cameraManager.orientationMode
+        cameraManager.setOrientationMode(currentMode)
     }
+    
     func shareTapped()    {
-        print("[MapContainerViewModel] (shareTapped) - Share button tapped")
         onShare?()
     }
+    
     func settingsTapped() {
-        print("[MapContainerViewModel] (settingsTapped) - Settings button tapped")
         onSettings?()
     }
+    
     func summaryTapped()  {
-        print("[MapContainerViewModel] (summaryTapped) - Summary button tapped")
         onSummary?()
     }
 }

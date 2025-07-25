@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseCore
+import MapKit
 
 @main
 struct SimpleMilesApp: App {
@@ -14,10 +15,13 @@ struct SimpleMilesApp: App {
     let locationManager = LocationManager.shared
     let driverStateManager: DrivingStateManager
     let travelStateManager: TravelStateManager
+    let travelLocationPredictor: TravelLocationPredictor
     var recordingManager: RecordingManager
+    let mapView: MKMapView
+    let cameraManager: CameraManager
+    let arrowManager: ArrowHeadingManager
     let mapViewModel: MapViewModel
-    let motionManager: MotionManager
-    let tripTraceStore: TripTraceStore
+//    let motionManager: MotionManager
     
     init() {
         FirebaseApp.configure()
@@ -34,23 +38,37 @@ struct SimpleMilesApp: App {
             locationManager: locationManager
         )
 
-        recordingManager = RecordingManager(
-            travelStatePublisher: travelStateManager.$state,
-            currentLocationPublisher: locationManager.$currentLocation,
-            lastLocationPublisher: locationManager.$lastLocation,
+        travelLocationPredictor = TravelLocationPredictor(
+            locationManager: locationManager,
+            travelStateManager: travelStateManager
         )
-        
-        tripTraceStore = TripTraceStore(
-            isRecordingPublisher: recordingManager.$isRecording,
+
+        recordingManager = RecordingManager(
             travelStatePublisher: travelStateManager.$state,
             currentLocationPublisher: locationManager.$currentLocation,
             lastLocationPublisher: locationManager.$lastLocation
         )
         
+        mapView = MKMapView()
+        
+        cameraManager = CameraManager(
+            travelLocationPredictor: travelLocationPredictor
+        )
+        
+        arrowManager = ArrowHeadingManager(
+            cameraManager: cameraManager,
+            travelLocationPredictor: travelLocationPredictor,
+            travelStateManager: travelStateManager
+        )
 
-        mapViewModel = MapViewModel(locationManager: locationManager, traceStore: tripTraceStore)
-        motionManager = MotionManager.shared
-        motionManager.observeTravelState(travelStateManager.$state.eraseToAnyPublisher())
+        mapViewModel = MapViewModel(
+            travelLocationPredictor: travelLocationPredictor,
+            cameraManager: cameraManager,
+            arrowManager: arrowManager,
+            travelStateManager: travelStateManager
+        )
+//        motionManager = MotionManager.shared
+//        motionManager.observeTravelState(travelStateManager.$state.eraseToAnyPublisher())
     }
 
     var body: some Scene {
@@ -58,7 +76,8 @@ struct SimpleMilesApp: App {
             MapContainerView(
                 viewModel: MapContainerViewModel(
                     recordingManager: recordingManager,
-                    travelStateManager: travelStateManager
+                    travelStateManager: travelStateManager,
+                    cameraManager: cameraManager
                 ),
                 mapViewModel: mapViewModel
             )

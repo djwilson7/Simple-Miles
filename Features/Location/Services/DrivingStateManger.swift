@@ -13,6 +13,7 @@ final class DrivingStateManager: ObservableObject {
     @Published private(set) var state: Bool = false
     private var lastMovementTime: Date = Date()
     private var evaluationTimer: Timer?
+    private var lastEvaluationStartTime: Date?
 
     private var cancellables = Set<AnyCancellable>()
     private let locationManager: LocationManager
@@ -27,31 +28,29 @@ final class DrivingStateManager: ObservableObject {
 
     private func observeLocation() {
         locationManager.$currentLocation
-            .combineLatest(locationManager.$lastLocation, locationManager.$speed)
+            .compactMap { $0 }
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] current, last, speed in
+            .sink { [weak self] current in
                 guard let self = self,
-                      let current = current,
-                      let last = last else {
+                      let last = self.locationManager.lastLocation else {
                     self?.state = false
-                    print("[DrivingStateManager] (observeLocation) - Driving state set to FALSE. Movement or speed did not meet threshold.")
                     return
                 }
 
-                let movedFarEnough = current.distance(from: last) > startDistanceThreshold
-                let speedOK = speed > self.speedThreshold
+                let movedFarEnough = current.distance(from: last) > self.startDistanceThreshold
+                let speedOK = self.locationManager.speed > self.speedThreshold
                 print("Moved Far Enough: \(movedFarEnough), speedOK \(speedOK)")
+
                 if movedFarEnough && speedOK {
-                    self.state = true
-                    self.lastMovementTime = Date()
-                    self.resetEvaluationTimer()
-                    print("[DrivingStateManager] (observeLocation) - Driving state set to TRUE. Distance: \(current.distance(from: last)) > \(startDistanceThreshold), Speed: \(speed) > \(speedThreshold)")
+                    if self.state == false {
+                        self.state = true
+                        self.lastMovementTime = Date()
+                        self.resetEvaluationTimer()
+                    }
                 } else {
                     if current.distance(from: last) >= self.pauseDistanceThreshold {
                         self.lastMovementTime = Date()
-                        print("[DrivingStateManager] (observeLocation) - Distance moved: \(current.distance(from: last)) >= \(pauseDistanceThreshold). Resetting lastMovementTime.")
                     }
-                    print("[DrivingStateManager] (observeLocation) - Maintaining TRUE state. Distance: \(current.distance(from: last)), Speed: \(speed)")
                 }
             }
             .store(in: &cancellables)
@@ -59,11 +58,13 @@ final class DrivingStateManager: ObservableObject {
 
     private func resetEvaluationTimer() {
         evaluationTimer?.invalidate()
-        print("[DrivingStateManager] (Timer) - Evaluation timer reset. Waiting 120s for movement before setting state to FALSE.")
+        lastEvaluationStartTime = Date()
         evaluationTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
             guard let self = self else { return }
-            if self.state {
-                print("[DrivingStateManager] (Timer) - Timer expired with no movement detected. Transitioning to FALSE.")
+            if self.state,
+               let lastLoc = self.locationManager.currentLocation?.timestamp,
+               let timerStart = self.lastEvaluationStartTime,
+               lastLoc <= timerStart {
                 self.state = false
             }
         }
