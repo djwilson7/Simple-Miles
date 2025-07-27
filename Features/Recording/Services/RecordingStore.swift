@@ -6,55 +6,49 @@ final class RecordingStore {
 
     private let fileManager = FileManager.default
     private let directory: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private let segmentExtension = "segment.json"
-
-    /// Persist the currently active segment to disk so it can be recovered across state transitions.
+    
     func writeTemporarySegment(_ segment: TripSegment) {
-        let url = directory.appendingPathComponent("active_segment.\(segmentExtension)")
+        let url = directory.appendingPathComponent("temp_segment.json")
         write(segment, to: url)
     }
 
-    /// Update the temporary segment (for clarity, this simply writes the segment).
     func updateTemporarySegment(_ segment: TripSegment) {
         writeTemporarySegment(segment)
     }
 
-    /// Load the currently active temporary segment from disk.
-    func loadTemporarySegment() -> TripSegment? {
-        let url = directory.appendingPathComponent("active_segment.\(segmentExtension)")
-        return read(from: url)
-    }
-
-    /// Finalize the temporary segment by persisting and removing the temporary file.
     func finalizeTemporarySegment() {
-        let tempURL = directory.appendingPathComponent("active_segment.\(segmentExtension)")
+        let tempURL = directory.appendingPathComponent("temp_segment.json")
         guard let segment = read(from: tempURL) else { return }
         persistFinalizedSegment(segment)
         try? fileManager.removeItem(at: tempURL)
     }
 
     func persistFinalizedSegment(_ segment: TripSegment) {
-        let filename = "segment_\(segment.id.uuidString).\(segmentExtension)"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM_dd_yyyy_HH_mm_ss"
+        let timestamp = formatter.string(from: segment.startTimestamp)
+        let filename = "finalized_\(timestamp).json"
         let url = directory.appendingPathComponent(filename)
         write(segment, to: url)
     }
 
     func loadAllFinalizedSegments() -> [TripSegment] {
         guard let files = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return [] }
-        let segmentFiles = files.filter { $0.pathExtension == "segment.json" && !$0.lastPathComponent.hasPrefix("temp_") }
-
+        let segmentFiles = files.filter { $0.lastPathComponent.hasPrefix("finalized_") }
         return segmentFiles.compactMap { read(from: $0) }
     }
 
     private func write(_ segment: TripSegment, to url: URL) {
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(segment)
-            try data.write(to: url)
-            print("RecordingStore: Saved segment to \(url.lastPathComponent)")
-        } catch {
-            print("RecordingStore: Failed to save segment - \(error)")
+        DispatchQueue.global(qos: .utility).async {
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = try encoder.encode(segment)
+                try data.write(to: url)
+                print("RecordingStore: Saved segment to \(url.lastPathComponent)")
+            } catch {
+                print("RecordingStore: Failed to save segment - \(error)")
+            }
         }
     }
 
@@ -66,13 +60,6 @@ final class RecordingStore {
         } catch {
             print("RecordingStore: Failed to read segment - \(error)")
             return nil
-        }
-    }
-
-    func deleteAllSegments() {
-        guard let files = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return }
-        for url in files where url.pathExtension == "segment.json" {
-            try? fileManager.removeItem(at: url)
         }
     }
 }

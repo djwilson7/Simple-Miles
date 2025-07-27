@@ -92,10 +92,10 @@ final class RecordingManager {
                     if PauseSegmentClassifier.shouldMerge(paused, anchorHeading: anchor.course, headingBuffer: pausedHeadingBuffer),
                        let previous = previousSegment {
                         previousSegment = TripSegment.merge(liveSegment: paused, previousSegment: previous)
-                        
+                        recordingStore.updateTemporarySegment(previousSegment!)
                     } else {
                         previousSegment?.finalize(at: Date())
-                        //future -> push segment to memory for sorting later.
+                        recordingStore.finalizeTemporarySegment()
                         previousSegment = nil
                     }
                     tripDistanceCommitted = previousSegment?.distance ?? 0
@@ -111,6 +111,9 @@ final class RecordingManager {
             }
 
             liveSegment = newSegment
+            if let previous = previousSegment {
+                recordingStore.updateTemporarySegment(previous)
+            }
             pausedSegment = nil
             pauseAnchor = nil
 
@@ -122,6 +125,9 @@ final class RecordingManager {
             if let location = currentLocation {
                 
             }
+            if let live = liveSegment {
+                recordingStore.writeTemporarySegment(live)
+            }
 
         case .paused:
             liveSegment?.duration = tripDurationLive
@@ -130,11 +136,11 @@ final class RecordingManager {
 
             if let previous = previousSegment, let live = liveSegment {
                 previousSegment = TripSegment.merge(liveSegment: live, previousSegment: previous)
-            } else {
-                previousSegment = liveSegment
+                recordingStore.updateTemporarySegment(previousSegment!)
+            } else if let live = liveSegment {
+                previousSegment = live
+                recordingStore.writeTemporarySegment(previousSegment!)
             }
-            
-            recordingStore.writeTemporarySegment(previousSegment!) //store the previous segment in temp memory
             
             tripDurationCommitted = previousSegment?.duration ?? 0
             tripDistanceCommitted = previousSegment?.distance ?? 0
@@ -149,7 +155,11 @@ final class RecordingManager {
 
         case .idle:
             if let location = currentLocation {
-                //we need to finalize the segment, then finalize the file into memory.
+                if var active = liveSegment {
+                    active.append(location: location)
+                    active.finalize(at: Date())
+                    recordingStore.finalizeTemporarySegment()
+                }
             }
 
             finalizeCurrentSegment()
