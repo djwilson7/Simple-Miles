@@ -122,9 +122,6 @@ final class RecordingManager {
                 lastRecordedLocation = location
             }
 
-            if let location = currentLocation {
-                
-            }
             if let live = liveSegment {
                 recordingStore.writeTemporarySegment(live)
             }
