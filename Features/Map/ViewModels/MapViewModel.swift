@@ -13,16 +13,17 @@ final class MapViewModel: NSObject, ObservableObject {
     @Published var isUserInteracting: Bool = false
     @Published private(set) var lastCamera: MapCamera?
     @Published var displayedArrowRotation: CLLocationDirection = 0
-    @Published var traceSegments: [[CLLocationCoordinate2D]] = []
+    @Published var tracePath: [CLLocationCoordinate2D] = []
     private var traceOrigin: CLLocationCoordinate2D?
     
     private var hasInitializedHeading = false
     private let travelStateManager: TravelStateManager
     
     var locationIconName: String {
-        switch cameraManager.orientationMode {
-        case .northUp: "location.north.line"
-        case .headingUp: "location.north.line.fill"
+        switch (cameraManager.orientationMode, self.autoFollowEnabled) {
+        case (.northUp, true): "location.north.line"
+        case (.headingUp, true): "location.north.line.fill"
+        case (.northUp, false), (.headingUp, false): "circle.fill"
         }
     }
     
@@ -54,6 +55,7 @@ final class MapViewModel: NSObject, ObservableObject {
         self.arrowManager = arrowManager
         self.zoomStore = zoomStore
         self.travelStateManager = travelStateManager
+        self.autoFollowEnabled = true
         self.cameraPosition = zoomStore.load().map { .region($0) } ?? .automatic
         super.init()
         
@@ -62,6 +64,8 @@ final class MapViewModel: NSObject, ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] mapCamera in
                 guard let self else { return }
+                guard self.autoFollowEnabled else { return }
+
                 if self.travelStateManager.state == .traveling {
                     withAnimation(.easeInOut(duration: 1.0)) {
                         self.cameraPosition = .camera(mapCamera)
@@ -82,16 +86,6 @@ final class MapViewModel: NSObject, ObservableObject {
     
     func recenter() {
         autoFollowEnabled = true
-        
-        let current = cameraManager.orientationMode
-        let next: CameraOrientationMode
-        if current == .headingUp {
-            next = .northUp
-        } else {
-            next = .headingUp
-        }
-        
-        cameraManager.setOrientationMode(next)
     }
     
     func updateZoomRegion(_ region: MKCoordinateRegion) {
@@ -122,13 +116,6 @@ final class MapViewModel: NSObject, ObservableObject {
             }
             .store(in: &cancellables)
         
-        cameraManager.$desiredCameraPosition
-            .compactMap { $0 }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] newCamera in
-                self?.cameraPosition = .camera(newCamera)
-            }
-            .store(in: &cancellables)
         
         travelStateManager.$state
             .removeDuplicates()
@@ -137,9 +124,7 @@ final class MapViewModel: NSObject, ObservableObject {
                 guard let self else { return }
                 switch (oldState, newState) {
                 case (.idle, .traveling):
-                    self.traceSegments = [[]]
-                case (.paused, .traveling):
-                    self.traceSegments.append([])
+                    self.tracePath = []
                 default:
                     break
                 }
@@ -150,6 +135,13 @@ final class MapViewModel: NSObject, ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] rotation in
                 self?.displayedArrowRotation = rotation
+            }
+            .store(in: &cancellables)
+
+        $autoFollowEnabled
+            .removeDuplicates()
+            .sink { value in
+                print("AutoFollow state changed: \(value)")
             }
             .store(in: &cancellables)
     }
@@ -185,6 +177,7 @@ final class MapViewModel: NSObject, ObservableObject {
     
     private func startAnimationLoop() {
         animationTimer?.invalidate()
+        var frameCount = 0
         animationTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] timer in
             guard
                 let self,
@@ -199,12 +192,11 @@ final class MapViewModel: NSObject, ObservableObject {
             let lat = start.coordinate.latitude + (end.coordinate.latitude - start.coordinate.latitude) * t
             let lon = start.coordinate.longitude + (end.coordinate.longitude - start.coordinate.longitude) * t
             self.currentLocation = CLLocation(latitude: lat, longitude: lon)
-            // Update traceSegments in sync with arrow animation
-            if self.traceSegments.isEmpty {
-                self.traceSegments = [[CLLocationCoordinate2D(latitude: lat, longitude: lon)]]
-            } else if let lastIndex = self.traceSegments.indices.last {
-                self.traceSegments[lastIndex].append(CLLocationCoordinate2D(latitude: lat, longitude: lon))
+
+            if frameCount % 2 == 0 {
+                self.tracePath.append(CLLocationCoordinate2D(latitude: lat, longitude: lon))
             }
+            frameCount += 1
 
             if t >= 1.0 {
                 timer.invalidate()

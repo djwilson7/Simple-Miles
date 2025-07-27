@@ -11,7 +11,7 @@ final class TravelStateManager: ObservableObject {
     @Published var pauseRemainingTime: TimeInterval? = nil
     @Published private(set) var pauseTotalDuration: TimeInterval? = nil
     private var pauseTimer: Timer?
-    private let defaultPauseDuration: TimeInterval = 1200.0
+    private let defaultPauseDuration: TimeInterval = 120.0
     // MARK: - State Enum
     enum TravelState {
         case idle
@@ -72,40 +72,39 @@ final class TravelStateManager: ObservableObject {
     }
 
     private func handleDrivingStarted() {
-        guard state != .traveling else {
-            print("[TravelStateManager] (handleDrivingStarted) - Already in .traveling, skipping.")
-            return
-        }
+        guard state != .traveling else { return }
         pauseRemainingTime = defaultPauseDuration
         pauseTotalDuration = defaultPauseDuration
-
-        // TripStartModel prediction logic
-//        if let modelURL = ModelStore.shared.modelURL {
-//            do {
-//                let mlModel = try MLModel(contentsOf: modelURL)
-//                let model = TripStartModel(model: mlModel)
-//                if let event = MotionManager.shared.currentEvent(label: "pre_check") {
-//                    let prediction = model.predict(samples: event.samples)
-//                    print("[TravelStateManager] (TripStartModel Prediction) - result: \(prediction)")
-//                } else {
-//                    print("[TravelStateManager] (TripStartModel Prediction) - Failed to get prediction, event is nil")
-//                }
-//            } catch {
-//                print("[TravelStateManager] (TripStartModel Prediction) - Prediction failed: \(error)")
-//            }
-//        } else {
-//            print("[TravelStateManager] (TripStartModel Prediction) - No model available, using fallback logic")
-//        }
-        markAsTraveling()
+        pauseTimer?.invalidate()
+        pauseTimer = nil
+        state = .traveling
+        print("TravelState Transitioned: .traveling")
     }
 
     private func handleDrivingStopped() {
-        print("[TravelStateManager] (handleDrivingStopped) - Driving stopped, transitioning to paused and starting idle timer")
         guard state == .traveling else {
-            print("[TravelStateManager] (handleDrivingStopped) - Ignoring transition to paused, current state is not .traveling")
             return
         }
-        markAsPaused()
+        state = .paused
+        print("TravelState Transitioned: .paused")
+        pauseTimer?.invalidate()
+        pauseRemainingTime = defaultPauseDuration
+        pauseTotalDuration = defaultPauseDuration
+
+        pauseTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self else { return }
+            guard let remaining = self.pauseRemainingTime else { return }
+
+            if remaining <= 1 {
+                timer.invalidate()
+                self.pauseRemainingTime = nil
+                self.pauseTotalDuration = nil
+                self.state = .idle
+                print("TravelState Transitioned: .idle (pause timer expired)")
+            } else {
+                self.pauseRemainingTime = remaining - 1
+            }
+        }
     }
 
     func extendPauseTimer(by interval: TimeInterval = 600) {
@@ -120,40 +119,6 @@ final class TravelStateManager: ObservableObject {
         } else {
             pauseTotalDuration = interval
         }
-    }
-
-    // MARK: - State Mutation
-    func markAsTraveling() {
-        pauseTimer?.invalidate()
-        pauseTimer = nil
-        state = .traveling
-    }
-
-    func markAsPaused() {
-        state = .paused
-        pauseTimer?.invalidate()
-        pauseRemainingTime = defaultPauseDuration
-        pauseTotalDuration = defaultPauseDuration
-
-        pauseTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self else { return }
-            guard let remaining = self.pauseRemainingTime else { return }
-
-            if remaining <= 1 {
-                timer.invalidate()
-                self.pauseRemainingTime = nil
-                self.pauseTotalDuration = nil
-                self.markAsIdle()
-            } else {
-                self.pauseRemainingTime = remaining - 1
-            }
-        }
-    }
-
-    func markAsIdle() {
-        pauseRemainingTime = nil
-        pauseTotalDuration = nil
-        state = .idle
     }
 
 }

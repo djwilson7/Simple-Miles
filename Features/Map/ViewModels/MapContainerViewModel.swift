@@ -6,8 +6,10 @@ final class MapContainerViewModel: ObservableObject {
     // MARK: - Published UI Bindings
 
     @Published var tripState: TravelStateManager.TravelState = .idle
-    @Published var tripDistance: String = "0.0 miles"
-    @Published var tripDuration: String = "0m"
+    @Published var tripDistanceLiveMiles: Double = 0.0
+    @Published var tripDistanceCommittedMiles: Double = 0.0
+    @Published var tripDurationLive: TimeInterval = 0
+    @Published var tripDurationCommitted: TimeInterval = 0
     @Published var remainingPauseTime: TimeInterval? = nil
     @Published var sweepProgress: CGFloat = 0
     @Published var totalPauseTime: TimeInterval? = nil
@@ -41,7 +43,18 @@ final class MapContainerViewModel: ObservableObject {
 
     var pauseCountdownFormatted: String {
         guard let remaining = remainingPauseTime else { return "" }
-        return String(format: "%d:%02d", Int(remaining) / 60, Int(remaining) % 60)
+
+        let hours = Int(remaining) / 3600
+        let minutes = (Int(remaining) % 3600) / 60
+        let seconds = Int(remaining) % 60
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m \(seconds)s"
+        } else if minutes > 0 {
+            return "\(minutes)m \(seconds)s"
+        } else {
+            return "\(seconds) seconds"
+        }
     }
 
     // MARK: - Init
@@ -66,19 +79,23 @@ final class MapContainerViewModel: ObservableObject {
             .assign(to: &$tripState)
 
 
-        recordingManager.$tripDistance
+        recordingManager.$tripDistanceLive
+            .map { $0 * 0.000621371 }
             .receive(on: DispatchQueue.main)
-            .map { String(format: "%.1f miles", $0 * 0.000621371) }
-            .assign(to: &$tripDistance)
+            .assign(to: &$tripDistanceLiveMiles)
 
-        recordingManager.$tripDuration
+        recordingManager.$tripDistanceCommitted
+            .map { $0 * 0.000621371 }
             .receive(on: DispatchQueue.main)
-            .map {
-                let minutes = Int($0) / 60
-                let seconds = Int($0) % 60
-                return String(format: "%02d:%02d", minutes, seconds)
-            }
-            .assign(to: &$tripDuration)
+            .assign(to: &$tripDistanceCommittedMiles)
+
+        recordingManager.$tripDurationLive
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$tripDurationLive)
+
+        recordingManager.$tripDurationCommitted
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$tripDurationCommitted)
 
         travelStateManager.$pauseRemainingTime
             .compactMap { $0 }

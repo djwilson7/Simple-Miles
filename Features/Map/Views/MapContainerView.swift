@@ -126,9 +126,18 @@ struct MapContainerView: View {
                 Text("Distance")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Text(viewModel.tripDistance)
+
+                Text(String(format: "%.1f miles", viewModel.tripDistanceCommittedMiles))
                     .font(.body)
                     .foregroundColor(.primary)
+
+                Text(String(format: "%.1f miles", viewModel.tripDistanceLiveMiles))
+                    .font(.caption2)
+                    .foregroundColor(
+                        viewModel.tripState == .paused ? .orange :
+                        viewModel.tripState == .traveling ? .green :
+                        viewModel.tripDistanceLiveMiles > 0 ? .green : .gray
+                    )
             }
             .frame(maxWidth: .infinity)
 
@@ -140,9 +149,18 @@ struct MapContainerView: View {
                 Text("Trip Time")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Text(viewModel.tripDuration)
+
+                Text(formattedTime(viewModel.tripDurationCommitted))
                     .font(.body)
                     .foregroundColor(.primary)
+
+                Text(formattedTime(viewModel.tripDurationLive))
+                    .font(.caption2)
+                    .foregroundColor(
+                        viewModel.tripState == .paused ? .orange :
+                        viewModel.tripState == .traveling ? .green :
+                        viewModel.tripDurationLive > 0 ? .green : .gray
+                    )
             }
             .frame(maxWidth: .infinity)
         }
@@ -156,6 +174,7 @@ struct MapContainerView: View {
     private var recenterButton: some View {
         Button(action: {
             viewModel.recenterTapped()
+            mapViewModel.recenter()
         }) {
             Image(systemName: mapViewModel.locationIconName)
                 .font(.system(size: 18, weight: .semibold))
@@ -229,4 +248,10 @@ struct MapContainerView: View {
         }
         .padding(.top, 8)
     }
+}
+
+private func formattedTime(_ interval: TimeInterval) -> String {
+    let minutes = Int(interval) / 60
+    let seconds = Int(interval) % 60
+    return String(format: "%02d:%02d", minutes, seconds)
 }

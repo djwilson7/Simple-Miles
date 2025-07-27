@@ -3,14 +3,20 @@ import Combine
 import CoreLocation
 
 final class RecordingManager {
-    @Published var tripDistance: CLLocationDistance = 0
-    @Published var tripDuration: TimeInterval = 0
+    private let compassHeadingPublisher = LocationManager.shared.$compassHeading
+    private var compassHeading: CLLocationDirection?
+    private var pausedHeadingBuffer: [CLLocationDirection] = []
+    private let recordingStore = RecordingStore()
+    
+    @Published var tripDistanceCommitted: CLLocationDistance = 0
+    @Published var tripDistanceLive: CLLocationDistance = 0
+    @Published var tripDurationCommitted: TimeInterval = 0
+    @Published var tripDurationLive: TimeInterval = 0
     @Published var isRecording: Bool = false
 
     private var firstLocation: CLLocation?
     private var lastRecordedLocation: CLLocation?
     private var tripStartTime: Date?
-    private var lastHeading: CLLocationDirection?
 
     private let travelStatePublisher: Published<TravelStateManager.TravelState>.Publisher
     private let currentLocationPublisher: Published<CLLocation?>.Publisher
@@ -22,6 +28,11 @@ final class RecordingManager {
     private var previousState: TravelStateManager.TravelState?
     private var durationTimer: AnyCancellable?
 
+    private var liveSegment: TripSegment?
+    private var previousSegment: TripSegment?
+    private var pausedSegment: TripSegment?
+    private var pauseAnchor: CLLocation?
+
     init(
         travelStatePublisher: Published<TravelStateManager.TravelState>.Publisher,
         currentLocationPublisher: Published<CLLocation?>.Publisher,
@@ -31,29 +42,41 @@ final class RecordingManager {
         self.currentLocationPublisher = currentLocationPublisher
         self.lastLocationPublisher = lastLocationPublisher
 
+        bindPublishers()
+    }
+
+    private func bindPublishers() {
         travelStatePublisher
-            .sink { [weak self] state in
-                self?.handleTravelStateUpdate(state)
-            }
+            .sink { [weak self] state in self?.handleTravelStateUpdate(state) }
             .store(in: &cancellables)
 
         currentLocationPublisher
             .sink { [weak self] location in
-                self?.currentLocation = location
-                guard let self = self,
-                      self.isRecording,
-                      let last = self.lastRecordedLocation,
+                guard let self = self else { return }
+                self.currentLocation = location
+                guard self.isRecording,
+                      let _ = self.lastRecordedLocation,
                       let location = location else { return }
 
-                let distance = last.distance(from: location)
-                self.tripDistance += distance
                 self.lastRecordedLocation = location
+                if var segment = self.liveSegment {
+                    segment.append(location: location)
+                    self.tripDistanceLive = segment.distance
+                }
             }
             .store(in: &cancellables)
 
         lastLocationPublisher
-            .sink { [weak self] location in
-                self?.lastLocation = location
+            .sink { [weak self] location in self?.lastLocation = location }
+            .store(in: &cancellables)
+
+        compassHeadingPublisher
+            .sink { [weak self] heading in
+                guard let self = self else { return }
+                self.compassHeading = heading
+                if self.previousState == .paused {
+                    self.pausedHeadingBuffer.append(heading)
+                }
             }
             .store(in: &cancellables)
     }
@@ -61,50 +84,120 @@ final class RecordingManager {
     private func handleTravelStateUpdate(_ state: TravelStateManager.TravelState) {
         switch state {
         case .traveling:
-            guard let location = currentLocation else { return }
+            if previousState == .paused {
+                pausedSegment?.duration = tripDurationLive
+                print("Paused segment duration set to \(tripDurationLive)")
 
-            if previousState == .idle {
+                if let paused = pausedSegment, let anchor = pauseAnchor {
+                    if PauseSegmentClassifier.shouldMerge(paused, anchorHeading: anchor.course, headingBuffer: pausedHeadingBuffer),
+                       let previous = previousSegment {
+                        previousSegment = TripSegment.merge(liveSegment: paused, previousSegment: previous)
+                        
+                    } else {
+                        previousSegment?.finalize(at: Date())
+                        //future -> push segment to memory for sorting later.
+                        previousSegment = nil
+                    }
+                    tripDistanceCommitted = previousSegment?.distance ?? 0
+                    tripDurationCommitted = previousSegment?.duration ?? 0
+                }
+                pausedHeadingBuffer.removeAll()
+            }
+            startDurationTimer()
+
+            var newSegment = TripSegment(startTimestamp: Date())
+            if let current = currentLocation {
+                newSegment.append(location: current)
             }
 
-            if firstLocation == nil {
+            liveSegment = newSegment
+            pausedSegment = nil
+            pauseAnchor = nil
+
+            if firstLocation == nil, let location = currentLocation {
                 firstLocation = location
-                tripStartTime = location.timestamp
-                if durationTimer == nil {
-                    durationTimer = Timer.publish(every: 1.0, on: .main, in: .common)
-                        .autoconnect()
-                        .sink { [weak self] _ in
-                            guard let self = self,
-                                  self.isRecording,
-                                  let start = self.tripStartTime else { return }
-                            self.tripDuration = Date().timeIntervalSince(start)
-                        }
-                }
-                tripDistance = 0
-                tripDuration = 0
                 lastRecordedLocation = location
             }
 
-            RecordingStore.updateLivePath(location)
+            if let location = currentLocation {
+                
+            }
+
         case .paused:
-            durationTimer?.cancel()
-            durationTimer = nil
+            liveSegment?.duration = tripDurationLive
+            liveSegment?.distance = tripDistanceLive
+            startDurationTimer()
+
+            if let previous = previousSegment, let live = liveSegment {
+                previousSegment = TripSegment.merge(liveSegment: live, previousSegment: previous)
+            } else {
+                previousSegment = liveSegment
+            }
+            
+            recordingStore.writeTemporarySegment(previousSegment!) //store the previous segment in temp memory
+            
+            tripDurationCommitted = previousSegment?.duration ?? 0
+            tripDistanceCommitted = previousSegment?.distance ?? 0
+            tripDistanceLive = 0
+            liveSegment = nil
+
+            pauseAnchor = currentLocation
+            pausedSegment = TripSegment(startTimestamp: Date())
+            if let current = currentLocation {
+                pausedSegment?.append(location: current)
+            }
+
         case .idle:
             if let location = currentLocation {
-                RecordingStore.finalizeLivePath(location)
+                //we need to finalize the segment, then finalize the file into memory.
             }
-            firstLocation = nil
-            lastRecordedLocation = nil
-            tripStartTime = nil
-            tripDistance = 0
-            durationTimer?.cancel()
-            durationTimer = nil
+
+            finalizeCurrentSegment()
+            reset()
         }
+
         previousState = state
         isRecording = (state == .traveling)
     }
-}
 
-private extension RecordingManager {
+    private func finalizeCurrentSegment() {
+        if var active = liveSegment {
+            active.finalize(at: Date())
+        }
+    }
+
+    private func reset() {
+        firstLocation = nil
+        lastRecordedLocation = nil
+        tripStartTime = nil
+        tripDistanceLive = 0
+        tripDistanceCommitted = 0
+        tripDurationLive = 0
+        tripDurationCommitted = 0
+        stopDurationTimer()
+        liveSegment = nil
+        previousSegment = nil
+        pausedSegment = nil
+        pauseAnchor = nil
+    }
+
+    private func startDurationTimer() {
+        stopDurationTimer()
+        tripStartTime = Date()
+        durationTimer = Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self = self,
+                      let start = self.tripStartTime else { return }
+                self.tripDurationLive = Date().timeIntervalSince(start)
+            }
+    }
+
+    private func stopDurationTimer() {
+        durationTimer?.cancel()
+        durationTimer = nil
+    }
+
     func interpolatePoints(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D, steps: Int) -> [CLLocationCoordinate2D] {
         guard steps > 1 else { return [to] }
         let latStep = (to.latitude - from.latitude) / Double(steps)

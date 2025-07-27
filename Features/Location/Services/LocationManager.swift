@@ -8,6 +8,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     @Published private(set) var lastLocation: CLLocation?
     @Published private(set) var speed: CLLocationSpeed = 0
     @Published private(set) var trueHeading: CLLocationDirection = 0
+    @Published private(set) var compassHeading: CLLocationDirection = 0
 
     // MARK: - Private State
     static let shared = LocationManager()
@@ -19,7 +20,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     private var lowSpeedTimer: Timer?
     private let lowSpeedThreshold: CLLocationSpeed = 2.24 // 5 mph
-    private let revertDelay: TimeInterval = 120           // 2 minutes
+    private let revertDelay: TimeInterval = 45            // 45 seconds
     private var preferCourseHeading: Bool = false
     private var lastCLHeading: CLLocationDirection = 0
 
@@ -106,12 +107,11 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         let heading = newHeading.trueHeading > 0 ? newHeading.trueHeading : newHeading.magneticHeading
         lastCLHeading = heading
+        compassHeading = heading
 
         if !preferCourseHeading {
             trueHeading = heading
             headingSubject.send(heading)
-        } else {
-            print("[LocationManager] Compass update received but course is preferred")
         }
     }
 
