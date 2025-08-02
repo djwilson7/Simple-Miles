@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import CoreLocation
 import Combine
 
@@ -88,6 +89,12 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let latest = locations.last else { return }
 
+        let appState = UIApplication.shared.applicationState
+        if appState == .background {
+            beginPassiveBackgroundTracking(from: latest)
+            return
+        }
+
         lastLocation = currentLocation
         currentLocation = latest
         locationSubject.send(latest)
@@ -117,6 +124,43 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("[LocationManager] Error: \(error.localizedDescription)")
+    }
+
+    final class BackgroundTaskRef {
+        var id: UIBackgroundTaskIdentifier = .invalid
+    }
+
+    private func beginPassiveBackgroundTracking(from location: CLLocation) {
+        let taskRef = BackgroundTaskRef()
+        taskRef.id = UIApplication.shared.beginBackgroundTask(withName: "PassiveTripStart") {
+            UIApplication.shared.endBackgroundTask(taskRef.id)
+        }
+
+        locationManager.startUpdatingLocation()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
+            self.evaluateBackgroundStart(from: location)
+            UIApplication.shared.endBackgroundTask(taskRef.id)
+        }
+    }
+
+    private func evaluateBackgroundStart(from location: CLLocation) {
+        guard location.speed > 4 else { return }
+
+        self.lastLocation = self.currentLocation
+        self.currentLocation = location
+        self.locationSubject.send(location)
+
+        if let previous = self.lastLocation {
+            let deltaDistance = location.distance(from: previous)
+            let deltaTime = location.timestamp.timeIntervalSince(previous.timestamp)
+            if deltaTime > 0 {
+                self.speed = deltaDistance / deltaTime
+            }
+        }
+
+        self.lastKnownStore.update(location)
+        self.evaluateHeadingPreference(for: location)
     }
 
     // MARK: - Heading Source Logic

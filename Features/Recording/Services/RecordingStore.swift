@@ -36,6 +36,19 @@ final class RecordingStore {
         guard let files = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return [] }
         let segmentFiles = files.filter { $0.lastPathComponent.hasPrefix("finalized_") }
         return segmentFiles.compactMap { read(from: $0) }
+                           .sorted(by: { $0.startTimestamp > $1.startTimestamp })
+    }
+    
+    func discardTemporarySegment() {
+        let tempURL = directory.appendingPathComponent("temp_segment.json")
+        do {
+            if fileManager.fileExists(atPath: tempURL.path) {
+                try fileManager.removeItem(at: tempURL)
+                print("RecordingStore: Discarded temporary segment")
+            }
+        } catch {
+            print("RecordingStore: Failed to discard temporary segment - \(error)")
+        }
     }
 
     private func write(_ segment: TripSegment, to url: URL) {
@@ -63,3 +76,5 @@ final class RecordingStore {
         }
     }
 }
+
+    

@@ -21,7 +21,10 @@ struct SimpleMilesApp: App {
     let cameraManager: CameraManager
     let arrowManager: ArrowHeadingManager
     let mapViewModel: MapViewModel
-//    let motionManager: MotionManager
+    let tripViewModel: TripViewModel
+    let userNotifier = UserNotifier.shared
+    let mapContainerViewModel: MapContainerViewModel
+    let activityViewModel: ActivityViewModel
     
     init() {
         FirebaseApp.configure()
@@ -37,7 +40,7 @@ struct SimpleMilesApp: App {
             drivingStatePublisher: driverStateManager.$state,
             locationManager: locationManager
         )
-
+        
         travelLocationPredictor = TravelLocationPredictor(
             locationManager: locationManager,
             travelStateManager: travelStateManager
@@ -49,40 +52,56 @@ struct SimpleMilesApp: App {
             lastLocationPublisher: locationManager.$lastLocation
         )
         
+        tripViewModel = TripViewModel(
+            recordingManager: recordingManager
+        )
+        
         mapView = MKMapView()
         
         cameraManager = CameraManager(
-            travelLocationPredictor: travelLocationPredictor
+            travelLocationPredictor: travelLocationPredictor,
+            tripViewModel: tripViewModel
         )
         
         arrowManager = ArrowHeadingManager(
             cameraManager: cameraManager,
             travelLocationPredictor: travelLocationPredictor,
-            travelStateManager: travelStateManager
+            travelStateManager: travelStateManager,
+            tripViewModel: tripViewModel
         )
 
         mapViewModel = MapViewModel(
             travelLocationPredictor: travelLocationPredictor,
             cameraManager: cameraManager,
             arrowManager: arrowManager,
-            travelStateManager: travelStateManager
+            travelStateManager: travelStateManager,
+            tripViewModel: tripViewModel,
+            recordingManager: recordingManager
         )
-//        motionManager = MotionManager.shared
-//        motionManager.observeTravelState(travelStateManager.$state.eraseToAnyPublisher())
+        
+        mapContainerViewModel = MapContainerViewModel (
+            recordingManager: recordingManager,
+            travelStateManager: travelStateManager,
+            cameraManager: cameraManager,
+            tripViewModel: tripViewModel
+        )
+        
+        activityViewModel = ActivityViewModel(
+            travelStateManager: travelStateManager,
+            recordingManager: recordingManager,
+            mapContainerViewModel: mapContainerViewModel
+        )
     }
 
     var body: some Scene {
         WindowGroup {
             MapContainerView(
-                viewModel: MapContainerViewModel(
-                    recordingManager: recordingManager,
-                    travelStateManager: travelStateManager,
-                    cameraManager: cameraManager
-                ),
+                viewModel: mapContainerViewModel,
                 mapViewModel: mapViewModel
             )
             .environmentObject(driverStateManager)
             .environmentObject(travelStateManager)
+            .environmentObject(activityViewModel)
         }
     }
 }

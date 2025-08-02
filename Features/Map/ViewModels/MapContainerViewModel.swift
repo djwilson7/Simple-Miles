@@ -13,6 +13,7 @@ final class MapContainerViewModel: ObservableObject {
     @Published var remainingPauseTime: TimeInterval? = nil
     @Published var sweepProgress: CGFloat = 0
     @Published var totalPauseTime: TimeInterval? = nil
+    let tripViewModel: TripViewModel
 
     // MARK: - Action Hooks
 
@@ -26,7 +27,7 @@ final class MapContainerViewModel: ObservableObject {
     private let recordingManager: RecordingManager
     private let travelStateManager: TravelStateManager
     private let cameraManager: CameraManager
-
+    
     // MARK: - Private Properties
 
     private var pauseStartUptime: TimeInterval?
@@ -58,10 +59,11 @@ final class MapContainerViewModel: ObservableObject {
     }
 
     // MARK: - Init
-    init(recordingManager: RecordingManager, travelStateManager: TravelStateManager, cameraManager: CameraManager) {
+    init(recordingManager: RecordingManager, travelStateManager: TravelStateManager, cameraManager: CameraManager, tripViewModel: TripViewModel) {
         self.recordingManager = recordingManager
         self.travelStateManager = travelStateManager
         self.cameraManager = cameraManager
+        self.tripViewModel = tripViewModel
         setupBindings()
         startSweepLoop()
     }
@@ -121,7 +123,6 @@ final class MapContainerViewModel: ObservableObject {
                     self?.sweepProgress = 0
                     return
                 }
-
                 let elapsed = ProcessInfo.processInfo.systemUptime - pauseStart
                 self.sweepProgress = min(CGFloat(elapsed / total), 1.0)
             }

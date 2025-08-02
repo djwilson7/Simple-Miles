@@ -18,7 +18,7 @@ final class DrivingStateManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let locationManager: LocationManager
     private let movementDistanceThreshold: CLLocationDistance = 10.0
-    private let speedThreshold: CLLocationSpeed = 0.5 // ~1.1 mph
+    private let speedThreshold: CLLocationSpeed = 2.5 // ~1.1 mph
 
     init(locationManager: LocationManager) {
         self.locationManager = locationManager

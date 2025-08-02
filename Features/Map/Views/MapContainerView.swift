@@ -4,8 +4,10 @@ import MapKit
 struct MapContainerView: View {
     @ObservedObject var viewModel: MapContainerViewModel
     @ObservedObject var mapViewModel: MapViewModel
+    
     @State private var showSettingsModal = false
     @State private var statusBarHeight: CGFloat = 0
+    @State private var showTripModal = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -23,29 +25,78 @@ struct MapContainerView: View {
                 Spacer()
             }
 
-            statusBar
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .onAppear {
-                                statusBarHeight = geo.size.height
-                            }
-                            .onChange(of: geo.size.height) { _, newValue in
-                                statusBarHeight = newValue
-                            }
+            // Toast overlay (centered above trip time bar)
+            if let toast = ToastManager.shared.currentToast {
+                VStack {
+                    Spacer()
+                    Text(toast.body)
+                        .font(.subheadline)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.black.opacity(0.85))
+                        )
+                        .foregroundColor(.white)
+                        .padding(.bottom, 140)
+                        .transition(.opacity)
+                        .animation(.easeInOut, value: toast)
+                }
+            }
+
+            if !viewModel.tripViewModel.isReviewing {
+                statusBar
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear {
+                                    statusBarHeight = geo.size.height
+                                }
+                                .onChange(of: geo.size.height) { _, newValue in
+                                    statusBarHeight = newValue
+                                }
+                        }
+                    )
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if viewModel.tripViewModel.isReviewing {
+                VStack(spacing: 20) {
+                    TripView(viewModel: viewModel.tripViewModel)
+                        .padding(.horizontal)
+
+                    Button(action: {
+                        viewModel.tripViewModel.isReviewing = false
+                    }) {
+                        Text("Sort Trips Later")
+                            .font(.footnote.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.blue)
+                                    .shadow(radius: 4)
+                            )
                     }
-                )
+                }
+                .padding(.bottom, 20)
+            }
         }
         .overlay(alignment: .bottomTrailing) {
-            controlButtons
-                .padding(.trailing, 20)
-                .padding(.bottom, statusBarHeight + 20)
+            if !viewModel.tripViewModel.isReviewing {
+                controlButtons
+                    .padding(.trailing, 20)
+                    .padding(.bottom, statusBarHeight + 20)
+            }
         }
         .onAppear {
             viewModel.onSettings = {
                 showSettingsModal = true
             }
         }
+        .overlay(settingsOverlay)
+        .overlay(tripOverlay)
     }
 
     private var controlButtons: some View {
@@ -84,17 +135,18 @@ struct MapContainerView: View {
 
                 HStack {
                     Spacer()
-                    (
-                        viewModel.tripState == .paused
-                        ? (
+                    HStack(spacing: 4) {
+                        if viewModel.tripViewModel.isReviewing {
+                            Text("Trip Sorting").foregroundColor(.primary)
+                        } else if viewModel.tripState == .paused {
                             Text("Ending Trip In: ")
                                 .foregroundColor(.primary)
-                            + Text(viewModel.pauseCountdownFormatted)
+                            Text(viewModel.pauseCountdownFormatted)
                                 .foregroundColor(.orange)
-                        )
-                        : Text("Simple Miles")
-                            .foregroundColor(.primary)
-                    )
+                        } else {
+                            Text("Simple Miles").foregroundColor(.primary)
+                        }
+                    }
                     .font(.headline)
                     Spacer()
                 }
@@ -216,6 +268,7 @@ struct MapContainerView: View {
 
     private var summaryButton: some View {
         Button(action: {
+            viewModel.tripViewModel.isReviewing = true
             viewModel.summaryTapped()
         }) {
             Image(systemName: "rectangle.stack")
@@ -247,6 +300,38 @@ struct MapContainerView: View {
                 )
         }
         .padding(.top, 8)
+    }
+    
+    private var settingsOverlay: some View {
+        GeometryReader { geo in
+            Group {
+                if showSettingsModal {
+                    SettingsView(isPresented: $showSettingsModal)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(20)
+                        .frame(
+                            maxWidth: geo.size.width * 0.9,
+                            maxHeight: geo.size.height * 0.9
+                        )
+                }
+            }
+        }
+    }
+
+    private var tripOverlay: some View {
+        GeometryReader { geo in
+            Group {
+                if showTripModal {
+                    TripView(viewModel: viewModel.tripViewModel)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(20)
+                        .frame(
+                            maxWidth: geo.size.width * 0.9,
+                            maxHeight: geo.size.height * 0.9
+                        )
+                }
+            }
+        }
     }
 }
 

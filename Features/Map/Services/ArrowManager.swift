@@ -15,12 +15,19 @@ final class ArrowHeadingManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var lastRotation: CLLocationDirection = 0
     private var travelState: TravelStateManager.TravelState = .idle
-
+    private let tripViewModel: TripViewModel
+    
     /// Initialize with the shared camera and travel motion managers
-    init(cameraManager: CameraManager, travelLocationPredictor: TravelLocationPredictor, travelStateManager: TravelStateManager) {
+    init(
+        cameraManager: CameraManager,
+        travelLocationPredictor: TravelLocationPredictor,
+        travelStateManager: TravelStateManager,
+        tripViewModel: TripViewModel
+    ) {
         self.cameraManager = cameraManager
         self.travelLocationPredictor = travelLocationPredictor
         self.travelStateManager = travelStateManager
+        self.tripViewModel = tripViewModel
         bind()
     }
 
@@ -32,16 +39,26 @@ final class ArrowHeadingManager: ObservableObject {
             .store(in: &cancellables)
 
         Publishers
-            .CombineLatest3(cameraManager.$currentHeading, travelLocationPredictor.$activeHeading, cameraManager.$orientationMode)
+            .CombineLatest3(
+                cameraManager.$currentHeading,
+                travelLocationPredictor.$activeHeading,
+                cameraManager.$orientationMode
+            )
             .receive(on: DispatchQueue.main)
             .sink { [weak self] cameraHeading, activeHeading, orientation in
-                self?.updateArrowRotation(cameraHeading: cameraHeading, trueHeading: activeHeading, orientation: orientation)
+                self?.updateArrowRotation(
+                    cameraHeading: cameraHeading,
+                    trueHeading: activeHeading,
+                    orientation: orientation
+                )
             }
             .store(in: &cancellables)
     }
 
     /// Compute and normalize the arrow rotation based on camera and device heading and orientation mode
     private func updateArrowRotation(cameraHeading: CLLocationDirection, trueHeading: CLLocationDirection, orientation: CameraOrientationMode) {
+        guard !tripViewModel.isReviewing else { return }
+
         let targetRotation: CLLocationDirection
 
         switch orientation {

@@ -4,11 +4,20 @@ import MapKit
 struct MapView: View {
     @ObservedObject var viewModel: MapViewModel
     var body: some View {
-        Map(position: $viewModel.cameraPosition, interactionModes: .all) {
-            MapPolyline(coordinates: viewModel.tracePath)
-                .stroke(.green, lineWidth: 7)
+        ZStack {
+            Map(position: $viewModel.cameraPosition, interactionModes: .all) {
+                if !viewModel.tripViewModel.isReviewing {
+                    MapPolyline(coordinates: viewModel.commitedTracePath)
+                        .stroke(.blue, lineWidth: 7)
+                    MapPolyline(coordinates: viewModel.nonCommitedTraceStatic)
+                        .stroke(.orange, lineWidth: 7)
+                } else {
+                    MapPolyline(coordinates: viewModel.previousTripPath)
+                        .stroke(.mint, lineWidth: 7)
+                }
 
-                if let coordinate = viewModel.currentLocation?.coordinate {
+                if !viewModel.tripViewModel.isReviewing,
+                   let coordinate = viewModel.currentLocation?.coordinate {
                     Annotation("", coordinate: coordinate, anchor: .center) {
                         Image(systemName: viewModel.locationIconName)
                             .resizable()
@@ -17,6 +26,24 @@ struct MapView: View {
                             .animation(.easeInOut(duration: 0.3), value: viewModel.displayedArrowRotation)
                             .symbolRenderingMode(.monochrome)
                             .foregroundStyle(.primary)
+                    }
+                } else {
+                    if let start = viewModel.tripMarkers.first {
+                        Annotation("Start", coordinate: start, anchor: .bottom) {
+                            Image(systemName: "flag.fill")
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundColor(.green)
+                        }
+                    }
+
+                    if let end = viewModel.tripMarkers.last {
+                        Annotation("End", coordinate: end, anchor: .bottom) {
+                            Image(systemName: "flag.checkered")
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundColor(.red)
+                        }
                     }
                 }
             }
@@ -37,6 +64,19 @@ struct MapView: View {
             .onMapCameraChange(frequency: .continuous) { context in
                 viewModel.cameraManager.updateZoomLevel(context.camera.distance)
             }
+            .onMapCameraChange(frequency: .onEnd) { context in
+                viewModel.updateZoomRegion(context.region)
+            }
+
+            if viewModel.isLoadingReviewPath {
+                Color.black.opacity(0.3)
+                    .edgesIgnoringSafeArea(.all)
+                ProgressView("Loading trip...")
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+            }
+        }
     }
 
     func recenterOnUser() {

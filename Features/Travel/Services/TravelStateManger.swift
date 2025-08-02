@@ -11,7 +11,6 @@ final class TravelStateManager: ObservableObject {
     @Published var pauseRemainingTime: TimeInterval? = nil
     @Published private(set) var pauseTotalDuration: TimeInterval? = nil
     private var pauseTimer: Timer?
-    private let defaultPauseDuration: TimeInterval = 120.0
     // MARK: - State Enum
     enum TravelState {
         case idle
@@ -73,8 +72,8 @@ final class TravelStateManager: ObservableObject {
 
     private func handleDrivingStarted() {
         guard state != .traveling else { return }
-        pauseRemainingTime = defaultPauseDuration
-        pauseTotalDuration = defaultPauseDuration
+        pauseRemainingTime = AppSettings.shared.pauseTimer
+        pauseTotalDuration = AppSettings.shared.pauseTimer
         pauseTimer?.invalidate()
         pauseTimer = nil
         state = .traveling
@@ -88,8 +87,8 @@ final class TravelStateManager: ObservableObject {
         state = .paused
         print("TravelState Transitioned: .paused")
         pauseTimer?.invalidate()
-        pauseRemainingTime = defaultPauseDuration
-        pauseTotalDuration = defaultPauseDuration
+        pauseRemainingTime = AppSettings.shared.pauseTimer
+        pauseTotalDuration = AppSettings.shared.pauseTimer
 
         pauseTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self else { return }
