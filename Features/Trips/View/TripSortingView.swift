@@ -17,28 +17,18 @@ struct TripSortingView: View {
     
     var body: some View {
         GeometryReader { geo in
-            let barHeight = geo.size.height * 0.05
-            let dateBarHeight = geo.size.height * 0.06
-            let barWidth = geo.size.width * 0.3
-            let dateBarWidth = geo.size.width * 0.5
-            let frame = geo.frame(in: .global)
-            let dateBarCenter = CGPoint(x: frame.midX, y: frame.midY)
-            
             GlassEffectContainer(spacing: 24) {
                 VStack {
-                    sortRow(geo: geo)
-                    
-                    statsRow(
-                        barWidth: barWidth,
-                        barHeight: barHeight
-                    )
-                    
-                    selectedTripRow(
-                        barWidth: barWidth,
-                        dateBarWidth: dateBarWidth,
-                        dateBarHeight: dateBarHeight,
-                        dateBarCenter: dateBarCenter
-                    )
+                    Spacer(minLength: geo.size.height * 0.3)
+                    VStack {
+                        sortRow(geo: geo)
+                    }
+                    Spacer(minLength: geo.size.height * 0.3)
+                    VStack(spacing: 20) {
+                        statsRow(geo: geo)
+                        
+                        selectedTripRow(geo: geo)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -47,8 +37,7 @@ struct TripSortingView: View {
     }
     
     private func sortRow(geo: GeometryProxy) -> some View {
-        HStack {
-            Spacer()
+        HStack(spacing: 40) {
             SortBubble(text: "Personal")
                 .onAppear {
                     let frame = geo.frame(in: .global)
@@ -62,7 +51,6 @@ struct TripSortingView: View {
                     let frame = geo.frame(in: .global)
                     personalBubbleCenter = CGPoint(x: frame.midX, y: frame.midY)
                 }
-            Spacer()
             SortBubble(text: "Business")
                 .onAppear {
                     let frame = geo.frame(in: .global)
@@ -76,28 +64,33 @@ struct TripSortingView: View {
                     let frame = geo.frame(in: .global)
                     businessBubbleCenter = CGPoint(x: frame.midX, y: frame.midY)
                 }
-            Spacer()
         }
+        .frame(maxWidth: .infinity)
     }
     
-    private func statsRow(barWidth: CGFloat, barHeight: CGFloat) -> some View {
-        HStack {
-            Spacer()
+    private func statsRow(geo: GeometryProxy) -> some View {
+        let barWidth = geo.size.width * 0.3
+        let barHeight = geo.size.height * 0.05
+
+        return HStack(spacing: 40) {
             Text("Distance")
                 .frame(width: barWidth, height: barHeight)
                 .glassEffect(.clear)
-            Spacer()
             Text("Duration")
                 .frame(width: barWidth, height: barHeight)
                 .glassEffect(.clear)
-            Spacer()
         }
         .font(.subheadline)
         .frame(maxWidth: .infinity)
     }
     
-    private func selectedTripRow(barWidth: CGFloat, dateBarWidth: CGFloat, dateBarHeight: CGFloat, dateBarCenter: CGPoint) -> some View {
-        HStack {
+    private func selectedTripRow(geo: GeometryProxy) -> some View {
+        let dateBarHeight = geo.size.height * 0.06
+        let dateBarWidth = geo.size.width * 0.5
+        let dateBarCenter = CGPoint(x: geo.frame(in: .global).midX, y: geo.frame(in: .global).midY)
+        let barWidth = geo.size.width * 0.3
+
+        return HStack(spacing: 40) {
             Text(".")
                 .frame(width: barWidth / 3, height: dateBarHeight)
                 .glassEffect(.clear)
@@ -136,10 +129,13 @@ struct TripSortingView: View {
                         }
                 )
                 .frame(width: dateBarWidth, height: dateBarHeight)
+            
             Text(".")
                 .frame(width: barWidth / 3, height: dateBarHeight)
                 .glassEffect(.clear)
         }
+        .frame(maxWidth: .infinity)
+        .padding(20)
     }
     
     func distance(from: CGPoint, to: CGPoint) -> CGFloat {
