@@ -35,6 +35,7 @@ struct LiveTripTrackingLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TripActivityAttributes.self) { context in
             ActivityView(context: context)
+                .containerBackground(Color.clear, for: .widget)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -46,6 +47,7 @@ struct LiveTripTrackingLiveActivity: Widget {
                         liveDuration: context.state.tripDurationLive,
                         remainingPauseTime: context.state.remainingPauseTime
                     )
+                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     TripStatusView(
@@ -56,6 +58,7 @@ struct LiveTripTrackingLiveActivity: Widget {
                         liveDuration: context.state.tripDurationLive,
                         remainingPauseTime: context.state.remainingPauseTime
                     )
+                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     TripStatusView(
@@ -66,21 +69,26 @@ struct LiveTripTrackingLiveActivity: Widget {
                         liveDuration: context.state.tripDurationLive,
                         remainingPauseTime: context.state.remainingPauseTime
                     )
+                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
                 }
             } compactLeading: {
                 let liveMiles = context.state.tripDistanceLive
                 Text(String(format: "%.1fmi", liveMiles))
                     .font(.caption)
                     .foregroundColor(liveMiles > 0 ? .orange : .gray)
+                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
             } compactTrailing: {
                 let liveSeconds = context.state.tripDurationLive
                 Text(formattedTime(liveSeconds))
                     .font(.caption)
                     .foregroundColor(liveSeconds > 0 ? .orange : .gray)
+                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
             } minimal: {
                 Text(context.state.state.capitalized)
                     .font(.caption)
+                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
             }
         }
     }
 }
+

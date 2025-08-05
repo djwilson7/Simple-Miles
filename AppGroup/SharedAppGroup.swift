@@ -17,6 +17,7 @@ enum SharedKeys {
     static let tripDurationLive = "tripDurationLive"
     static let sweepProgress = "sweepProgress"
     static let remainingPauseTime = "remainingPauseTime"
+    static let extendPauseRequested = "extendPauseRequested"
 }
 
 func getSharedDefaults() -> UserDefaults? {

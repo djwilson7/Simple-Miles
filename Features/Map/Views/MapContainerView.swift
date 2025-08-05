@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 
+
 struct MapContainerView: View {
     @ObservedObject var viewModel: MapContainerViewModel
     @ObservedObject var mapViewModel: MapViewModel
@@ -8,6 +9,9 @@ struct MapContainerView: View {
     @State private var showSettingsModal = false
     @State private var statusBarHeight: CGFloat = 0
     @State private var showTripModal = false
+    @State private var isMorphingPauseButton = false
+    @State private var isPauseButtonPressed: Bool = false
+    @State private var isInSettings = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -15,12 +19,8 @@ struct MapContainerView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                titleBar
-                    .padding(.top, 12)
-
-                if viewModel.tripState == .paused {
-                    extendPauseButton
-                }
+                titleContainer
+                    .padding(.top, 20)
 
                 Spacer()
             }
@@ -44,7 +44,7 @@ struct MapContainerView: View {
                 }
             }
 
-            if !viewModel.tripViewModel.isReviewing {
+            if !(viewModel.tripViewModel.isReviewing || isInSettings) {
                 statusBar
                     .background(
                         GeometryReader { geo in
@@ -58,43 +58,27 @@ struct MapContainerView: View {
                         }
                     )
             }
-        }
-        .overlay(alignment: .bottom) {
-            if viewModel.tripViewModel.isReviewing {
-                VStack(spacing: 20) {
-                    TripView(viewModel: viewModel.tripViewModel)
-                        .padding(.horizontal)
 
-                    Button(action: {
-                        viewModel.tripViewModel.isReviewing = false
-                    }) {
-                        Text("Sort Trips Later")
-                            .font(.footnote.bold())
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.blue)
-                                    .shadow(radius: 4)
-                            )
-                    }
-                }
-                .padding(.bottom, 20)
+            if viewModel.tripViewModel.isReviewing {
+                TripSortingView()
             }
         }
+        
         .overlay(alignment: .bottomTrailing) {
-            if !viewModel.tripViewModel.isReviewing {
+            if !(viewModel.tripViewModel.isReviewing || isInSettings) {
                 controlButtons
                     .padding(.trailing, 20)
                     .padding(.bottom, statusBarHeight + 20)
             }
         }
+        
         .onAppear {
             viewModel.onSettings = {
                 showSettingsModal = true
+                isInSettings = true
             }
         }
+        
         .overlay(settingsOverlay)
         .overlay(tripOverlay)
     }
@@ -108,119 +92,147 @@ struct MapContainerView: View {
         }
     }
 
-    private var titleBar: some View {
+    private var titleContainer: some View {
         GeometryReader { geo in
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.ultraThinMaterial)
+            let containerWidth = geo.size.width * 0.9
+            let unpausedBarWidth = containerWidth
+            let pausedBarWidth = containerWidth * 0.7
+            let mergeOffset: CGFloat = viewModel.tripState == .paused ? -geo.size.width * 0.05 : 0
+            let buttonOffset: CGFloat = viewModel.tripState == .paused ? geo.size.width * 0.07 : 0
+            
+            GlassEffectContainer(spacing: 8) {
+                ZStack(alignment: .trailing) {
+                    titleBar
+                        .frame(width: viewModel.tripState == .paused ? pausedBarWidth : unpausedBarWidth, height: 44)
+                        .offset(x: mergeOffset)
+                        .animation(.spring(), value: viewModel.tripState)
 
-                ZStack {
-                    let start: CGFloat = 0.75
-                    let rawEnd = start + viewModel.sweepProgress
-
-                    if rawEnd <= 1.0 {
-                        RoundedRectangle(cornerRadius: 16)
-                            .trim(from: start, to: rawEnd)
-                            .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
-                    } else {
-                        RoundedRectangle(cornerRadius: 16)
-                            .trim(from: start, to: 1.0)
-                            .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
-
-                        RoundedRectangle(cornerRadius: 16)
-                            .trim(from: 0.0, to: rawEnd - 1.0)
-                            .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
-                    }
+                    extendPauseButton
+                        .offset(x: isPauseButtonPressed ? mergeOffset / 2 : buttonOffset)
+                        .animation(.spring(), value: isPauseButtonPressed)
+                        .animation(.spring(), value: viewModel.tripState)
                 }
-
-                HStack {
-                    Spacer()
-                    HStack(spacing: 4) {
-                        if viewModel.tripViewModel.isReviewing {
-                            Text("Trip Sorting").foregroundColor(.primary)
-                        } else if viewModel.tripState == .paused {
-                            Text("Ending Trip In: ")
-                                .foregroundColor(.primary)
-                            Text(viewModel.pauseCountdownFormatted)
-                                .foregroundColor(.orange)
-                        } else {
-                            Text("Simple Miles").foregroundColor(.primary)
-                        }
-                    }
-                    .font(.headline)
-                    Spacer()
-                }
-                .padding(.vertical, 10)
             }
-            .frame(height: geo.size.height)
+            .position(x: geo.size.width / 2, y: 20)
         }
-        .frame(height: 44)
-        .padding(.horizontal)
+    }
+
+    private var titleBar: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 50)
+                .fill(Color.clear)
+
+            ZStack {
+                let start: CGFloat = 0.75
+                let rawEnd = start + viewModel.sweepProgress
+
+                if rawEnd <= 1.0 {
+                    RoundedRectangle(cornerRadius: 50)
+                        .trim(from: start, to: rawEnd)
+                        .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
+                } else {
+                    RoundedRectangle(cornerRadius: 50)
+                        .trim(from: start, to: 1.0)
+                        .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
+
+                    RoundedRectangle(cornerRadius: 50)
+                        .trim(from: 0.0, to: rawEnd - 1.0)
+                        .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
+                }
+            }
+
+            HStack {
+                Spacer()
+                HStack(spacing: 4) {
+                    if viewModel.tripViewModel.isReviewing {
+                        Text("Trip Sorting").foregroundColor(.primary)
+                    } else if viewModel.tripState == .paused {
+                        Text("Ending Trip In: ")
+                            .foregroundColor(.primary)
+                        Text(viewModel.pauseCountdownFormatted)
+                            .foregroundColor(.orange)
+                    } else {
+                        Text("Simple Miles").foregroundColor(.primary)
+                    }
+                }
+                .font(.headline)
+                Spacer()
+            }
+            .padding(.vertical, 10)
+        }
+        .glassEffect(.clear)
+        .glassEffectTransition(.matchedGeometry)
+        
     }
 
     private var statusBar: some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 2) {
-                Text("Status")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Text(viewModel.tripStateText)
-                    .font(.body)
-                    .foregroundColor(viewModel.tripStateColor)
+        GeometryReader { geo in
+            HStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    Text("Status")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(viewModel.tripStateText)
+                        .font(.body)
+                        .foregroundColor(viewModel.tripStateColor)
+                }
+                .frame(maxWidth: .infinity)
+
+                Divider()
+                    .frame(width: 1, height: 28)
+                    .background(Color.secondary.opacity(0.4))
+
+                VStack(spacing: 2) {
+                    Text("Distance")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Text(String(format: "%.1f miles", viewModel.tripDistanceCommittedMiles))
+                        .font(.body)
+                        .foregroundColor(.primary)
+
+                    Text(String(format: "%.1f miles", viewModel.tripDistanceLiveMiles))
+                        .font(.caption2)
+                        .foregroundColor(
+                            viewModel.tripState == .paused ? .orange :
+                            viewModel.tripState == .traveling ? .green :
+                            viewModel.tripDistanceLiveMiles > 0 ? .green : .gray
+                        )
+                }
+                .frame(maxWidth: .infinity)
+
+                Divider()
+                    .frame(width: 1, height: 28)
+                    .background(Color.secondary.opacity(0.4))
+
+                VStack(spacing: 2) {
+                    Text("Trip Time")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Text(formattedTime(viewModel.tripDurationCommitted))
+                        .font(.body)
+                        .foregroundColor(.primary)
+
+                    Text(formattedTime(viewModel.tripDurationLive))
+                        .font(.caption2)
+                        .foregroundColor(
+                            viewModel.tripState == .paused ? .orange :
+                            viewModel.tripState == .traveling ? .green :
+                            viewModel.tripDurationLive > 0 ? .green : .gray
+                        )
+                }
+                .frame(maxWidth: .infinity)
+                
             }
-            .frame(maxWidth: .infinity)
-
-            Divider()
-                .frame(width: 1, height: 28)
-                .background(Color.secondary.opacity(0.4))
-
-            VStack(spacing: 2) {
-                Text("Distance")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text(String(format: "%.1f miles", viewModel.tripDistanceCommittedMiles))
-                    .font(.body)
-                    .foregroundColor(.primary)
-
-                Text(String(format: "%.1f miles", viewModel.tripDistanceLiveMiles))
-                    .font(.caption2)
-                    .foregroundColor(
-                        viewModel.tripState == .paused ? .orange :
-                        viewModel.tripState == .traveling ? .green :
-                        viewModel.tripDistanceLiveMiles > 0 ? .green : .gray
-                    )
-            }
-            .frame(maxWidth: .infinity)
-
-            Divider()
-                .frame(width: 1, height: 28)
-                .background(Color.secondary.opacity(0.4))
-
-            VStack(spacing: 2) {
-                Text("Trip Time")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text(formattedTime(viewModel.tripDurationCommitted))
-                    .font(.body)
-                    .foregroundColor(.primary)
-
-                Text(formattedTime(viewModel.tripDurationLive))
-                    .font(.caption2)
-                    .foregroundColor(
-                        viewModel.tripState == .paused ? .orange :
-                        viewModel.tripState == .traveling ? .green :
-                        viewModel.tripDurationLive > 0 ? .green : .gray
-                    )
-            }
-            .frame(maxWidth: .infinity)
+            .padding(.vertical)
+            .padding(.horizontal)
+            .frame(width: geo.size.width * 0.9, alignment: .center)
+            .glassEffect(.clear)
+            .position(x: geo.size.width / 2, y: geo.size.height / 2)
         }
-        .padding(.vertical)
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
-        .padding(.horizontal)
-        .padding(.bottom, 12)
+        .frame(height: 60)
+        
     }
 
     private var recenterButton: some View {
@@ -229,13 +241,10 @@ struct MapContainerView: View {
             mapViewModel.recenter()
         }) {
             Image(systemName: mapViewModel.locationIconName)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(12)
-                .background(.blue)
+                .frame(width: 40, height: 40)
                 .clipShape(Circle())
-                .shadow(radius: 4)
         }
+        .buttonStyle(GlassButtonStyle())
     }
 
     private var shareButton: some View {
@@ -243,27 +252,22 @@ struct MapContainerView: View {
             viewModel.shareTapped()
         }) {
             Image(systemName: "square.and.arrow.up")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(12)
-                .background(.blue)
+                .frame(width: 40, height: 40)
                 .clipShape(Circle())
-                .shadow(radius: 4)
         }
+        .buttonStyle(GlassButtonStyle())
+
     }
 
     private var settingsButton: some View {
-        Button {
+        Button(action: {
             viewModel.settingsTapped()
-        } label: {
+        }) {
             Image(systemName: "gearshape")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(12)
-                .background(.blue)
+                .frame(width: 40, height: 40)
                 .clipShape(Circle())
-                .shadow(radius: 4)
         }
+        .buttonStyle(GlassButtonStyle())
     }
 
     private var summaryButton: some View {
@@ -272,47 +276,89 @@ struct MapContainerView: View {
             viewModel.summaryTapped()
         }) {
             Image(systemName: "rectangle.stack")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(12)
-                .background(.blue)
+                .frame(width: 40, height: 40)
                 .clipShape(Circle())
-                .shadow(radius: 4)
         }
+        .buttonStyle(GlassButtonStyle())
+
     }
 
     private var extendPauseButton: some View {
         Button(action: {
+            isPauseButtonPressed = true
+            isMorphingPauseButton = true
             viewModel.extendPauseTapped()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.isMorphingPauseButton = false
+                self.isPauseButtonPressed = false
+            }
         }) {
-            Text("Extend Pause")
-                .font(.system(size: 14, weight: .semibold))
+            Image(systemName: "plus")
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
                 .foregroundColor(.orange)
-                .padding(.horizontal, 16)
-                .frame(height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 44)
-                        .fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 44)
-                        .stroke(Color.orange, lineWidth: 1.5)
-                )
         }
-        .padding(.top, 8)
+        .frame(width: 44, height: 44)
+        .buttonStyle(GlassButtonStyle(borderOpacity: 0.0))
+        .opacity(viewModel.tripState == .paused ? 1 : 0)
+        .disabled(viewModel.tripState != .paused)
+        .allowsHitTesting(viewModel.tripState == .paused)
+        .glassEffect(.clear)
+        .glassEffectTransition(.matchedGeometry)
     }
     
     private var settingsOverlay: some View {
         GeometryReader { geo in
             Group {
                 if showSettingsModal {
-                    SettingsView(isPresented: $showSettingsModal)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(20)
+                    ZStack {
+                        VStack(spacing: 0) {
+                            HStack {
+                                Spacer().frame(width: 4)
+                                Text("Settings")
+                                    .font(.title)
+                                    .bold()
+                                Spacer()
+                                Button(action: {
+                                    showSettingsModal = false
+                                    isInSettings = false
+                                }) {
+                                    Image(systemName: "xmark")
+                                        .font(.title2)
+                                        .padding(8)
+                                }
+                                .buttonStyle(.plain)
+                                Spacer().frame(width: 4)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 18)
+                            .padding(.bottom, 6)
+                            .padding(.leading, 20)
+                            .padding(.trailing, 20)
+                            .overlay(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.black.opacity(0.14), Color.clear]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                .frame(height: 12)
+                                .offset(y: 10),
+                                alignment: .bottom
+                            )
+                            ScrollView {
+                                SettingsView(isPresented: $showSettingsModal)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
                         .frame(
-                            maxWidth: geo.size.width * 0.9,
-                            maxHeight: geo.size.height * 0.9
+                            width: geo.size.width * 0.9,
+                            height: geo.size.height * 0.8
                         )
+                        
+                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28))
+                        .shadow(color: Color.black.opacity(0.45), radius: 32, x: 0, y: 16)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
             }
         }
@@ -323,7 +369,7 @@ struct MapContainerView: View {
             Group {
                 if showTripModal {
                     TripView(viewModel: viewModel.tripViewModel)
-                        .background(.ultraThinMaterial)
+                        .background(Color(.systemBackground).opacity(0.001))
                         .cornerRadius(20)
                         .frame(
                             maxWidth: geo.size.width * 0.9,
@@ -339,4 +385,18 @@ private func formattedTime(_ interval: TimeInterval) -> String {
     let minutes = Int(interval) / 60
     let seconds = Int(interval) % 60
     return String(format: "%02d:%02d", minutes, seconds)
+}
+
+struct GlassButtonStyle: ButtonStyle {
+    var borderOpacity: Double = 1.0
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                Circle().fill(.ultraThinMaterial)
+            )
+            .overlay(
+                Circle().stroke(Color.white.opacity(borderOpacity), lineWidth: 2)
+            )
+    }
 }

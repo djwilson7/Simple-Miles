@@ -7,7 +7,7 @@ final class RecordingManager {
     private let compassHeadingPublisher = LocationManager.shared.$compassHeading
     private var compassHeading: CLLocationDirection?
     private var pausedHeadingBuffer: [CLLocationDirection] = []
-    private let recordingStore = RecordingStore()
+    private let tripSegmentStore = TripSegmentStore()
     private let settings = AppSettings.shared
     
     @Published var tripDistanceCommitted: CLLocationDistance = 0
@@ -95,30 +95,16 @@ final class RecordingManager {
                     if PauseSegmentClassifier.shouldMerge(paused, anchorHeading: anchor.course, headingBuffer: pausedHeadingBuffer),
                        let previous = previousSegment {
                         previousSegment = TripSegment.merge(liveSegment: paused, previousSegment: previous)
-                        recordingStore.updateTemporarySegment(previousSegment!)
+                        tripSegmentStore.write(previousSegment!) //update temp file
                         commitedPath = previousSegment!.pathCoordinates
-                        UserNotifier.shared.showNotification(
-                            type: .success,
-                            title: "Segment Added",
-                            message: "Your paused segment was added to your existing trip."
-                        )
                     } else {
-                        previousSegment?.finalize(at: Date())
+                        tripSegmentStore.delete(previousSegment!) //remove temp file for previous segment
+                        previousSegment?.finalize(at: Date()) //update file name
                         let minimumMeters = settings.minimumTripDistance * 1609.34
                         if let segment = previousSegment, segment.distance >= minimumMeters {
-                            recordingStore.finalizeTemporarySegment()
-                            UserNotifier.shared.showNotification(
-                                type: .success,
-                                title: "Trip Finalized",
-                                message: "Your last trip was finalized."
-                            )
+                            tripSegmentStore.write(previousSegment!) //write with new file name
                         } else if previousSegment != nil {
-                            recordingStore.discardTemporarySegment()
-                            UserNotifier.shared.showNotification(
-                                type: .warning,
-                                title: "Trip Discarded",
-                                message: "Trip was too short to be saved."
-                            )
+                            //no op (temp is already destroyed, and new hasn't been written
                         }
                         commitedPath = []
                         previousSegment = nil
@@ -138,7 +124,7 @@ final class RecordingManager {
 
             liveSegment = newSegment
             if let previous = previousSegment {
-                recordingStore.updateTemporarySegment(previous)
+                tripSegmentStore.write(previous)
             }
             pausedSegment = nil
             pauseAnchor = nil
@@ -149,7 +135,7 @@ final class RecordingManager {
             }
 
             if let live = liveSegment {
-                recordingStore.writeTemporarySegment(live)
+                tripSegmentStore.write(live)
             }
 
         case .paused:
@@ -160,21 +146,12 @@ final class RecordingManager {
             if let previous = previousSegment, let live = liveSegment {
                 previousSegment = TripSegment.merge(liveSegment: live, previousSegment: previous)
                 commitedPath = previousSegment!.pathCoordinates
-                recordingStore.updateTemporarySegment(previousSegment!)
-                UserNotifier.shared.showNotification(
-                    type: .success,
-                    title: "Current Segment Paused",
-                    message: "Segment merged to existing trip."
-                )
+                tripSegmentStore.write(previousSegment!)
+                
             } else if let live = liveSegment {
                 previousSegment = live
                 commitedPath = previousSegment!.pathCoordinates
-                recordingStore.writeTemporarySegment(previousSegment!)
-                UserNotifier.shared.showNotification(
-                    type: .success,
-                    title: "Segment Created",
-                    message: "New segment created."
-                )
+                tripSegmentStore.write(previousSegment!)
             }
             nonCommitedPath = []
             tripDurationCommitted = previousSegment?.duration ?? 0
@@ -192,23 +169,12 @@ final class RecordingManager {
             if let location = currentLocation {
                 if var active = previousSegment {
                     active.append(location: location)
-                    active.finalize(at: Date())
+                    tripSegmentStore.delete(active) //delete the temp file.
+                    active.finalize(at: Date()) //set new file name
                     let minimumMeters = settings.minimumTripDistance * 1609.34
                     if let segment = previousSegment, segment.distance >= minimumMeters {
-                        recordingStore.finalizeTemporarySegment()
-                        UserNotifier.shared.showNotification(
-                            type: .success,
-                            title: "Trip Finalized",
-                            message: "Your last trip was finalized."
-                        )
+                        tripSegmentStore.write(active) //write with new file name
                         loadAllFinalizedSegments()
-                    } else if (previousSegment ?? liveSegment) != nil {
-                        recordingStore.discardTemporarySegment()
-                        UserNotifier.shared.showNotification(
-                            type: .warning,
-                            title: "Trip Discarded",
-                            message: "Trip was too short to be saved."
-                        )
                     }
                 }
             }
@@ -222,12 +188,14 @@ final class RecordingManager {
     }
 
     private func loadAllFinalizedSegments() {
-        allSegments = recordingStore.loadAllFinalizedSegments()
+        allSegments = tripSegmentStore.loadAll(for: TripType(name: "unclassified"))
     }
 
     private func finalizeCurrentSegment() {
         if var active = liveSegment {
+            tripSegmentStore.delete(active)
             active.finalize(at: Date())
+            tripSegmentStore.write(active)
         }
     }
 

@@ -1,20 +1,34 @@
 import SwiftUI
 import ActivityKit
 import WidgetKit
+import Intents
 
 struct ActivityView: View {
     let context: ActivityViewContext<TripActivityAttributes>
-
+    
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .trim(from: 0.75, to: 0.75 + min(context.state.sweepProgress, 1.0))
-                .stroke(
-                    context.state.state.lowercased() == "paused" ? Color.orange.opacity(0.9) : Color.clear,
-                    lineWidth: 3
-                )
-                .rotationEffect(.degrees(270))
-                .animation(.linear(duration: 1.0), value: context.state.sweepProgress)
+            if context.state.state.lowercased() == "paused" {
+                let sweepStart = 0.75
+                let sweepProgress = min(context.state.sweepProgress, 1.0)
+                if sweepStart + sweepProgress <= 1.0 {
+                    RoundedRectangle(cornerRadius: 24)
+                        .trim(from: sweepStart, to: sweepStart + sweepProgress)
+                        .stroke(Color.orange.opacity(0.9), lineWidth: 7)
+                        .animation(.linear(duration: 1.0), value: sweepProgress)
+                } else {
+                    // First segment: from sweepStart to 1.0
+                    RoundedRectangle(cornerRadius: 24)
+                        .trim(from: sweepStart, to: 1.0)
+                        .stroke(Color.orange.opacity(0.9), lineWidth: 7)
+                        .animation(.linear(duration: 1.0), value: sweepProgress)
+                    // Second segment: from 0.0 to overflow
+                    RoundedRectangle(cornerRadius: 24)
+                        .trim(from: 0.0, to: (sweepStart + sweepProgress) - 1.0)
+                        .stroke(Color.orange.opacity(0.9), lineWidth: 7)
+                        .animation(.linear(duration: 1.0), value: sweepProgress)
+                }
+            }
 
             TripStatusView(
                 state: context.state.state,
@@ -135,15 +149,18 @@ struct TripStatusView: View {
 
                     Spacer()
 
-                    Button("Extend Pause") {
-                        // Action placeholder
+                    Button(intent: ExtendPauseIntent()) {
+                        Text("Extend Pause")
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 8))
-                    .tint(.orange)
-                    .controlSize(.regular)
-                    .font(.system(size: 14, weight: .semibold))
+                    .buttonStyle(.plain)
                     .foregroundColor(.orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(.orange, lineWidth: 2)
+                    )
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal)
@@ -152,3 +169,4 @@ struct TripStatusView: View {
         }
     }
 }
+

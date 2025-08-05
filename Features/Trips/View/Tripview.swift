@@ -10,7 +10,7 @@ struct TripView: View {
             ZStack {
                 ForEach(viewModel.allSegments.indices, id: \.self) { index in
                     let delta = index - topCardIndex
-                    if abs(delta) <= 2 {
+                    if abs(delta) <= 1 {
                         StackedTripCard(
                             segment: viewModel.allSegments[index],
                             delta: delta,
@@ -46,9 +46,9 @@ private struct StackedTripCard: View {
     var body: some View {
         TripCardView(segment: segment)
             .scaleEffect(delta == 0 ? 1.0 : 0.95)
+            .glassEffect(isTopCard ? .regular : .clear, in: RoundedRectangle(cornerRadius: 16))
             .offset(y: CGFloat(delta) * 30 + (delta == 0 ? dragOffset.height : 0))
             .zIndex(Double(2 - abs(delta)))
-            .opacity(abs(delta) <= 2 ? 1 : 0)
             .padding(.horizontal, 8)
             .gesture(
                 isTopCard ?

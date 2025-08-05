@@ -69,6 +69,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6A13AF3E2E3EF7E50081F1DE /* Exceptions for "LiveTripTracking" folder in "SimpleMiles" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppIntent.swift,
+			);
+			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
+		};
 		6A2C07F42E3D5FF5005B8149 /* Exceptions for "LiveTripTracking" folder in "LiveTripTrackingExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -118,6 +125,7 @@
 		6A2C07E02E3D5FF2005B8149 /* LiveTripTracking */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				6A13AF3E2E3EF7E50081F1DE /* Exceptions for "LiveTripTracking" folder in "SimpleMiles" target */,
 				6A2C07F42E3D5FF5005B8149 /* Exceptions for "LiveTripTracking" folder in "LiveTripTrackingExtension" target */,
 			);
 			path = LiveTripTracking;
@@ -491,6 +499,7 @@
 				INFOPLIST_FILE = LiveTripTracking/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LiveTripTracking;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -519,6 +528,7 @@
 				INFOPLIST_FILE = LiveTripTracking/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LiveTripTracking;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -741,7 +751,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6N8KA8WNG4;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "i-maneo.Simple-MilesTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -760,7 +770,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6N8KA8WNG4;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "i-maneo.Simple-MilesTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -778,6 +788,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6N8KA8WNG4;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "i-maneo.Simple-MilesUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -795,6 +806,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6N8KA8WNG4;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "i-maneo.Simple-MilesUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";

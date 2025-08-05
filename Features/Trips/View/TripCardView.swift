@@ -32,7 +32,7 @@ struct TripCardView: View {
 
             HStack {
                 Spacer()
-                Text(segment.tripType.rawValue)
+                Text(segment.tripType.name.capitalized)
                     .font(.footnote)
                     .italic()
                     .foregroundColor(.secondary)
@@ -40,9 +40,8 @@ struct TripCardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(.thinMaterial)
-        .cornerRadius(10)
         .shadow(radius: 2)
+        .background(Color(.systemBackground).opacity(0.001))
     }
 
     private func formattedMonthDayYear(_ date: Date) -> String {

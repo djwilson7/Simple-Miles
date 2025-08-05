@@ -3,6 +3,7 @@ import Foundation
 import Combine
 import CoreLocation
 import CoreML
+import NotificationCenter
 
 
 final class TravelStateManager: ObservableObject {
@@ -11,6 +12,9 @@ final class TravelStateManager: ObservableObject {
     @Published var pauseRemainingTime: TimeInterval? = nil
     @Published private(set) var pauseTotalDuration: TimeInterval? = nil
     private var pauseTimer: Timer?
+    private var notificationObserver: NSObjectProtocol?
+    private var extendPauseFlagTimer: Timer?
+
     // MARK: - State Enum
     enum TravelState {
         case idle
@@ -76,6 +80,10 @@ final class TravelStateManager: ObservableObject {
         pauseTotalDuration = AppSettings.shared.pauseTimer
         pauseTimer?.invalidate()
         pauseTimer = nil
+        
+        extendPauseFlagTimer?.invalidate()
+        extendPauseFlagTimer = nil
+        
         state = .traveling
         print("TravelState Transitioned: .traveling")
     }
@@ -98,15 +106,33 @@ final class TravelStateManager: ObservableObject {
                 timer.invalidate()
                 self.pauseRemainingTime = nil
                 self.pauseTotalDuration = nil
+                
+                // Invalidate and nil extendPauseFlagTimer here as per instructions
+                self.extendPauseFlagTimer?.invalidate()
+                self.extendPauseFlagTimer = nil
+                
                 self.state = .idle
                 print("TravelState Transitioned: .idle (pause timer expired)")
             } else {
                 self.pauseRemainingTime = remaining - 1
             }
         }
+        
+        // Create and start extendPauseFlagTimer here as per instructions
+        if extendPauseFlagTimer == nil {
+            extendPauseFlagTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                guard let self = self else { return }
+                if getSharedDefaults()?.bool(forKey: SharedKeys.extendPauseRequested) == true {
+                    print("App Group flag triggered: extending pause timer.")
+                    self.extendPauseTimer()
+                    getSharedDefaults()?.set(false, forKey: SharedKeys.extendPauseRequested)
+                }
+            }
+        }
     }
 
-    func extendPauseTimer(by interval: TimeInterval = 600) {
+    func extendPauseTimer() {
+        let interval = AppSettings.shared.pauseTimer //always pulled from settings.
         if let current = pauseRemainingTime {
             pauseRemainingTime = current + interval
         } else {
@@ -118,6 +144,13 @@ final class TravelStateManager: ObservableObject {
         } else {
             pauseTotalDuration = interval
         }
+    }
+
+    deinit {
+        if let observer = notificationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        extendPauseFlagTimer?.invalidate()
     }
 
 }

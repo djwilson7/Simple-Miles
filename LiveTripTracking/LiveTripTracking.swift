@@ -10,7 +10,7 @@ struct Provider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let defaults = UserDefaults(suiteName: "group.com.your.bundle.id")
+        let defaults = UserDefaults(suiteName: "group.i-maneo.SimpleMiles")
         let entry = SimpleEntry(
             date: Date(),
             tripState: defaults?.string(forKey: "tripState") ?? "idle",
@@ -26,7 +26,7 @@ struct Provider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        let defaults = UserDefaults(suiteName: "group.com.your.bundle.id")
+        let defaults = UserDefaults(suiteName: "group.i-maneo.SimpleMiles")
         let entry = SimpleEntry(
             date: Date(),
             tripState: defaults?.string(forKey: "tripState") ?? "idle",
@@ -38,7 +38,7 @@ struct Provider: TimelineProvider {
             tripDurationLive: defaults?.double(forKey: "tripDurationLive") ?? 0.0,
             remainingPauseTime: defaults?.double(forKey: "remainingPauseTime")
         )
-        let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(15)))
+        let timeline = Timeline(entries: [entry], policy: .never)
         completion(timeline)
     }
 }
@@ -114,19 +114,9 @@ struct LiveTripTrackingSmallView : View {
                 }
                 .frame(maxWidth: .infinity)
             }
-
-            if entry.tripState == "paused", let remaining = entry.remainingPauseTime {
-                HStack {
-                    Text("Ending Trip In:")
-                        .font(.caption2)
-                    Text(formattedTime(remaining))
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                }
-            }
         }
         .padding()
-        .containerBackground(.ultraThinMaterial, for: .widget)
+        .containerBackground(.black, for: .widget)
     }
 }
 
@@ -273,7 +263,7 @@ struct LiveTripTrackingLargeView: View {
             }
         }
         .padding()
-        .containerBackground(.ultraThinMaterial, for: .widget)  // ← new
+        .containerBackground(.ultraThinMaterial, for: .widget)
     }
 }
 

@@ -7,12 +7,21 @@
 
 import WidgetKit
 import AppIntents
+import Foundation
 
-struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Configuration" }
-    static var description: IntentDescription { "This is an example widget." }
+struct ExtendPauseIntent: AppIntent {
+    static var title: LocalizedStringResource = "Extend Pause Timer"
+    static var description = IntentDescription("Extend the trip pause timer by the user's default extension.")
 
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
+    func perform() async throws -> some IntentResult {
+        // Notify main app to extend pause timer
+        getSharedDefaults()?.set(true, forKey: SharedKeys.extendPauseRequested)
+        print("Extension for paused time requested")
+        return .result()
+    }
 }
+
+extension Notification.Name {
+    static let extendPauseTimerRequested = Notification.Name("ExtendPauseTimerRequested")
+}
+

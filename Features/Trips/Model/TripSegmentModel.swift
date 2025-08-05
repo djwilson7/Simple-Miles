@@ -12,11 +12,8 @@ struct TripSegment: Codable {
     var speedSamples: [CLLocationSpeed]
     var tripType: TripType
     
-    enum TripType: String, Codable {
-        case personal
-        case business
-        case unclassified
-    }
+    // Added fileName property to hold file name, initialized to "temp_trip" on init, updated on finalize
+    private(set) var fileName: String = "temp_trip"
     
     private enum CodingKeys: String, CodingKey {
         case id, startTimestamp, endTimestamp, pathCoordinates, distance, duration, headingSamples, speedSamples, tripType
@@ -34,6 +31,8 @@ struct TripSegment: Codable {
         tripType = try container.decode(TripType.self, forKey: .tripType)
         let rawCoords = try container.decode([[Double]].self, forKey: .pathCoordinates)
         pathCoordinates = rawCoords.map { CLLocationCoordinate2D(latitude: $0[0], longitude: $0[1]) }
+        // On decoding, set fileName to "temp_trip" as default (or could compute from dates if desired)
+        self.fileName = "temp_trip"
     }
     
     func encode(to encoder: Encoder) throws {
@@ -50,9 +49,23 @@ struct TripSegment: Codable {
         try container.encode(rawCoords, forKey: .pathCoordinates)
     }
     
+    // Computed property to suggest a file name based on trip data
+    private var suggestedFileName: String {
+        // Example file name format: "trip_YYYYMMdd_HHmmss"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        return "\(self.tripType)_\(formatter.string(from: startTimestamp))"
+    }
+    
+    // Updates the fileName property
+    private mutating func updateFileName(_ newName: String) {
+        self.fileName = newName
+    }
+    
+    // Updated init to set fileName to "temp_trip" during construction
     init(
         startTimestamp: Date,
-        tripType: TripType = .unclassified
+        tripType: TripType = TripType(name: "unclassified")
     ) {
         self.id = UUID()
         self.startTimestamp = startTimestamp
@@ -62,12 +75,14 @@ struct TripSegment: Codable {
         self.headingSamples = []
         self.speedSamples = []
         self.tripType = tripType
+        self.fileName = "temp_trip"
     }
     
     mutating func finalize(at endTimestamp: Date) {
         print("TripSegment Finalize called with endTimestamp: \(endTimestamp)")
         self.endTimestamp = endTimestamp
         self.duration = endTimestamp.timeIntervalSince(startTimestamp)
+        updateFileName(suggestedFileName)
     }
     
     mutating func append(location: CLLocation) {

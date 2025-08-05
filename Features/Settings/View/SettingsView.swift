@@ -6,26 +6,11 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Text("Settings")
-                    .font(.title)
-                    .bold()
-                Spacer()
-                Button(action: {
-                    isPresented = false
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.caption)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(5)
-            
             makeStepperRow(
                 title: settings.minTripDistance.title,
                 description: settings.minTripDistance.description,
                 value: $settings.minimumTripDistance,
-                displayText: formatDistance(settings.minTripDistance.value),
+                displayText: formatDistance(settings.minimumTripDistance),
                 step: 0.1,
                 range: 0.1...1.5
             )
@@ -34,7 +19,7 @@ struct SettingsView: View {
                 title: settings.pauseTimerDuration.title,
                 description: settings.pauseTimerDuration.description,
                 value: $settings.pauseTimer,
-                displayText: formatTime(settings.pauseTimerDuration.value),
+                displayText: formatTime(settings.pauseTimer),
                 step: 30,
                 range: 90...300
             )
@@ -122,3 +107,4 @@ struct SettingsView: View {
         }
     }
 }
+

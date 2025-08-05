@@ -8,12 +8,34 @@ struct MapView: View {
             Map(position: $viewModel.cameraPosition, interactionModes: .all) {
                 if !viewModel.tripViewModel.isReviewing {
                     MapPolyline(coordinates: viewModel.commitedTracePath)
-                        .stroke(.blue, lineWidth: 7)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.6), Color.cyan.opacity(0.3)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            lineWidth: 7
+                        )
+                    
                     MapPolyline(coordinates: viewModel.nonCommitedTraceStatic)
-                        .stroke(.orange, lineWidth: 7)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.orange.opacity(0.6), Color.red.opacity(0.3)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            lineWidth: 7
+                        )
                 } else {
                     MapPolyline(coordinates: viewModel.previousTripPath)
-                        .stroke(.mint, lineWidth: 7)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.purple.opacity(0.6), Color.black.opacity(0.3)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            lineWidth: 7
+                        )
                 }
 
                 if !viewModel.tripViewModel.isReviewing,

@@ -5,7 +5,7 @@ import CoreGraphics
 
 final class ActivityViewModel: ObservableObject {
     // MARK: - UserDefaults Helper
-    private let userDefaults = UserDefaults(suiteName: "group.com.simplemiles.shared")
+    private let userDefaults = UserDefaults(suiteName: "group.i-maneo.SimpleMiles")
     private func saveToUserDefaults<T>(_ value: T, forKey key: String) {
         userDefaults?.set(value, forKey: key)
     }
