@@ -78,9 +78,7 @@ final class MapViewModel: NSObject, ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] newCamera in
                 guard let self else { return }
-                guard !self.isUserInteracting else { return }
-
-                // Extract current center and heading
+                
                 let current = self.lastCamera
 
                 let headingChanged = current?.heading != newCamera.heading
@@ -122,7 +120,7 @@ final class MapViewModel: NSObject, ObservableObject {
                     }
                 }
                 // If only the center changed, animate
-                else if centerChanged && self.autoFollowEnabled {
+                else if centerChanged {
                     withAnimation(.easeInOut(duration: 1.0)) {
                         self.cameraPosition = .camera(updatedCamera)
                     }
@@ -236,6 +234,7 @@ final class MapViewModel: NSObject, ObservableObject {
                     }
                 } else if !isReviewing {
                     self.hasEnteredReviewMode = false
+                    self.tripViewModel.resetReviewState() // Hard reset review/trip sorting state
                     if let current = self.currentLocation {
                         let savedAltitude = self.zoomStore.loadAltitude() ?? 1500
                         let camera = MapCamera(centerCoordinate: current.coordinate, distance: savedAltitude, heading: 0, pitch: 0)

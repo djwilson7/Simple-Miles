@@ -95,13 +95,17 @@ final class RecordingManager {
                     if PauseSegmentClassifier.shouldMerge(paused, anchorHeading: anchor.course, headingBuffer: pausedHeadingBuffer),
                        let previous = previousSegment {
                         previousSegment = TripSegment.merge(liveSegment: paused, previousSegment: previous)
+                        print(previousSegment?.tripType.urlPrefix ?? "no prefixURL present should merge")
                         tripSegmentStore.write(previousSegment!) //update temp file
                         commitedPath = previousSegment!.pathCoordinates
                     } else {
                         tripSegmentStore.delete(previousSegment!) //remove temp file for previous segment
+                        print("temp file deleted")
                         previousSegment?.finalize(at: Date()) //update file name
+                        print("new file name: \(previousSegment?.tripType.urlPrefix ?? "no prefixURL present")")
                         let minimumMeters = settings.minimumTripDistance * 1609.34
                         if let segment = previousSegment, segment.distance >= minimumMeters {
+                            print("new file written with new file name")
                             tripSegmentStore.write(previousSegment!) //write with new file name
                         } else if previousSegment != nil {
                             //no op (temp is already destroyed, and new hasn't been written
@@ -124,6 +128,7 @@ final class RecordingManager {
 
             liveSegment = newSegment
             if let previous = previousSegment {
+                print("New file written with name: \(previous.tripType.urlPrefix)")
                 tripSegmentStore.write(previous)
             }
             pausedSegment = nil
@@ -135,6 +140,7 @@ final class RecordingManager {
             }
 
             if let live = liveSegment {
+                print("new file written for live segment \(live.tripType.urlPrefix)")
                 tripSegmentStore.write(live)
             }
 
@@ -146,11 +152,13 @@ final class RecordingManager {
             if let previous = previousSegment, let live = liveSegment {
                 previousSegment = TripSegment.merge(liveSegment: live, previousSegment: previous)
                 commitedPath = previousSegment!.pathCoordinates
+                print("paused, new write: \(previousSegment?.tripType.urlPrefix ?? "URL DOESNT EXIST")")
                 tripSegmentStore.write(previousSegment!)
                 
             } else if let live = liveSegment {
                 previousSegment = live
                 commitedPath = previousSegment!.pathCoordinates
+                print("paused, new write: \(previousSegment?.tripType.urlPrefix ?? "URL DOESNT EXIST")")
                 tripSegmentStore.write(previousSegment!)
             }
             nonCommitedPath = []
@@ -188,7 +196,7 @@ final class RecordingManager {
     }
 
     private func loadAllFinalizedSegments() {
-        allSegments = tripSegmentStore.loadAll(for: TripType(name: "unclassified"))
+        allSegments = tripSegmentStore.loadAllUnclassified()
     }
 
     private func finalizeCurrentSegment() {

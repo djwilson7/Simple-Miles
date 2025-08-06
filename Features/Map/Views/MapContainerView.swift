@@ -9,10 +9,12 @@ struct MapContainerView: View {
     @State private var showSettingsModal = false
     @State private var statusBarHeight: CGFloat = 0
     @State private var showTripModal = false
-    @State private var isMorphingPauseButton = false
-    @State private var isPauseButtonPressed: Bool = false
     @State private var isInSettings = false
-
+    
+    private var isViewingState: Bool {
+        viewModel.tripViewModel.isReviewing || isInSettings
+    }
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             MapView(viewModel: mapViewModel)
@@ -60,7 +62,7 @@ struct MapContainerView: View {
             }
 
             if viewModel.tripViewModel.isReviewing {
-                TripSortingView()
+                TripSortingView(viewModel: viewModel.tripViewModel)
             }
         }
         
@@ -80,7 +82,6 @@ struct MapContainerView: View {
         }
         
         .overlay(settingsOverlay)
-        .overlay(tripOverlay)
     }
 
     private var controlButtons: some View {
@@ -91,33 +92,61 @@ struct MapContainerView: View {
             recenterButton
         }
     }
-
+    
     private var titleContainer: some View {
         GeometryReader { geo in
-            let containerWidth = geo.size.width * 0.9
-            let unpausedBarWidth = containerWidth
-            let pausedBarWidth = containerWidth * 0.7
-            let mergeOffset: CGFloat = viewModel.tripState == .paused ? -geo.size.width * 0.05 : 0
-            let buttonOffset: CGFloat = viewModel.tripState == .paused ? geo.size.width * 0.07 : 0
-            
             GlassEffectContainer(spacing: 8) {
-                ZStack(alignment: .trailing) {
-                    titleBar
-                        .frame(width: viewModel.tripState == .paused ? pausedBarWidth : unpausedBarWidth, height: 44)
-                        .offset(x: mergeOffset)
-                        .animation(.spring(), value: viewModel.tripState)
-
+                ZStack {
+                    backButton
                     extendPauseButton
-                        .offset(x: isPauseButtonPressed ? mergeOffset / 2 : buttonOffset)
-                        .animation(.spring(), value: isPauseButtonPressed)
-                        .animation(.spring(), value: viewModel.tripState)
+                    titleBar(geo: geo)
                 }
             }
             .position(x: geo.size.width / 2, y: 20)
         }
     }
 
-    private var titleBar: some View {
+    private var backButton: some View {
+        Button(action: {
+            viewModel.tripViewModel.isReviewing = false
+            isInSettings = false
+            showSettingsModal = false
+        }) {
+            Image(systemName: "chevron.left")
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+                .foregroundColor(.white)
+        }
+        .frame(width: 44, height: 44)
+        .buttonStyle(GlassButtonStyle(borderOpacity: 0.0))
+        .opacity(isViewingState ? 1 : 0 )
+        .disabled(!isViewingState)
+        .allowsHitTesting(isViewingState)
+        .offset(x: isViewingState ? -150 : 0)
+        .animation(.easeInOut, value: isViewingState)
+        .glassEffect(.clear)
+    }
+    
+    private var extendPauseButton: some View {
+        Button(action: {
+            viewModel.extendPauseTapped()
+        }) {
+            Image(systemName: "plus")
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+                .foregroundColor(.orange)
+        }
+        .frame(width: 44, height: 44)
+        .buttonStyle(GlassButtonStyle(borderOpacity: 0.0))
+        .opacity(viewModel.tripState == .paused ? 1 : 0)
+        .disabled(viewModel.tripState != .paused)
+        .allowsHitTesting(viewModel.tripState == .paused)
+        .offset(x: viewModel.tripState == .paused ? 150 : 0)
+        .animation(.easeInOut, value: viewModel.tripState == .paused)
+        .glassEffect(.clear)
+    }
+    
+    private func titleBar(geo: GeometryProxy) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 50)
                 .fill(Color.clear)
@@ -145,14 +174,17 @@ struct MapContainerView: View {
                 Spacer()
                 HStack(spacing: 4) {
                     if viewModel.tripViewModel.isReviewing {
-                        Text("Trip Sorting").foregroundColor(.primary)
+                        Text("Trip Sorting")
+                            .foregroundColor(.primary)
                     } else if viewModel.tripState == .paused {
                         Text("Ending Trip In: ")
                             .foregroundColor(.primary)
+                        
                         Text(viewModel.pauseCountdownFormatted)
                             .foregroundColor(.orange)
                     } else {
-                        Text("Simple Miles").foregroundColor(.primary)
+                        Text("Simple Miles")
+                            .foregroundColor(.primary)
                     }
                 }
                 .font(.headline)
@@ -160,9 +192,8 @@ struct MapContainerView: View {
             }
             .padding(.vertical, 10)
         }
+        .frame(width: geo.size.width * 0.5, height: 44)
         .glassEffect(.clear)
-        .glassEffectTransition(.matchedGeometry)
-        
     }
 
     private var statusBar: some View {
@@ -282,30 +313,6 @@ struct MapContainerView: View {
         .buttonStyle(GlassButtonStyle())
 
     }
-
-    private var extendPauseButton: some View {
-        Button(action: {
-            isPauseButtonPressed = true
-            isMorphingPauseButton = true
-            viewModel.extendPauseTapped()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.isMorphingPauseButton = false
-                self.isPauseButtonPressed = false
-            }
-        }) {
-            Image(systemName: "plus")
-                .frame(width: 44, height: 44)
-                .clipShape(Circle())
-                .foregroundColor(.orange)
-        }
-        .frame(width: 44, height: 44)
-        .buttonStyle(GlassButtonStyle(borderOpacity: 0.0))
-        .opacity(viewModel.tripState == .paused ? 1 : 0)
-        .disabled(viewModel.tripState != .paused)
-        .allowsHitTesting(viewModel.tripState == .paused)
-        .glassEffect(.clear)
-        .glassEffectTransition(.matchedGeometry)
-    }
     
     private var settingsOverlay: some View {
         GeometryReader { geo in
@@ -363,22 +370,6 @@ struct MapContainerView: View {
             }
         }
     }
-
-    private var tripOverlay: some View {
-        GeometryReader { geo in
-            Group {
-                if showTripModal {
-                    TripView(viewModel: viewModel.tripViewModel)
-                        .background(Color(.systemBackground).opacity(0.001))
-                        .cornerRadius(20)
-                        .frame(
-                            maxWidth: geo.size.width * 0.9,
-                            maxHeight: geo.size.height * 0.9
-                        )
-                }
-            }
-        }
-    }
 }
 
 private func formattedTime(_ interval: TimeInterval) -> String {
@@ -400,3 +391,4 @@ struct GlassButtonStyle: ButtonStyle {
             )
     }
 }
+

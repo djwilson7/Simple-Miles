@@ -3,16 +3,22 @@ import UniformTypeIdentifiers
 
 struct SortBubble: View {
     let text: String
+    let size: CGFloat
 
     var body: some View {
-        Text(text)
-            .font(.system(size: 20, weight: .bold))
-            .frame(width: 75, height: 75, alignment: .center)
-            .padding(40)
-            .multilineTextAlignment(.center)
-            .minimumScaleFactor(0.4)
-            .glassEffect(.clear, in: Circle())
-            .lineLimit(1)
+        ZStack {
+            Circle()
+                .fill(Color.clear.opacity(0.001))
+                .frame(width: size, height: size, alignment: .center)
+            Text(text)
+                .font(.system(size: size * 0.3, weight: .bold))
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
+                .frame(width: size, height: size, alignment: .center)
+        }
+        .frame(width: size, height: size, alignment: .center)
     }
 }
 
@@ -22,7 +28,7 @@ private struct SortBubblePreview: View {
 
     var body: some View {
         VStack(spacing: 30) {
-            SortBubble(text: "Personal")
+            SortBubble(text: "Personal", size: 120)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()

@@ -69,18 +69,30 @@ struct MapView: View {
                     }
                 }
             }
-            .gesture(DragGesture().onChanged { _ in
-                viewModel.isUserInteracting = true
-                viewModel.autoFollowEnabled = false
-            })
-            .gesture(MagnificationGesture().onChanged { _ in
-                viewModel.isUserInteracting = true
-                viewModel.autoFollowEnabled = false
-            })
-            .gesture(RotationGesture().onChanged { _ in
-                viewModel.isUserInteracting = true
-                viewModel.autoFollowEnabled = false
-            })
+            .simultaneousGesture(
+                DragGesture().onChanged { _ in
+                    viewModel.isUserInteracting = true
+                    viewModel.autoFollowEnabled = false
+                }
+                .simultaneously(with:
+                    MagnificationGesture().onChanged { _ in
+                        viewModel.isUserInteracting = true
+                        viewModel.autoFollowEnabled = false
+                    }
+                )
+                .simultaneously(with:
+                    RotationGesture().onChanged { _ in
+                        viewModel.isUserInteracting = true
+                        viewModel.autoFollowEnabled = false
+                    }
+                )
+                .simultaneously(with:
+                    TapGesture().onEnded {
+                        viewModel.isUserInteracting = true
+                        viewModel.autoFollowEnabled = false
+                    }
+                )
+            )
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: []))
             .edgesIgnoringSafeArea(.all)
             .onMapCameraChange(frequency: .continuous) { context in
@@ -105,3 +117,4 @@ struct MapView: View {
         viewModel.recenter()
     }
 }
+

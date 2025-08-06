@@ -54,7 +54,7 @@ struct TripSegment: Codable {
         // Example file name format: "trip_YYYYMMdd_HHmmss"
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd_HHmmss"
-        return "\(self.tripType)_\(formatter.string(from: startTimestamp))"
+        return "\(self.tripType.urlPrefix)\(formatter.string(from: startTimestamp))"
     }
     
     // Updates the fileName property

@@ -17,7 +17,6 @@ struct SimpleMilesApp: App {
     let travelStateManager: TravelStateManager
     let travelLocationPredictor: TravelLocationPredictor
     var recordingManager: RecordingManager
-    let mapView: MKMapView
     let cameraManager: CameraManager
     let arrowManager: ArrowHeadingManager
     let mapViewModel: MapViewModel
@@ -55,9 +54,7 @@ struct SimpleMilesApp: App {
         tripViewModel = TripViewModel(
             recordingManager: recordingManager
         )
-        
-        mapView = MKMapView()
-        
+                
         cameraManager = CameraManager(
             travelLocationPredictor: travelLocationPredictor,
             tripViewModel: tripViewModel
