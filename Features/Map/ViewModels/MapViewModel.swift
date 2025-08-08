@@ -104,14 +104,20 @@ final class MapViewModel: NSObject, ObservableObject {
                 let updatedCamera = newCamera
                 
                 if headingChanged || centerChanged {
-                    cameraAnimationManager.animate(
-                        from: current ?? updatedCamera,
-                        to: updatedCamera,
-                        isReviewing: tripViewModel.isReviewing,
-                        onUpdate: { [weak self] interpolated in
-                            self?.cameraPosition = .camera(interpolated)
-                        }
-                    )
+                    if travelStateManager.state == .idle {
+                        // Instantly update camera, no animation
+                        self.cameraPosition = .camera(updatedCamera)
+                    } else {
+                        // Animate heading/camera change
+                        cameraAnimationManager.animate(
+                            from: current ?? updatedCamera,
+                            to: updatedCamera,
+                            isReviewing: tripViewModel.isReviewing,
+                            onUpdate: { [weak self] interpolated in
+                                self?.cameraPosition = .camera(interpolated)
+                            }
+                        )
+                    }
                 }
                 self.lastCamera = updatedCamera
             }
