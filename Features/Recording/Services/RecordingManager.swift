@@ -23,14 +23,14 @@ final class RecordingManager {
     private var lastRecordedLocation: CLLocation?
     private var tripStartTime: Date?
 
-    private let travelStatePublisher: Published<TravelStateManager.TravelState>.Publisher
+    private let travelStatePublisher: Published<TravelState>.Publisher
     private let currentLocationPublisher: Published<CLLocation?>.Publisher
     private let lastLocationPublisher: Published<CLLocation?>.Publisher
 
     private var cancellables = Set<AnyCancellable>()
     private var currentLocation: CLLocation?
     private var lastLocation: CLLocation?
-    private var previousState: TravelStateManager.TravelState?
+    private var previousState: TravelState?
     private var durationTimer: AnyCancellable?
 
     private var liveSegment: TripSegment?
@@ -39,7 +39,7 @@ final class RecordingManager {
     private var pauseAnchor: CLLocation?
 
     init(
-        travelStatePublisher: Published<TravelStateManager.TravelState>.Publisher,
+        travelStatePublisher: Published<TravelState>.Publisher,
         currentLocationPublisher: Published<CLLocation?>.Publisher,
         lastLocationPublisher: Published<CLLocation?>.Publisher
     ) {
@@ -86,7 +86,7 @@ final class RecordingManager {
             .store(in: &cancellables)
     }
 
-    private func handleTravelStateUpdate(_ state: TravelStateManager.TravelState) {
+    private func handleTravelStateUpdate(_ state: TravelState) {
         switch state {
         case .traveling:
             if previousState == .paused {

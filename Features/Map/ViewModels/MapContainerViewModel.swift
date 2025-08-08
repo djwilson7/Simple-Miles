@@ -5,7 +5,7 @@ import SwiftUI
 final class MapContainerViewModel: ObservableObject {
     // MARK: - Published UI Bindings
 
-    @Published var tripState: TravelStateManager.TravelState = .idle
+    @Published var tripState: TravelState = .idle
     @Published var tripDistanceLiveMiles: Double = 0.0
     @Published var tripDistanceCommittedMiles: Double = 0.0
     @Published var tripDurationLive: TimeInterval = 0

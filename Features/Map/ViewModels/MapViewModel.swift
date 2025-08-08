@@ -195,7 +195,7 @@ final class MapViewModel: NSObject, ObservableObject {
 
         travelStateManager.$state
             .removeDuplicates()
-            .scan((TravelStateManager.TravelState.idle, TravelStateManager.TravelState.idle)) { ($0.1, $1) }
+            .scan((TravelState.idle, TravelState.idle)) { ($0.1, $1) }
             .sink { [weak self] oldState, newState in
                 guard let self else { return }
                 switch (oldState, newState) {

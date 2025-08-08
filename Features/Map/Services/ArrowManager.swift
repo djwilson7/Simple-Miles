@@ -14,7 +14,7 @@ final class ArrowHeadingManager: ObservableObject {
     private let travelStateManager: TravelStateManager
     private var cancellables = Set<AnyCancellable>()
     private var lastRotation: CLLocationDirection = 0
-    private var travelState: TravelStateManager.TravelState = .idle
+    private var travelState: TravelState = .idle
     private let tripViewModel: TripViewModel
     
     /// Initialize with the shared camera and travel motion managers

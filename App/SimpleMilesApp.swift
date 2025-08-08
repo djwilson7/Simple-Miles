@@ -13,7 +13,9 @@ import MapKit
 struct SimpleMilesApp: App {
     @AppStorage("isLoggedIn") var isLoggedIn = false
     let locationManager = LocationManager.shared
-    let driverStateManager: DrivingStateManager
+    let driverStateManager = DrivingStateManager.shared
+    
+    
     let travelStateManager: TravelStateManager
     let travelLocationPredictor: TravelLocationPredictor
     var recordingManager: RecordingManager
@@ -28,13 +30,11 @@ struct SimpleMilesApp: App {
     init() {
         FirebaseApp.configure()
         print("[App] Simple_MilesApp launched")
+        
+        locationManager.initialize()
+        locationManager.startSignificantChangeMonitoring()
 
-        LocationManager.shared.initialize()
-        LocationManager.shared.startSignificantChangeMonitoring()
-
-        driverStateManager = DrivingStateManager(
-            locationManager: locationManager
-        )
+        driverStateManager.initialize()
 
         travelStateManager = TravelStateManager(
             drivingStatePublisher: driverStateManager.$state,

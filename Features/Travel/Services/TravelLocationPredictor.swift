@@ -16,7 +16,7 @@ final class TravelLocationPredictor: ObservableObject {
 
     private var lastLocation: CLLocation?
     private var lastHeading: CLLocationDirection = 0
-    private var currentTravelState: TravelStateManager.TravelState = .idle
+    private var currentTravelState: TravelState = .idle
 
     init(locationManager: LocationManager, travelStateManager: TravelStateManager) {
         self.locationManager = locationManager

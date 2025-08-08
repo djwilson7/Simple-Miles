@@ -37,7 +37,7 @@ final class ActivityViewModel: ObservableObject {
         didSet { saveToUserDefaults(tripDurationLive, forKey: "tripDurationLive") }
     }
     
-    @Published var state: TravelStateManager.TravelState = .idle {
+    @Published var state: TravelState = .idle {
         didSet { saveToUserDefaults(state.displayText, forKey: "state") }
     }
     
