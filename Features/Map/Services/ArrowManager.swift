@@ -58,15 +58,10 @@ final class ArrowHeadingManager: ObservableObject {
     /// Compute and normalize the arrow rotation based on camera and device heading and orientation mode
     private func updateArrowRotation(cameraHeading: CLLocationDirection, trueHeading: CLLocationDirection, orientation: CameraOrientationMode) {
         guard !tripViewModel.isReviewing else { return }
-
-        let targetRotation: CLLocationDirection
-
-        switch orientation {
-        case .headingUp:
-            targetRotation = 0
-        case .northUp:
-            targetRotation = normalizedAngle(trueHeading - cameraHeading)
-        }
+        
+        let policy = MapOrientationPolicyFactory.policy(for: orientation)
+        let targetRotation = policy.arrowRotation(cameraHeading: cameraHeading,
+                                                  trueHeading: trueHeading)
 
         let smoothedRotation = smoothAngleTransition(from: lastRotation, to: targetRotation)
         lastRotation = smoothedRotation

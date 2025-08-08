@@ -39,25 +39,21 @@ struct LiveTripTrackingLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    TripStatusView(
-                        state: context.state.state,
-                        committedDistance: context.state.tripDistanceCommitted,
-                        liveDistance: context.state.tripDistanceLive,
-                        committedDuration: context.state.tripDurationCommitted,
-                        liveDuration: context.state.tripDurationLive,
-                        remainingPauseTime: context.state.remainingPauseTime
-                    )
+                    HStack {
+                        Spacer()
+                        Text("Simply Miles")
+                            .multilineTextAlignment(.center)
+                        Spacer()
+                    }
                     .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    TripStatusView(
-                        state: context.state.state,
-                        committedDistance: context.state.tripDistanceCommitted,
-                        liveDistance: context.state.tripDistanceLive,
-                        committedDuration: context.state.tripDurationCommitted,
-                        liveDuration: context.state.tripDurationLive,
-                        remainingPauseTime: context.state.remainingPauseTime
-                    )
+                    HStack {
+                        Spacer()
+                        Text("Drive Safe")
+                            .multilineTextAlignment(.center)
+                        Spacer()
+                    }
                     .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -73,16 +69,26 @@ struct LiveTripTrackingLiveActivity: Widget {
                 }
             } compactLeading: {
                 let liveMiles = context.state.tripDistanceLive
-                Text(String(format: "%.1fmi", liveMiles))
-                    .font(.caption)
-                    .foregroundColor(liveMiles > 0 ? .orange : .gray)
-                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
+                HStack {
+                    Spacer()
+                    Text(String(format: "%.1fmi", liveMiles))
+                        .font(.caption)
+                        .foregroundColor(liveMiles > 0 ? .orange : .gray)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
             } compactTrailing: {
                 let liveSeconds = context.state.tripDurationLive
-                Text(formattedTime(liveSeconds))
-                    .font(.caption)
-                    .foregroundColor(liveSeconds > 0 ? .orange : .gray)
-                    .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
+                HStack {
+                    Spacer()
+                    Text(formattedTime(liveSeconds))
+                        .font(.caption)
+                        .foregroundColor(liveSeconds > 0 ? .orange : .gray)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                .containerBackground(.ultraThinMaterial.opacity(0.001), for: .widget)
             } minimal: {
                 Text(context.state.state.capitalized)
                     .font(.caption)

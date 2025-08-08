@@ -16,7 +16,7 @@ struct TripSegment: Codable {
     private(set) var fileName: String = "temp_trip"
     
     private enum CodingKeys: String, CodingKey {
-        case id, startTimestamp, endTimestamp, pathCoordinates, distance, duration, headingSamples, speedSamples, tripType
+        case id, startTimestamp, endTimestamp, pathCoordinates, distance, duration, headingSamples, speedSamples, tripType, fileName
     }
     
     init(from decoder: Decoder) throws {
@@ -31,8 +31,7 @@ struct TripSegment: Codable {
         tripType = try container.decode(TripType.self, forKey: .tripType)
         let rawCoords = try container.decode([[Double]].self, forKey: .pathCoordinates)
         pathCoordinates = rawCoords.map { CLLocationCoordinate2D(latitude: $0[0], longitude: $0[1]) }
-        // On decoding, set fileName to "temp_trip" as default (or could compute from dates if desired)
-        self.fileName = "temp_trip"
+        self.fileName = try container.decodeIfPresent(String.self, forKey: .fileName) ?? "temp_trip"
     }
     
     func encode(to encoder: Encoder) throws {
@@ -47,6 +46,7 @@ struct TripSegment: Codable {
         try container.encode(tripType, forKey: .tripType)
         let rawCoords = pathCoordinates.map { [$0.latitude, $0.longitude] }
         try container.encode(rawCoords, forKey: .pathCoordinates)
+        try container.encode(fileName, forKey: .fileName)
     }
     
     // Computed property to suggest a file name based on trip data
@@ -62,6 +62,8 @@ struct TripSegment: Codable {
         self.fileName = newName
     }
     
+   
+    
     // Updated init to set fileName to "temp_trip" during construction
     init(
         startTimestamp: Date,
@@ -76,6 +78,11 @@ struct TripSegment: Codable {
         self.speedSamples = []
         self.tripType = tripType
         self.fileName = "temp_trip"
+    }
+    
+    mutating func resortSegment(as newType: TripType) {
+        self.tripType = newType
+        updateFileName(suggestedFileName) // Now uses the new tripType’s prefix
     }
     
     mutating func finalize(at endTimestamp: Date) {

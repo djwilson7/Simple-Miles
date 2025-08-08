@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TripSortingView: View {
     @ObservedObject var viewModel: TripViewModel
-
+    
     @State private var iconPosition: CGPoint = .zero
     @State private var dragOffset: CGSize = .zero
     @State private var dateBarOffset: CGSize = .zero
@@ -14,13 +14,13 @@ struct TripSortingView: View {
     @State private var currentDateBarY: CGFloat = 0
     @State private var personalChoiceBubbleScale: CGFloat = 1.0
     @State private var businessChoiceBubbleScale: CGFloat = 1.0
-
+    
     var body: some View {
         GeometryReader { geo in
             GlassEffectContainer(spacing: 24) {
                 VStack {
                     Spacer(minLength: geo.size.height * 0.3)
-                    if currentDateBarY < dateBarOriginY - 50 {
+                    if (currentDateBarY < dateBarOriginY - 50) && !viewModel.unclassifiedSegments.isEmpty {
                         VStack {
                             sortRow(geo: geo)
                         }
@@ -28,8 +28,10 @@ struct TripSortingView: View {
                     
                     Spacer(minLength: geo.size.height * 0.3)
                     VStack(spacing: 20) {
-                        statsRow(geo: geo)
-
+                        if !viewModel.unclassifiedSegments.isEmpty {
+                            statsRow(geo: geo)
+                        }
+                        
                         selectedTripRow(geo: geo)
                     }
                 }
@@ -41,7 +43,7 @@ struct TripSortingView: View {
             .coordinateSpace(name: "TripSortingViewSpace")
         }
     }
-
+    
     private func sortRow(geo: GeometryProxy) -> some View {
         HStack(spacing: 40) {
             SortBubble(text: "Personal", size: 120)
@@ -56,11 +58,11 @@ struct TripSortingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: geo.size.height * 0.2)
     }
-
+    
     private func statsRow(geo: GeometryProxy) -> some View {
         let barWidth = geo.size.width * 0.3
         let barHeight = geo.size.height * 0.05
-
+        
         return HStack(spacing: 40) {
             Text(viewModel.currentDistance)
                 .frame(width: barWidth, height: barHeight)
@@ -72,25 +74,30 @@ struct TripSortingView: View {
         .font(.subheadline)
         .frame(maxWidth: .infinity)
     }
-
+    
     private func selectedTripRow(geo: GeometryProxy) -> some View {
         let dateBarHeight = geo.size.height * 0.06
         let dateBarWidth = geo.size.width * 0.5
-
-        return HStack(spacing: 40) {
-            Button(
-                action: {
+        
+        return ZStack {
+            if !viewModel.unclassifiedSegments.isEmpty {
+                SystemControlButton(
+                    icon: "chevron.left",
+                    opacity: viewModel.currentTripIndex == 0 ? 0 : 1,
+                    padding: 5,
+                    color: Color.white,
+                ) {
                     viewModel.selectPreviousSegment()
                 }
-            ) {
-                Image(systemName: "chevron.left")
+                .glassEffect(.clear)
+                .disabled(viewModel.currentTripIndex == 0)
+                .allowsHitTesting(viewModel.currentTripIndex > 0)
+                .offset(x: viewModel.currentTripIndex > 0 ? -150 : 0)
+                .animation(.spring(duration: 0.8, bounce: 0.35, blendDuration: 0.8), value: viewModel.currentTripIndex > 0)
             }
-            .glassEffect(.clear)
-            .disabled(viewModel.currentTripIndex == 0)
             
-
             GeometryReader { barGeo in
-                DateBar(geo: geo, payload: viewModel.currentStartDate, isDragging: isDraggingDateBar)
+                DateBar(geo: geo, payload: viewModel.currentStartDate, isDragging: isDraggingDateBar, hasTrips: !viewModel.unclassifiedSegments.isEmpty)
                     .offset(dateBarDragOffset)
                     .gesture(
                         DragGesture()
@@ -102,10 +109,22 @@ struct TripSortingView: View {
                                 updateChoiceBubbles()
                             }
                             .onEnded { _ in
+                                if currentDateBarY < dateBarOriginY - 50 {
+                                    if currentDateBarX < dateBarOriginX {
+                                        viewModel.classifyCurrentSegment(newClassification: "personal")
+                                    } else if currentDateBarX > dateBarOriginX {
+                                        viewModel.classifyCurrentSegment(newClassification: "business")
+                                    }
+                                } else {
+                                    if currentDateBarX < dateBarOriginX - 30 {
+                                        viewModel.selectPreviousSegment()
+                                    } else if currentDateBarX > dateBarOriginX + 30 {
+                                        viewModel.selectNextSegment()
+                                    }
+                                }
                                 isDraggingDateBar = false
                                 withAnimation(.spring()) {
                                     dateBarDragOffset = .zero
-                                    // Reset current position to origin when drag ends; origin remains unchanged
                                     currentDateBarX = dateBarOriginX
                                     currentDateBarY = dateBarOriginY
                                 }
@@ -119,19 +138,24 @@ struct TripSortingView: View {
                     }
             }
             .frame(width: dateBarWidth, height: dateBarHeight)
-
-            Button(
-                action: {
+            
+            if !viewModel.unclassifiedSegments.isEmpty {
+                SystemControlButton(
+                    icon: "chevron.right",
+                    opacity: (viewModel.currentTripIndex < viewModel.unclassifiedSegments.count - 1) && !viewModel.unclassifiedSegments.isEmpty ? 1: 0,
+                    padding: 5,
+                    color: Color.white
+                ) {
                     viewModel.selectNextSegment()
                 }
-            ) {
-                Image(systemName: "chevron.right")
-                    
+                .glassEffect(.clear)
+                .disabled(
+                    viewModel.currentTripIndex == viewModel.unclassifiedSegments.count - 1 || viewModel.unclassifiedSegments.isEmpty
+                )
+                .allowsHitTesting((viewModel.currentTripIndex < viewModel.unclassifiedSegments.count - 1) && !viewModel.unclassifiedSegments.isEmpty)
+                .offset(x: (viewModel.currentTripIndex < viewModel.unclassifiedSegments.count - 1) && !viewModel.unclassifiedSegments.isEmpty ? 150 : 0)
+                .animation(.spring(duration: 0.8, bounce: 0.35, blendDuration: 0.8), value: (viewModel.currentTripIndex < viewModel.unclassifiedSegments.count - 1) && !viewModel.unclassifiedSegments.isEmpty)
             }
-            .glassEffect(.clear)
-            .disabled(
-                viewModel.currentTripIndex == viewModel.allSegments.count - 1 || viewModel.allSegments.isEmpty
-            )
         }
         .frame(maxWidth: .infinity)
     }

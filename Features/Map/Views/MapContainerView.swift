@@ -19,14 +19,14 @@ struct MapContainerView: View {
         ZStack(alignment: .bottom) {
             MapView(viewModel: mapViewModel)
                 .ignoresSafeArea()
-
+            
             VStack(spacing: 0) {
                 titleContainer
                     .padding(.top, 20)
-
+                
                 Spacer()
             }
-
+            
             // Toast overlay (centered above trip time bar)
             if let toast = ToastManager.shared.currentToast {
                 VStack {
@@ -45,7 +45,7 @@ struct MapContainerView: View {
                         .animation(.easeInOut, value: toast)
                 }
             }
-
+            
             if !(viewModel.tripViewModel.isReviewing || isInSettings) {
                 statusBar
                     .background(
@@ -60,7 +60,7 @@ struct MapContainerView: View {
                         }
                     )
             }
-
+            
             if viewModel.tripViewModel.isReviewing {
                 TripSortingView(viewModel: viewModel.tripViewModel)
             }
@@ -83,7 +83,7 @@ struct MapContainerView: View {
         
         .overlay(settingsOverlay)
     }
-
+    
     private var controlButtons: some View {
         VStack(spacing: 10) {
             settingsButton
@@ -105,56 +105,48 @@ struct MapContainerView: View {
             .position(x: geo.size.width / 2, y: 20)
         }
     }
-
+    
     private var backButton: some View {
-        Button(action: {
+        SystemControlButton(
+            icon: "chevron.left",
+            opacity: isViewingState ? 1: 0,
+            color: Color.green
+        ) {
             viewModel.tripViewModel.isReviewing = false
             isInSettings = false
             showSettingsModal = false
-        }) {
-            Image(systemName: "chevron.left")
-                .frame(width: 44, height: 44)
-                .clipShape(Circle())
-                .foregroundColor(.white)
         }
-        .frame(width: 44, height: 44)
-        .buttonStyle(GlassButtonStyle(borderOpacity: 0.0))
-        .opacity(isViewingState ? 1 : 0 )
+        .glassEffect(.clear)
         .disabled(!isViewingState)
         .allowsHitTesting(isViewingState)
         .offset(x: isViewingState ? -150 : 0)
-        .animation(.easeInOut, value: isViewingState)
-        .glassEffect(.clear)
+        .animation(.spring(duration: 0.8, bounce: 0.35, blendDuration: 0.8), value: isViewingState)
     }
     
     private var extendPauseButton: some View {
-        Button(action: {
+        SystemControlButton(
+            icon: "plus",
+            opacity: viewModel.tripState == .paused ? 1 : 0,
+            color: Color.orange
+        ) {
             viewModel.extendPauseTapped()
-        }) {
-            Image(systemName: "plus")
-                .frame(width: 44, height: 44)
-                .clipShape(Circle())
-                .foregroundColor(.orange)
         }
-        .frame(width: 44, height: 44)
-        .buttonStyle(GlassButtonStyle(borderOpacity: 0.0))
-        .opacity(viewModel.tripState == .paused ? 1 : 0)
+        .glassEffect(.clear)
         .disabled(viewModel.tripState != .paused)
         .allowsHitTesting(viewModel.tripState == .paused)
         .offset(x: viewModel.tripState == .paused ? 150 : 0)
-        .animation(.easeInOut, value: viewModel.tripState == .paused)
-        .glassEffect(.clear)
+        .animation(.spring(duration: 0.8, bounce: 0.35, blendDuration: 0.8), value: viewModel.tripState == .paused)
     }
     
     private func titleBar(geo: GeometryProxy) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 50)
                 .fill(Color.clear)
-
+            
             ZStack {
                 let start: CGFloat = 0.75
                 let rawEnd = start + viewModel.sweepProgress
-
+                
                 if rawEnd <= 1.0 {
                     RoundedRectangle(cornerRadius: 50)
                         .trim(from: start, to: rawEnd)
@@ -163,13 +155,13 @@ struct MapContainerView: View {
                     RoundedRectangle(cornerRadius: 50)
                         .trim(from: start, to: 1.0)
                         .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
-
+                    
                     RoundedRectangle(cornerRadius: 50)
                         .trim(from: 0.0, to: rawEnd - 1.0)
                         .stroke(Color.orange.opacity(viewModel.tripState == .paused ? 0.9 : 0), lineWidth: 3)
                 }
             }
-
+            
             HStack {
                 Spacer()
                 HStack(spacing: 4) {
@@ -195,7 +187,7 @@ struct MapContainerView: View {
         .frame(width: geo.size.width * 0.5, height: 44)
         .glassEffect(.clear)
     }
-
+    
     private var statusBar: some View {
         GeometryReader { geo in
             HStack(spacing: 0) {
@@ -208,49 +200,49 @@ struct MapContainerView: View {
                         .foregroundColor(viewModel.tripStateColor)
                 }
                 .frame(maxWidth: .infinity)
-
+                
                 Divider()
                     .frame(width: 1, height: 28)
                     .background(Color.secondary.opacity(0.4))
-
+                
                 VStack(spacing: 2) {
                     Text("Distance")
                         .font(.caption)
                         .foregroundColor(.secondary)
-
+                    
                     Text(String(format: "%.1f miles", viewModel.tripDistanceCommittedMiles))
                         .font(.body)
                         .foregroundColor(.primary)
-
+                    
                     Text(String(format: "%.1f miles", viewModel.tripDistanceLiveMiles))
                         .font(.caption2)
                         .foregroundColor(
                             viewModel.tripState == .paused ? .orange :
-                            viewModel.tripState == .traveling ? .green :
-                            viewModel.tripDistanceLiveMiles > 0 ? .green : .gray
+                                viewModel.tripState == .traveling ? .green :
+                                viewModel.tripDistanceLiveMiles > 0 ? .green : .gray
                         )
                 }
                 .frame(maxWidth: .infinity)
-
+                
                 Divider()
                     .frame(width: 1, height: 28)
                     .background(Color.secondary.opacity(0.4))
-
+                
                 VStack(spacing: 2) {
                     Text("Trip Time")
                         .font(.caption)
                         .foregroundColor(.secondary)
-
+                    
                     Text(formattedTime(viewModel.tripDurationCommitted))
                         .font(.body)
                         .foregroundColor(.primary)
-
+                    
                     Text(formattedTime(viewModel.tripDurationLive))
                         .font(.caption2)
                         .foregroundColor(
                             viewModel.tripState == .paused ? .orange :
-                            viewModel.tripState == .traveling ? .green :
-                            viewModel.tripDurationLive > 0 ? .green : .gray
+                                viewModel.tripState == .traveling ? .green :
+                                viewModel.tripDurationLive > 0 ? .green : .gray
                         )
                 }
                 .frame(maxWidth: .infinity)
@@ -263,55 +255,52 @@ struct MapContainerView: View {
             .position(x: geo.size.width / 2, y: geo.size.height / 2)
         }
         .frame(height: 60)
-        
     }
-
+    
     private var recenterButton: some View {
-        Button(action: {
+        SystemControlButton(
+            icon: mapViewModel.locationIconName,
+            padding: 10,
+            color: Color.white
+        ) {
             viewModel.recenterTapped()
             mapViewModel.recenter()
-        }) {
-            Image(systemName: mapViewModel.locationIconName)
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
         }
-        .buttonStyle(GlassButtonStyle())
+        .glassEffect(.clear)
     }
-
+    
     private var shareButton: some View {
-        Button(action: {
+        SystemControlButton(
+            icon: "square.and.arrow.up",
+            padding: 10,
+            color: Color.white
+        ) {
             viewModel.shareTapped()
-        }) {
-            Image(systemName: "square.and.arrow.up")
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
         }
-        .buttonStyle(GlassButtonStyle())
-
+        .glassEffect(.clear)
     }
-
+    
     private var settingsButton: some View {
-        Button(action: {
+        SystemControlButton(
+            icon: "gearshape",
+            padding: 10,
+            color: Color.white
+        ) {
             viewModel.settingsTapped()
-        }) {
-            Image(systemName: "gearshape")
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
         }
-        .buttonStyle(GlassButtonStyle())
+        .glassEffect(.clear)
     }
-
+    
     private var summaryButton: some View {
-        Button(action: {
+        SystemControlButton(
+            icon: "rectangle.stack",
+            padding: 10,
+            color: Color.white
+        ) {
             viewModel.tripViewModel.isReviewing = true
             viewModel.summaryTapped()
-        }) {
-            Image(systemName: "rectangle.stack")
-                .frame(width: 40, height: 40)
-                .clipShape(Circle())
         }
-        .buttonStyle(GlassButtonStyle())
-
+        .glassEffect(.clear)
     }
     
     private var settingsOverlay: some View {
@@ -380,7 +369,7 @@ private func formattedTime(_ interval: TimeInterval) -> String {
 
 struct GlassButtonStyle: ButtonStyle {
     var borderOpacity: Double = 1.0
-
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(

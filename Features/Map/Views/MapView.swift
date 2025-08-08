@@ -3,39 +3,61 @@ import MapKit
 
 struct MapView: View {
     @ObservedObject var viewModel: MapViewModel
+    
     var body: some View {
         ZStack {
             Map(position: $viewModel.cameraPosition, interactionModes: .all) {
                 if !viewModel.tripViewModel.isReviewing {
-                    MapPolyline(coordinates: viewModel.commitedTracePath)
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.blue.opacity(0.6), Color.cyan.opacity(0.3)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            lineWidth: 7
-                        )
+                    // Committed (stored) path
+                    if !viewModel.commitedTracePath.isEmpty {
+                        MapPolyline(coordinates: viewModel.commitedTracePath)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.blue.opacity(0.6), Color.cyan.opacity(0.3)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 7
+                            )
+                    }
                     
-                    MapPolyline(coordinates: viewModel.nonCommitedTraceStatic)
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.orange.opacity(0.6), Color.red.opacity(0.3)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            lineWidth: 7
-                        )
+                    // Live static path (fixed points except the anchor)
+                    if !viewModel.nonCommitedTraceStatic.isEmpty {
+                        MapPolyline(coordinates: viewModel.nonCommitedTraceStatic)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.6), Color.red.opacity(0.3)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 7
+                            )
+                    }
+                    
+                    // Live tail (anchor -> interpolated head)
+                    if viewModel.nonCommitedTraceTail.count >= 2 {
+                        MapPolyline(coordinates: viewModel.nonCommitedTraceTail)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.6), Color.red.opacity(0.3)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 7
+                            )
+                    }
                 } else {
-                    MapPolyline(coordinates: viewModel.previousTripPath)
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.purple.opacity(0.6), Color.black.opacity(0.3)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            lineWidth: 7
-                        )
+                    if !viewModel.previousTripPath.isEmpty {
+                        MapPolyline(coordinates: viewModel.previousTripPath)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.purple.opacity(0.6), Color.black.opacity(0.3)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 7
+                            )
+                    }
                 }
 
                 if !viewModel.tripViewModel.isReviewing,
@@ -71,35 +93,34 @@ struct MapView: View {
             }
             .simultaneousGesture(
                 DragGesture().onChanged { _ in
-                    viewModel.isUserInteracting = true
-                    viewModel.autoFollowEnabled = false
+                    viewModel.userInteracting()
                 }
                 .simultaneously(with:
                     MagnificationGesture().onChanged { _ in
-                        viewModel.isUserInteracting = true
-                        viewModel.autoFollowEnabled = false
+                        viewModel.userInteracting()
                     }
                 )
                 .simultaneously(with:
                     RotationGesture().onChanged { _ in
-                        viewModel.isUserInteracting = true
-                        viewModel.autoFollowEnabled = false
+                        viewModel.userInteracting()
                     }
                 )
                 .simultaneously(with:
                     TapGesture().onEnded {
-                        viewModel.isUserInteracting = true
-                        viewModel.autoFollowEnabled = false
+                        viewModel.userInteracting()
                     }
                 )
             )
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: []))
             .edgesIgnoringSafeArea(.all)
-            .onMapCameraChange(frequency: .continuous) { context in
-                viewModel.cameraManager.updateZoomLevel(context.camera.distance)
-            }
             .onMapCameraChange(frequency: .onEnd) { context in
-                viewModel.updateZoomRegion(context.region)
+                if !viewModel.tripViewModel.isReviewing {
+                    if viewModel.cameraManager.orientationMode == .freeRoam {
+                        viewModel.cameraManager.updateZoomLevel(context.camera.distance)
+                        viewModel.updateLastCamera(context.camera)
+                    }
+                    viewModel.updateZoomRegion(context.region)
+                }
             }
 
             if viewModel.isLoadingReviewPath {
@@ -116,5 +137,5 @@ struct MapView: View {
     func recenterOnUser() {
         viewModel.recenter()
     }
-}
 
+}

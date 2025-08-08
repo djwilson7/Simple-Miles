@@ -3,7 +3,7 @@ import Combine
 import CoreLocation
 
 final class TripViewModel: ObservableObject {
-    @Published var allSegments: [TripSegment] = []
+    @Published var unclassifiedSegments: [TripSegment] = []
     @Published var selectedPath: [CLLocationCoordinate2D] = []
     @Published var isReviewing: Bool = false
     @Published var currentTripIndex: Int = 0
@@ -12,19 +12,15 @@ final class TripViewModel: ObservableObject {
     @Published var currentDuration: String = "1H 2M 3s"
     @Published var currentStartDate: String = "Jun 31, 2025 1:23pm"
 
-    private let recordingManager: RecordingManager
     private var cancellables = Set<AnyCancellable>()
-
-    init(recordingManager: RecordingManager) {
-        self.recordingManager = recordingManager
-
-        recordingManager.$allSegments
+    private let tripSegmentStore = TripSegmentStore.shared
+    
+    init() {
+        TripSegmentStore.shared.uncommitedTripsUpdated
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] segments in
-                self?.allSegments = segments
-                if !segments.isEmpty {
-                    self?.updateSelectedPath(index: 0)
-                }
+            .sink { [weak self] in
+                self?.unclassifiedSegments = self?.tripSegmentStore.loadAllUnclassified() ?? []
+                self?.updateSelectedPath(index: 0)
             }
             .store(in: &cancellables)
         
@@ -32,7 +28,8 @@ final class TripViewModel: ObservableObject {
             .removeDuplicates()
             .sink { [weak self] reviewing in
                 guard let self = self else { return }
-                if reviewing, !self.allSegments.isEmpty {
+                unclassifiedSegments = tripSegmentStore.loadAllUnclassified()
+                if reviewing, !self.unclassifiedSegments.isEmpty {
                     self.updateSelectedPath(index: 0)
                 }
             }
@@ -40,7 +37,7 @@ final class TripViewModel: ObservableObject {
     }
 
     func updateSelectedPath(index: Int) {
-        guard allSegments.indices.contains(index) else {
+        guard unclassifiedSegments.indices.contains(index) else {
             selectedPath = []
             currentDistance = "0.0 miles"
             currentDuration = "1H 2M 3s"
@@ -48,10 +45,10 @@ final class TripViewModel: ObservableObject {
             return
         }
         currentTripIndex = index
-        selectedPath = allSegments[index].pathCoordinates
-        currentDistance = formatDistance(allSegments[index].distance)
-        currentDuration = formatDuration(allSegments[index].duration)
-        currentStartDate = formatDateTime(allSegments[index].startTimestamp)
+        selectedPath = unclassifiedSegments[index].pathCoordinates
+        currentDistance = formatDistance(unclassifiedSegments[index].distance)
+        currentDuration = formatDuration(unclassifiedSegments[index].duration)
+        currentStartDate = formatDateTime(unclassifiedSegments[index].startTimestamp)
     }
 
     func selectPreviousSegment() {
@@ -62,10 +59,27 @@ final class TripViewModel: ObservableObject {
     }
 
     func selectNextSegment() {
-        if currentTripIndex + 1 < allSegments.count {
+        if currentTripIndex + 1 < unclassifiedSegments.count {
             currentTripIndex += 1
             updateSelectedPath(index: currentTripIndex)
         }
+    }
+    
+    func classifyCurrentSegment(newClassification: String) {
+        guard unclassifiedSegments.indices.contains(currentTripIndex) else { return }
+        var segment = unclassifiedSegments[currentTripIndex]
+        tripSegmentStore.delete(segment)
+        let newType = TripType(name: newClassification)
+        segment.resortSegment(as: newType)
+        tripSegmentStore.write(segment)
+        unclassifiedSegments = tripSegmentStore.loadAllUnclassified()
+        updateSelectedPath(index: 0)
+        
+        let allPersonalCount = tripSegmentStore.loadAllPersonal().count
+        let allBusinessCount = tripSegmentStore.loadAllBusiness().count
+        
+        print("Personal Trip Count: \(allPersonalCount)")
+        print("Business Trip Count: \(allBusinessCount)")
     }
     
     func formatDateTime(_ date: Date) -> String {

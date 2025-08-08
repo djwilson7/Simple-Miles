@@ -1,7 +1,12 @@
 import Foundation
 import CoreLocation
+import Combine
 
 final class TripSegmentStore {
+    static let shared = TripSegmentStore()
+    
+    let uncommitedTripsUpdated = PassthroughSubject<Void, Never>()
+    
     init() {}
 
     private let fileManager = FileManager.default
@@ -16,6 +21,11 @@ final class TripSegmentStore {
                 let data = try encoder.encode(segment)
                 try data.write(to: url)
                 print("TripSegmentStore: Saved segment to \(url.lastPathComponent)")
+                if segment.tripType.name == "unclassified" {
+                    DispatchQueue.main.async {
+                        TripSegmentStore.shared.uncommitedTripsUpdated.send()
+                    }
+                }
             } catch {
                 print("TripSegmentStore: Failed to save segment - \(error)")
             }
@@ -28,6 +38,11 @@ final class TripSegmentStore {
             if fileManager.fileExists(atPath: url.path) {
                 try fileManager.removeItem(at: url)
                 print("TripSegmentStore: Deleted segment file \(url.lastPathComponent)")
+                if segment.tripType.name == "unclassified" {
+                    DispatchQueue.main.async {
+                        TripSegmentStore.shared.uncommitedTripsUpdated.send()
+                    }
+                }
             } else {
                 print("TripSegmentStore: File not found for deletion: \(url.lastPathComponent)")
             }

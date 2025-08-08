@@ -11,12 +11,13 @@ struct DateBar: View {
     var geo: GeometryProxy
     var payload: String
     var isDragging: Bool
+    var hasTrips: Bool
     
     var body: some View {
-        Text(payload)
+        Text(hasTrips ? payload : "No Trips To Sort")
             .foregroundColor(.white)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
+            .padding(.top, 15)
+            .padding(.bottom, 15)
             .minimumScaleFactor(0.0)
             .frame(width: geo.size.width * 0.5)
             .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 50))
@@ -28,7 +29,7 @@ struct DateBar: View {
     GeometryReader { proxy in
         VStack(alignment: .center) {
             Spacer()
-            DateBar(geo: proxy, payload: "Jun 31st 2025 1:25pm", isDragging: false)
+            DateBar(geo: proxy, payload: "Jun 31st 2025 1:25pm", isDragging: false, hasTrips: true)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

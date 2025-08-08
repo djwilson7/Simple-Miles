@@ -29,8 +29,9 @@ struct SimpleMilesApp: App {
         FirebaseApp.configure()
         print("[App] Simple_MilesApp launched")
 
-        locationManager.initialize()
-        
+        LocationManager.shared.initialize()
+        LocationManager.shared.startSignificantChangeMonitoring()
+
         driverStateManager = DrivingStateManager(
             locationManager: locationManager
         )
@@ -51,9 +52,7 @@ struct SimpleMilesApp: App {
             lastLocationPublisher: locationManager.$lastLocation
         )
         
-        tripViewModel = TripViewModel(
-            recordingManager: recordingManager
-        )
+        tripViewModel = TripViewModel()
                 
         cameraManager = CameraManager(
             travelLocationPredictor: travelLocationPredictor,

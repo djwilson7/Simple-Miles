@@ -3,11 +3,6 @@ import CoreLocation
 import Combine
 import SwiftUI
 
-enum CameraOrientationMode {
-    case northUp
-    case headingUp
-}
-
 final class CameraManager: NSObject, ObservableObject {
 
     // MARK: - Public Published State
@@ -89,10 +84,6 @@ final class CameraManager: NSObject, ObservableObject {
         autoZoomEnabled = enabled
     }
 
-    func setUserZoomLevel(_ distance: CLLocationDistance) {
-        userZoomLevel = distance
-    }
-
     func resetToNorth() {
         orientationMode = .northUp
         lastProgrammaticHeading = 0
@@ -105,13 +96,8 @@ final class CameraManager: NSObject, ObservableObject {
     // MARK: - Core Camera Update
 
     public func updateCameraCenter(for location: CLLocation) {
-        let heading: CLLocationDirection
-        switch orientationMode {
-        case .northUp:
-            heading = 0
-        case .headingUp:
-            heading = travelLocationPredictor.activeHeading
-        }
+        let policy = MapOrientationPolicyFactory.policy(for: orientationMode)
+        let heading = policy.cameraHeading(predictor: travelLocationPredictor, currentHeading: currentHeading)
 
         currentHeading = heading
         lastProgrammaticHeading = heading
