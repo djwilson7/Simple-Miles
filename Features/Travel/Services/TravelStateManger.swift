@@ -1,3 +1,10 @@
+/// TravelStateManger.swift
+/// 
+/// Manages the travel state of the user based on driving detection and timer events.
+/// This includes transitioning between traveling, paused, and idle states. It observes
+/// driving state changes, manages pause timers, and handles pause extension requests
+/// from app group shared defaults.
+
 import SwiftUI
 import Foundation
 import Combine
@@ -6,36 +13,87 @@ import CoreML
 import NotificationCenter
 
 
+/// Manages the travel state of the user by observing driving status and handling timers.
+/// This singleton class tracks whether the user is traveling, paused, or idle, manages
+/// pause durations, and responds to external pause extension triggers.
+/// It facilitates the coordination between driving detection and travel state transitions.
 final class TravelStateManager: ObservableObject {
-    // MARK: - Published Properties
-    @Published private(set) var state: TravelState = .idle
-    @Published var pauseRemainingTime: TimeInterval? = nil
-    @Published private(set) var pauseTotalDuration: TimeInterval? = nil
-    private var pauseTimer: Timer?
-    private var notificationObserver: NSObjectProtocol?
-    private var extendPauseFlagTimer: Timer?
-
+    static let shared = TravelStateManager()
     
+    // MARK: - Published Properties
+    /// Remaining time for the current pause duration.
+    /// Updated every second when paused and nil otherwise.
+    @Published var pauseRemainingTime: TimeInterval? = nil
+    
+    /// The current travel state of the user, such as idle, traveling, or paused.
+    /// This property is read-only externally to prevent uncontrolled mutations.
+    @Published private(set) var state: TravelState = .idle
+    
+    /// The total duration initially set for the current pause period.
+    /// This represents the original pause timer length and is nil when not paused.
+    @Published private(set) var pauseTotalDuration: TimeInterval? = nil
 
-    // MARK: - Private Properties
+    // MARK: - Timer Properties
+    /// Timer instance responsible for decrementing the pauseRemainingTime.
+    private var pauseTimer: Timer?
+    
+    /// Timer periodically checking for external pause extension triggers.
+    private var extendPauseFlagTimer: Timer?
+    
+    // MARK: - Observer/Cancellable Properties
+    /// Observer for notification center events, currently unused but reserved.
+    private var notificationObserver: NSObjectProtocol?
+    
+    /// Cancellable token for the Combine subscription to driving state publisher.
     private var drivingStateCancellable: AnyCancellable?
-    private var locationManager: LocationManager?
+
+    // MARK: - Manager Dependencies
+    /// Shared location manager used for any location-related functionalities.
+    private let locationManager = LocationManager.shared
+    
+    /// Shared driving state manager which provides driving state changes.
+    private let drivingStateManager = DrivingStateManager.shared
 
     // MARK: - Init
-    init(
-        drivingStatePublisher: Published<Bool>.Publisher,
-        locationManager: LocationManager
-    ) {
-        self.locationManager = locationManager
-        // Ensure pause times are nil on init for clean state
+    /// Private initializer to enforce singleton usage pattern.
+    /// Ensures only one instance of TravelStateManager exists during app lifecycle.
+    private init() {}
+
+    // MARK: - Lifecycle Methods
+    /// Initializes the travel state manager by resetting pause timers and
+    /// subscribing to driving state updates.
+    /// Call this once during app setup or when resetting state.
+    func initialize() {
         pauseRemainingTime = nil
         pauseTotalDuration = nil
-        subscribeToDrivingState(publisher: drivingStatePublisher)
+        subscribeToDrivingState()
     }
 
-    // MARK: - Subscriptions
-    private func subscribeToDrivingState(publisher: Published<Bool>.Publisher) {
-        drivingStateCancellable = publisher
+    // MARK: - Public Methods
+    /// Extends the current pause timer duration by the configured pause timer interval.
+    /// Updates both remaining and total pause durations accordingly.
+    /// If no pause timer exists, initializes it with the default interval.
+    func extendPauseTimer() {
+        let interval = AppSettings.shared.pauseTimer //always pulled from settings.
+        if let current = pauseRemainingTime {
+            pauseRemainingTime = current + interval
+        } else {
+            pauseRemainingTime = interval
+        }
+
+        if let total = pauseTotalDuration {
+            pauseTotalDuration = total + interval
+        } else {
+            pauseTotalDuration = interval
+        }
+    }
+
+    // MARK: - Private Methods
+    /// Subscribes to driving state changes from the drivingStateManager,
+    /// observing on the main thread and handling duplicates.
+    /// Updates the internal travel state accordingly.
+    private func subscribeToDrivingState() {
+        drivingStateCancellable = drivingStateManager.$state
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isDriving in
@@ -43,7 +101,9 @@ final class TravelStateManager: ObservableObject {
             }
     }
 
-    // MARK: - Driving State Handling
+    /// Handles changes in driving state by delegating to appropriate handlers
+    /// depending on whether driving has started or stopped.
+    /// - Parameter isDriving: Boolean indicating current driving status.
     private func handleDrivingStateChange(_ isDriving: Bool) {
         switch isDriving {
         case true:
@@ -53,6 +113,9 @@ final class TravelStateManager: ObservableObject {
         }
     }
 
+    /// Called when driving starts.
+    /// Resets and invalidates any pause timers, sets the state to traveling,
+    /// and initializes pause timers from app settings.
     private func handleDrivingStarted() {
         guard state != .traveling else { return }
         pauseRemainingTime = AppSettings.shared.pauseTimer
@@ -67,6 +130,10 @@ final class TravelStateManager: ObservableObject {
         print("TravelState Transitioned: .traveling")
     }
 
+    /// Called when driving stops.
+    /// Transitions state to paused, starts a countdown timer for the pause duration,
+    /// and sets up a periodic timer to listen for external pause extension requests.
+    /// When the pause timer expires, transitions the state to idle.
     private func handleDrivingStopped() {
         guard state == .traveling else {
             return
@@ -86,7 +153,6 @@ final class TravelStateManager: ObservableObject {
                 self.pauseRemainingTime = nil
                 self.pauseTotalDuration = nil
                 
-                // Invalidate and nil extendPauseFlagTimer here as per instructions
                 self.extendPauseFlagTimer?.invalidate()
                 self.extendPauseFlagTimer = nil
                 
@@ -97,7 +163,6 @@ final class TravelStateManager: ObservableObject {
             }
         }
         
-        // Create and start extendPauseFlagTimer here as per instructions
         if extendPauseFlagTimer == nil {
             extendPauseFlagTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
@@ -110,21 +175,7 @@ final class TravelStateManager: ObservableObject {
         }
     }
 
-    func extendPauseTimer() {
-        let interval = AppSettings.shared.pauseTimer //always pulled from settings.
-        if let current = pauseRemainingTime {
-            pauseRemainingTime = current + interval
-        } else {
-            pauseRemainingTime = interval
-        }
-
-        if let total = pauseTotalDuration {
-            pauseTotalDuration = total + interval
-        } else {
-            pauseTotalDuration = interval
-        }
-    }
-
+    /// Cleans up any observers and invalidates timers upon deallocation.
     deinit {
         if let observer = notificationObserver {
             NotificationCenter.default.removeObserver(observer)

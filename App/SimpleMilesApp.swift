@@ -12,11 +12,12 @@ import MapKit
 @main
 struct SimpleMilesApp: App {
     @AppStorage("isLoggedIn") var isLoggedIn = false
+    
+    //Singleton Class References
     let locationManager = LocationManager.shared
     let driverStateManager = DrivingStateManager.shared
+    let travelStateManager = TravelStateManager.shared
     
-    
-    let travelStateManager: TravelStateManager
     let travelLocationPredictor: TravelLocationPredictor
     var recordingManager: RecordingManager
     let cameraManager: CameraManager
@@ -35,11 +36,8 @@ struct SimpleMilesApp: App {
         locationManager.startSignificantChangeMonitoring()
 
         driverStateManager.initialize()
-
-        travelStateManager = TravelStateManager(
-            drivingStatePublisher: driverStateManager.$state,
-            locationManager: locationManager
-        )
+        
+        travelStateManager.initialize()
         
         travelLocationPredictor = TravelLocationPredictor(
             locationManager: locationManager,
