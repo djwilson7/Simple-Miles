@@ -62,7 +62,7 @@ struct TripSegment: Codable {
         self.fileName = newName
     }
     
-   
+    
     
     // Updated init to set fileName to "temp_trip" during construction
     init(
@@ -104,18 +104,14 @@ struct TripSegment: Codable {
     }
     
     private mutating func append(segment: TripSegment) {
-        print("TripSegment Append Segment called with segment id: \(segment.id)")
         self.pathCoordinates += segment.pathCoordinates
         self.headingSamples += segment.headingSamples
         self.speedSamples += segment.speedSamples
         self.distance += segment.distance
         self.duration += segment.duration
     }
-
-    static func merge(liveSegment: TripSegment, previousSegment: TripSegment) -> TripSegment {
-        print("TripSegment Merge called with liveSegment id: \(liveSegment.id), previousSegment id: \(previousSegment.id)")
-        var mergedSegment = previousSegment
-        mergedSegment.append(segment: liveSegment)
-        return mergedSegment
+    
+    public mutating func merge(with other: TripSegment) {
+        self.append(segment: other)
     }
 }

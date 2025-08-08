@@ -18,8 +18,8 @@ struct SimpleMilesApp: App {
     let driverStateManager = DrivingStateManager.shared
     let travelStateManager = TravelStateManager.shared
     let travelLocationPredictor = TravelLocationPredictor.shared
+    let recordingManager = RecordingManager.shared
     
-    var recordingManager: RecordingManager
     let cameraManager: CameraManager
     let arrowManager: ArrowHeadingManager
     let mapViewModel: MapViewModel
@@ -41,11 +41,13 @@ struct SimpleMilesApp: App {
         
         travelLocationPredictor.initialize()
 
-        recordingManager = RecordingManager(
-            travelStatePublisher: travelStateManager.$state,
-            currentLocationPublisher: locationManager.$currentLocation,
-            lastLocationPublisher: locationManager.$lastLocation
-        )
+        recordingManager.initialize()
+        
+//        recordingManager = RecordingManager(
+//            travelStatePublisher: travelStateManager.$state,
+//            currentLocationPublisher: locationManager.$currentLocation,
+//            lastLocationPublisher: locationManager.$lastLocation
+//        )
         
         tripViewModel = TripViewModel()
                 
