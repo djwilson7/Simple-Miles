@@ -17,8 +17,8 @@ struct SimpleMilesApp: App {
     let locationManager = LocationManager.shared
     let driverStateManager = DrivingStateManager.shared
     let travelStateManager = TravelStateManager.shared
+    let travelLocationPredictor = TravelLocationPredictor.shared
     
-    let travelLocationPredictor: TravelLocationPredictor
     var recordingManager: RecordingManager
     let cameraManager: CameraManager
     let arrowManager: ArrowHeadingManager
@@ -39,10 +39,7 @@ struct SimpleMilesApp: App {
         
         travelStateManager.initialize()
         
-        travelLocationPredictor = TravelLocationPredictor(
-            locationManager: locationManager,
-            travelStateManager: travelStateManager
-        )
+        travelLocationPredictor.initialize()
 
         recordingManager = RecordingManager(
             travelStatePublisher: travelStateManager.$state,
