@@ -35,9 +35,8 @@ final class MapViewModel: NSObject, ObservableObject {
 
     var locationIconName: String {
         switch cameraManager.orientationMode {
-        case .northUp: "location.north.line"
+        case .northUp, .freeRoam: "location.north.line"
         case .headingUp: "location.north.line.fill"
-        case .freeRoam: "circle.fill"
         case .reviewing: ""
         }
     }
@@ -196,7 +195,7 @@ final class MapViewModel: NSObject, ObservableObject {
             .store(in: &cancellables)
 
 
-        arrowManager.$displayedArrowRotation
+        arrowManager.$desiredArrowRotation
             .receive(on: DispatchQueue.main)
             .sink { [weak self] rotation in
                 self?.displayedArrowRotation = rotation
@@ -324,6 +323,12 @@ final class MapViewModel: NSObject, ObservableObject {
     /// Passes the given camera distance to the CameraManager for persistence.
     func saveUserCameraDistance(_ distance: CLLocationDistance) {
         cameraManager.saveUserCameraDistance(distance)
+    }
+    
+    /// Intended for use by the map gesture handler.
+    /// Call this method whenever the user rotates the map in free roam mode to update the heading.
+    func updateFreeRoamHeading(_ heading: CLLocationDirection) {
+        cameraManager.setCameraToFreeRoam(heading: heading)
     }
 
     // MARK: - Paths

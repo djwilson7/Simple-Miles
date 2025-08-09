@@ -13,6 +13,10 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var orientationMode: CameraOrientationMode = .northUp
     @Published var currentHeading: CLLocationDirection = 0
     @Published var desiredCameraPosition: MapCamera? = nil
+    
+    /// The authoritative published heading for the map orientation in free roam mode.
+    /// Other managers (like ArrowHeadingManager) can subscribe to this to track user-controlled map heading.
+    @Published var mapHeading: CLLocationDirection = 0
 
     // MARK: - Private Properties
     private var lastLocation : CLLocation?
@@ -21,7 +25,7 @@ final class CameraManager: NSObject, ObservableObject {
     private let travelLocationPredictor = TravelLocationPredictor.shared
     private var cancellables = Set<AnyCancellable>()
     
-    private var lastNonFreeRoamOrientation: CameraOrientationMode = .northUp
+    var lastNonFreeRoamOrientation: CameraOrientationMode = .northUp
 
     // MARK: - Initialization
     private override init() {
@@ -52,6 +56,12 @@ final class CameraManager: NSObject, ObservableObject {
             lastNonFreeRoamOrientation = orientationMode
         }
         orientationMode = newOrientation
+        
+        if newOrientation == .freeRoam {
+            // When entering free roam, mapHeading should be set by the coordinator or view model
+            // calling setCameraToFreeRoam(heading:) with the latest map heading.
+            // This method does not call setCameraToFreeRoam itself to avoid unwanted side effects.
+        }
     }
     
     /// Saves the provided camera altitude (distance) if needed.
@@ -69,10 +79,10 @@ final class CameraManager: NSObject, ObservableObject {
         case .northUp: setCameraToNorthUp(location)
         case .headingUp: setCameraToHeadingUp(location, heading)
         case .freeRoam:
-            //no op for now
-            print("Entered Free Roam, No Op")
+            // No automatic camera update in free roam mode.
+            break
         case .reviewing:
-            //no op for now
+            // No op for now
             print("Entered Reviewing, No Op")
         }
     }
@@ -117,9 +127,12 @@ final class CameraManager: NSObject, ObservableObject {
     }
     
     /// Sets the camera to "free roam" mode: disables programmatic camera updating, user can control freely.
-    private func setCameraToFreeRoam() {
-        //no op -> we save the last orientaion mode and revert when we exit
-        //placeholder incase we want to create alt ops down the line.
+    /// - Parameter heading: Optional heading to set as the authoritative mapHeading for free roam orientation.
+    func setCameraToFreeRoam(heading: CLLocationDirection? = nil) {
+        if let heading = heading {
+            mapHeading = heading
+        }
+        // No programmatic camera updates; the mapHeading property serves as the reference for free roam heading.
     }
     
     /// Sets the camera to review mode: fits the camera to the provided path using the path-fitting utility.

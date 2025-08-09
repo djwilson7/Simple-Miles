@@ -21,8 +21,8 @@ struct SimpleMilesApp: App {
     let recordingManager = RecordingManager.shared
     let userNotifier = UserNotifier.shared
     let cameraManager = CameraManager.shared
+    let arrowManager = ArrowHeadingManager.shared
     
-    let arrowManager: ArrowHeadingManager
     let mapViewModel: MapViewModel
     let tripViewModel: TripViewModel
     let mapContainerViewModel: MapContainerViewModel
@@ -36,25 +36,13 @@ struct SimpleMilesApp: App {
         locationManager.startSignificantChangeMonitoring()
 
         driverStateManager.initialize()
-        
         travelStateManager.initialize()
-        
         travelLocationPredictor.initialize()
-
         recordingManager.initialize()
-        
         cameraManager.initialize()
-
+        arrowManager.initialize()
         
         tripViewModel = TripViewModel()
-                
-        
-        arrowManager = ArrowHeadingManager(
-            cameraManager: cameraManager,
-            travelLocationPredictor: travelLocationPredictor,
-            travelStateManager: travelStateManager,
-            tripViewModel: tripViewModel
-        )
 
         mapViewModel = MapViewModel(
             travelLocationPredictor: travelLocationPredictor,
@@ -90,3 +78,4 @@ struct SimpleMilesApp: App {
         }
     }
 }
+

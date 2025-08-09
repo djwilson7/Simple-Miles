@@ -121,6 +121,13 @@ struct MapView: View {
                     }
                 }
             }
+            .onMapCameraChange(frequency: .continuous) { context in
+                if !viewModel.tripViewModel.isReviewing {
+                    if CameraManager.shared.orientationMode == .freeRoam {
+                        viewModel.updateFreeRoamHeading(context.camera.heading)
+                    }
+                }
+            }
 
             if viewModel.isLoadingReviewPath {
                 Color.black.opacity(0.3)
