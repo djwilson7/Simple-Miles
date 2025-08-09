@@ -38,15 +38,14 @@ final class MapViewModel: NSObject, ObservableObject {
         case .northUp: "location.north.line"
         case .headingUp: "location.north.line.fill"
         case .freeRoam: "circle.fill"
+        case .reviewing: ""
         }
     }
-   
 
     let recordingManager: RecordingManager
-    let cameraManager: CameraManager
+    private let cameraManager = CameraManager.shared
     let arrowManager: ArrowHeadingManager
     private let travelLocationPredictor: TravelLocationPredictor
-    private let zoomStore: ZoomLevelStore
     private var cancellables = Set<AnyCancellable>()
     
     private var savedFreeRoamZoom: CLLocationDistance?
@@ -69,21 +68,17 @@ final class MapViewModel: NSObject, ObservableObject {
 
     init(
         travelLocationPredictor: TravelLocationPredictor,
-        cameraManager: CameraManager,
         arrowManager: ArrowHeadingManager,
-        zoomStore: ZoomLevelStore = ZoomLevelStore(),
         travelStateManager: TravelStateManager,
         tripViewModel: TripViewModel,
         recordingManager: RecordingManager
     ) {
         self.travelLocationPredictor = travelLocationPredictor
-        self.cameraManager = cameraManager
         self.arrowManager = arrowManager
-        self.zoomStore = zoomStore
         self.travelStateManager = travelStateManager
         self.tripViewModel = tripViewModel
         self.autoFollowEnabled = true
-        self.cameraPosition = zoomStore.load().map { .region($0) } ?? .automatic
+        self.cameraPosition = .automatic
         self.recordingManager = recordingManager
         super.init()
         
@@ -93,25 +88,20 @@ final class MapViewModel: NSObject, ObservableObject {
                 guard let self else { return }
                 guard let newCamera = newCamera else { return }
                 
-                let policy = MapOrientationPolicyFactory.policy(for: self.cameraManager.orientationMode)
-                guard policy.allowsCenterUpdate else { return }
-                
                 let current = self.lastCamera
                 let headingChanged = (current?.heading ?? 0) != newCamera.heading
                 let centerChanged = current?.centerCoordinate.latitude != newCamera.centerCoordinate.latitude ||
                 current?.centerCoordinate.longitude != newCamera.centerCoordinate.longitude
                 
-                let updatedCamera = newCamera
-                
                 if headingChanged || centerChanged {
-                    if travelStateManager.state == .idle {
+                    if self.travelStateManager.state == .idle {
                         // Instantly update camera, no animation
-                        self.cameraPosition = .camera(updatedCamera)
+                        self.cameraPosition = .camera(newCamera)
                     } else {
                         // Animate heading/camera change
                         cameraAnimationManager.animate(
-                            from: current ?? updatedCamera,
-                            to: updatedCamera,
+                            from: current ?? newCamera,
+                            to: newCamera,
                             isReviewing: tripViewModel.isReviewing,
                             onUpdate: { [weak self] interpolated in
                                 self?.cameraPosition = .camera(interpolated)
@@ -119,26 +109,25 @@ final class MapViewModel: NSObject, ObservableObject {
                         )
                     }
                 }
-                self.lastCamera = updatedCamera
+                self.lastCamera = newCamera
             }
             .store(in: &cancellables)
-        
-        if let savedAltitude = zoomStore.loadAltitude() {
-            cameraManager.updateZoomLevel(savedAltitude)
-        }
-        
-        cameraManager.setOrientationMode(.northUp)
+        cameraManager.updateOrientationMode(.northUp)
         bindStreams()
     }
 
     // MARK: - Public Controls
 
     func recenter() {
-        let policy = MapOrientationPolicyFactory.policy(for: cameraManager.orientationMode)
-        autoFollowEnabled = policy.allowsAutoFollow
+        autoFollowEnabled = true
         isUserInteracting = false
-        if cameraManager.orientationMode == .freeRoam {
-            cameraManager.setOrientationMode(.northUp)
+        switch cameraManager.orientationMode {
+        case .reviewing, .freeRoam:
+            cameraManager.resetOrientation()
+        case .northUp:
+            cameraManager.updateOrientationMode(.headingUp)
+        case .headingUp:
+            cameraManager.updateOrientationMode(.northUp)
         }
     }
 
@@ -146,15 +135,10 @@ final class MapViewModel: NSObject, ObservableObject {
         if autoFollowEnabled {
             autoFollowEnabled = false
             isUserInteracting = true
-            cameraManager.setOrientationMode(.freeRoam)
+            cameraManager.updateOrientationMode(.freeRoam)
         }
     }
 
-    func updateZoomRegion(_ region: MKCoordinateRegion) {
-        zoomStore.save(region: region)
-        zoomStore.save(altitude: cameraManager.currentZoomLevel())
-        currentRegion = region
-    }
 
     // MARK: - Streams
 
@@ -167,13 +151,9 @@ final class MapViewModel: NSObject, ObservableObject {
                 guard let self, let location else { return }
 
                 if self.currentLocation == nil {
-                    if let savedRegion = zoomStore.load() {
-                        self.cameraPosition = .region(savedRegion)
-                    } else {
-                        self.cameraPosition = .camera(
-                            MapCamera(centerCoordinate: location.coordinate, distance: 1500, heading: 0, pitch: 0)
-                        )
-                    }
+                    self.cameraPosition = .camera(
+                        MapCamera(centerCoordinate: location.coordinate, distance: 1500, heading: 0, pitch: 0)
+                    )
                 }
 
                 let isTraveling = (self.travelStateManager.state == .traveling)
@@ -291,11 +271,9 @@ final class MapViewModel: NSObject, ObservableObject {
     }
     
     private func handleIsReviewing() {
-        savedFreeRoamZoom = cameraManager.currentZoomLevel()
-        
         isLoadingReviewPath = true
         hasEnteredReviewMode = true
-        autoFollowEnabled = true
+        autoFollowEnabled = false
         isUserInteracting = false
 
         // Clear anchors so no tail is drawn during review
@@ -311,24 +289,9 @@ final class MapViewModel: NSObject, ObservableObject {
             tripMarkers = []
         }
 
-        // Target camera to fit review path
-        let reviewCamera = cameraToFitPath(cachedPreviousTripPath, offset: 0.3)
-        let startCamera = lastCamera ?? MapCamera(
-            centerCoordinate: reviewCamera.centerCoordinate,
-            distance: reviewCamera.distance,
-            heading: 0,
-            pitch: 0
-        )
-
-        // Animate to review camera
-        cameraAnimationManager.animate(
-            from: startCamera,
-            to: reviewCamera,
-            isReviewing: true,
-            onUpdate: { [weak self] interpolated in
-                self?.cameraPosition = .camera(interpolated)
-            }
-        )
+        // CameraManager now publishes the review camera position, which is then animated by the desiredCameraPosition sink.
+        cameraManager.updateOrientationMode(.reviewing)
+        cameraManager.setCameraToReview(path: cachedPreviousTripPath)
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -338,41 +301,13 @@ final class MapViewModel: NSObject, ObservableObject {
     }
 
     private func handleIsNotReviewing() {
+        cameraManager.resetOrientation()
         hasEnteredReviewMode = false
-        if let previousZoom = savedFreeRoamZoom {
-            cameraManager.updateZoomLevel(previousZoom)
-        }
+        
         tripViewModel.resetReviewState()
-
-        if let current = currentLocation {
-            let savedAltitude = zoomStore.loadAltitude() ?? 1500
-            let userCamera = MapCamera(
-                centerCoordinate: current.coordinate,
-                distance: savedAltitude,
-                heading: 0,
-                pitch: 0
-            )
-
-            let startCamera = lastCamera ?? MapCamera(
-                centerCoordinate: userCamera.centerCoordinate,
-                distance: userCamera.distance,
-                heading: 0,
-                pitch: 0
-            )
-
-            // Animate back to user location
-            cameraAnimationManager.animate(
-                from: startCamera,
-                to: userCamera,
-                isReviewing: false,
-                onUpdate: { [weak self] interpolated in
-                    self?.cameraPosition = .camera(interpolated)
-                }
-            )
-
-            autoFollowEnabled = true
-            isUserInteracting = false
-        }
+        
+        autoFollowEnabled = true
+        isUserInteracting = false
 
         // Refresh anchors immediately on exit so tail re-anchors
         currentStaticLast = cachedNonCommitedPath.last
@@ -384,6 +319,11 @@ final class MapViewModel: NSObject, ObservableObject {
     
     func updateLastCamera(_ camera: MapCamera) {
         lastCamera = camera
+    }
+
+    /// Passes the given camera distance to the CameraManager for persistence.
+    func saveUserCameraDistance(_ distance: CLLocationDistance) {
+        cameraManager.saveUserCameraDistance(distance)
     }
 
     // MARK: - Paths
@@ -399,7 +339,7 @@ final class MapViewModel: NSObject, ObservableObject {
             } else {
                 tripMarkers = []
             }
-            self.cameraManager.zoomToFitPath(previousTripPath, offset: 0.3)
+            cameraManager.setCameraToReview(path: previousTripPath)
         } else {
             commitedTracePath = self.cachedCommitedPath
             nonCommitedTraceStatic = self.cachedNonCommitedPath

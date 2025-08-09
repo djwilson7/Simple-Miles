@@ -263,7 +263,6 @@ struct MapContainerView: View {
             padding: 10,
             color: Color.white
         ) {
-            viewModel.recenterTapped()
             mapViewModel.recenter()
         }
         .glassEffect(.clear)

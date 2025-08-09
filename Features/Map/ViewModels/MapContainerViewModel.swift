@@ -130,11 +130,6 @@ final class MapContainerViewModel: ObservableObject {
     }
 
     // MARK: - Button Events
-
-    func recenterTapped() {
-        let currentMode = cameraManager.orientationMode
-        cameraManager.setOrientationMode(currentMode)
-    }
     
     func shareTapped()    {
         onShare?()

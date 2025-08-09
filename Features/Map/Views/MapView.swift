@@ -115,11 +115,10 @@ struct MapView: View {
             .edgesIgnoringSafeArea(.all)
             .onMapCameraChange(frequency: .onEnd) { context in
                 if !viewModel.tripViewModel.isReviewing {
-                    if viewModel.cameraManager.orientationMode == .freeRoam {
-                        viewModel.cameraManager.updateZoomLevel(context.camera.distance)
+                    if CameraManager.shared.orientationMode == .freeRoam {
                         viewModel.updateLastCamera(context.camera)
+                        viewModel.saveUserCameraDistance(context.camera.distance)
                     }
-                    viewModel.updateZoomRegion(context.region)
                 }
             }
 
