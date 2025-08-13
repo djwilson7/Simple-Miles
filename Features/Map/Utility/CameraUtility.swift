@@ -9,7 +9,7 @@ struct CameraUtility {
     /// Returns a MapCamera that fits the given path with a specified vertical offset.
     static func cameraToFitPath(
         _ coordinates: [CLLocationCoordinate2D],
-        offset: CGFloat = 0.4,
+        offset: CGFloat = 0.1,
         defaultLocation: CLLocationCoordinate2D? = nil
     ) -> MapCamera {
         guard !coordinates.isEmpty else {
@@ -33,7 +33,7 @@ struct CameraUtility {
         let centerLon = (minLon + maxLon) / 2
 
         let verticalAnchorRatio = 0.3
-        let shiftRatio = 0.7 - verticalAnchorRatio
+        let shiftRatio = 0.3 - verticalAnchorRatio
         let latSpan = maxLat - minLat
         let verticalShiftDegrees = latSpan * shiftRatio
 
@@ -44,8 +44,8 @@ struct CameraUtility {
 
         let latDelta = maxLat - minLat
         let lonDelta = maxLon - minLon
-        let horizontalPaddingFactor = 5.0
-        let verticalPaddingFactor = 5.0 + Double(offset)
+        let horizontalPaddingFactor = 4.5
+        let verticalPaddingFactor = 4.0 + Double(offset)
         let paddedLatDelta = latDelta * verticalPaddingFactor
         let paddedLonDelta = lonDelta * horizontalPaddingFactor
         let maxPaddedDelta = max(paddedLatDelta, paddedLonDelta)

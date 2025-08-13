@@ -42,6 +42,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     private let revertDelay: TimeInterval = 45            // seconds
     private var preferCourseHeading: Bool = false
     private var lastCLHeading: CLLocationDirection = 0
+    private var orientationOffset: CLLocationDirection = 0.0
     
     // MARK: - Significant Change State
     
@@ -92,6 +93,29 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         }
         NotificationCenter.default.addObserver(self, selector: #selector(appDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+        
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        NotificationCenter.default.addObserver(self, selector: #selector(updateOrientationOffset), name: UIDevice.orientationDidChangeNotification, object: nil)
+        updateOrientationOffset()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
+    }
+    
+    // MARK: - Orientation Handling
+    @objc private func updateOrientationOffset() {
+        switch UIDevice.current.orientation {
+        case .landscapeLeft:
+            orientationOffset = 90
+        case .portraitUpsideDown:
+            orientationOffset = 180
+        case .landscapeRight:
+            orientationOffset = 270
+        default:
+            orientationOffset = 0
+        }
     }
     
     // MARK: - Public API
@@ -227,8 +251,10 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         evaluateHeadingPreference(for: latest)
     }
     
+  
+    
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        let heading = newHeading.trueHeading > 0 ? newHeading.trueHeading : newHeading.magneticHeading
+        let heading = newHeading.trueHeading > 0 ? newHeading.trueHeading + orientationOffset : newHeading.magneticHeading + orientationOffset
         lastCLHeading = heading
         compassHeading = heading
         

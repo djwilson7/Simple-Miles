@@ -5,6 +5,7 @@ struct MainView: View {
     @ObservedObject var mainviewModel: MainViewModel
     @ObservedObject var mapViewModel: MapViewModel
     @State private var barDrag: CGSize = .zero
+    @State private var islandOffset: CGFloat = 0
     @Environment(\.layout) private var layout
     
     private var isReview: Bool { MainStateDriver.shared.mainState == .review }
@@ -135,7 +136,19 @@ struct MainView: View {
             summaryButton
             recenterButton
         }
-        .padding(.trailing, 5)
+        .padding(.trailing, layout.controlButtonsPadding - islandOffset)
+        .onAppear {
+            NotificationCenter.default.addObserver(forName: UIDevice.orientationDidChangeNotification, object: nil, queue: .main) { _ in
+                switch UIDevice.current.orientation {
+                case .landscapeLeft:
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene, let window = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                        islandOffset = window.safeAreaInsets.right
+                    }
+                default:
+                    islandOffset = 0
+                }
+            }
+        }
     }
     
     private var recenterButton: some View {

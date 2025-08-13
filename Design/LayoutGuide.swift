@@ -47,11 +47,15 @@ public struct LayoutGuide {
     public let animationDurations: AnimationDurations
     
     // Inside LayoutGuide
-    public var buttonWidth: CGFloat { width.pct(0.15) }  // 10% of view width
+    public var buttonWidth: CGFloat { min(100, width.pct(0.15)) }  // 10% of view width
     public var buttonHeight: CGFloat { max(40, height.pct(0.05)) } // 5% of view height
     
-    public var titleWidth: CGFloat { width.pct(0.5) }
+    public var titleWidth: CGFloat { min(500, width.pct(0.5)) }
     public var titleHeight: CGFloat { max(40, height.pct(0.05)) }
+    public var titleButtonOffset: CGFloat {min(400, width.pct(0.34))}
+    
+    public var controlButtonsPadding: CGFloat { width.pct(0.01) }
+    
     // SpacerDimension for horizontal and vertical spacers
     public let spacer: SpacerDimension
 

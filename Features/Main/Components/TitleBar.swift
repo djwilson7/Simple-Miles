@@ -29,7 +29,7 @@ struct TitleBarView: View {
         .glassEffect(.clear)
         .disabled(viewModel.isInMainState)
         .allowsHitTesting(!viewModel.isInMainState)
-        .offset(x: viewModel.isInMainState ? 0 : -layout.width.pct(0.35))
+        .offset(x: viewModel.isInMainState ? 0 : -layout.titleButtonOffset)
         .animation(.spring(duration: layout.animationDurations.slow, bounce: 0.35, blendDuration: 0.8), value: viewModel.isInMainState)
     }
     
@@ -43,7 +43,7 @@ struct TitleBarView: View {
         .glassEffect(.clear)
         .disabled(viewModel.travelState != .paused)
         .allowsHitTesting(viewModel.travelState == .paused)
-        .offset(x: viewModel.travelState == .paused ? layout.width.pct(0.35) : 0)
+        .offset(x: viewModel.travelState == .paused ? layout.titleButtonOffset : 0)
         .animation(.spring(duration: layout.animationDurations.slow, bounce: 0.35, blendDuration: 0.8), value: viewModel.travelState == .paused)
     }
     
