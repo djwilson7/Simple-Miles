@@ -112,7 +112,10 @@ struct MapView: View {
                 )
             )
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: []))
-            .edgesIgnoringSafeArea(.all)
+            .ignoresSafeArea(edges: [.top, .trailing, .bottom])
+            .safeAreaInset(edge: .leading) {
+                Color.clear.frame(width: 20)
+            }
             .onMapCameraChange(frequency: .onEnd) { context in
                 if !(MainStateDriver.shared.mainState == .review) {
                     if CameraManager.shared.orientationMode == .freeRoam {
