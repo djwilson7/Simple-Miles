@@ -48,8 +48,10 @@ public struct LayoutGuide {
     
     // Inside LayoutGuide
     public var buttonWidth: CGFloat { width.pct(0.15) }  // 10% of view width
-    public var buttonHeight: CGFloat { height.pct(0.05) } // 5% of view height
+    public var buttonHeight: CGFloat { max(40, height.pct(0.05)) } // 5% of view height
     
+    public var titleWidth: CGFloat { width.pct(0.5) }
+    public var titleHeight: CGFloat { max(40, height.pct(0.05)) }
     // SpacerDimension for horizontal and vertical spacers
     public let spacer: SpacerDimension
 

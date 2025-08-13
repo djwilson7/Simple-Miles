@@ -18,13 +18,14 @@ struct TitleBarView: View {
     
     private var backButton: some View {
         SystemControlButton(
-            icon: "chevron.left",
             opacity: viewModel.isInMainState ? 0 : 1,
-            color: Color.green
-        ) {
-            viewModel.backButtonPressed()
-            print("Back button pressed, from the title bar")
-        }
+            color: Color.green,
+            action: {
+                viewModel.backButtonPressed()
+                print("Back button pressed, from the title bar")
+            },
+            label: { Image(systemName: "chevron.left") }
+        )
         .glassEffect(.clear)
         .disabled(viewModel.isInMainState)
         .allowsHitTesting(!viewModel.isInMainState)
@@ -34,12 +35,11 @@ struct TitleBarView: View {
     
     private var extendPauseButton: some View {
         SystemControlButton(
-            icon: "plus",
             opacity: viewModel.travelState == .paused ? 1 : 0,
-            color: Color.orange
-        ) {
-            viewModel.extendPauseButtonPressed()
-        }
+            color: Color.orange,
+            action: { viewModel.extendPauseButtonPressed() },
+            label: { Image(systemName: "plus") }
+        )
         .glassEffect(.clear)
         .disabled(viewModel.travelState != .paused)
         .allowsHitTesting(viewModel.travelState == .paused)
@@ -79,7 +79,7 @@ struct TitleBarView: View {
                 Spacer()
             }
         }
-        .frame(width: layout.width.pct(0.5), height: layout.height.pct(0.05))
+        .frame(width: layout.titleWidth, height: layout.titleHeight)
         .glassEffect(.clear)
     }
 }

@@ -7,17 +7,9 @@ struct MainView: View {
     @State private var barDrag: CGSize = .zero
     @Environment(\.layout) private var layout
     
-    private var isReview: Bool {
-        MainStateDriver.shared.mainState == .review
-    }
-    
-    private var canGoPrev: Bool {
-        TripViewModel.shared.currentTripIndex > 0
-    }
-    
-    private var canGoNext: Bool {
-        TripViewModel.shared.currentTripIndex < TripViewModel.shared.unclassifiedSegments.count - 1
-    }
+    private var isReview: Bool { MainStateDriver.shared.mainState == .review }
+    private var canGoPrev: Bool { TripViewModel.shared.currentTripIndex > 0 }
+    private var canGoNext: Bool { TripViewModel.shared.currentTripIndex < TripViewModel.shared.unclassifiedSegments.count - 1 }
     
     var body: some View {
         GeometryReader { geo in
@@ -66,12 +58,12 @@ struct MainView: View {
         let followX = (isReview && !leftVisible) ? barDrag.width : 0
         let followY = (isReview && !leftVisible) ? barDrag.height : 0
         let visibleX = -layout.width.pct(0.4)
-        return Button( //Left Button
-            action: { TripViewModel.shared.selectPreviousSegment() }
-        ) {
-            AnimatedChevronButtonLabel(isLeftFacing: true)
-                .opacity(leftVisible ? 1 : 0)
-        }
+        return SystemControlButton( //Left Button
+            opacity: leftVisible ? 1: 0,
+            color: Color.white,
+            action: { TripViewModel.shared.selectPreviousSegment() },
+            label: { AnimatedChevronButtonLabel(isLeftFacing: true) }
+        )
         .frame(width: layout.buttonWidth, height: layout.buttonHeight)
         .buttonStyle(.plain)
         .glassEffect(.clear)
@@ -87,12 +79,12 @@ struct MainView: View {
         let followX = (isReview && !rightVisible) ? barDrag.width : 0
         let followY = (isReview && !rightVisible) ? barDrag.height : 0
         let visibleX = layout.width.pct(0.4)
-        return Button( //Right Button
-            action: { TripViewModel.shared.selectNextSegment() }
-        ) {
-            AnimatedChevronButtonLabel(isLeftFacing: false)
-                .opacity(rightVisible ? 1 : 0)
-        }
+        return SystemControlButton(
+            opacity: rightVisible ? 1: 0,
+            color: Color.white,
+            action: { TripViewModel.shared.selectNextSegment() },
+            label: { AnimatedChevronButtonLabel(isLeftFacing: false) }
+        )
         .buttonStyle(.plain)
         .frame(width: layout.buttonWidth, height: layout.buttonHeight)
         .glassEffect(.clear)
@@ -146,45 +138,37 @@ struct MainView: View {
     
     private var recenterButton: some View {
         SystemControlButton(
-            icon: mapViewModel.locationIconName,
-            padding: 10,
-            color: Color.white
-        ) {
-            mapViewModel.recenter()
-        }
+            color: Color.white,
+            action: { mapViewModel.recenter() },
+            label: { Image(systemName: mapViewModel.locationIconName) }
+        )
         .glassEffect(.clear)
     }
     
     private var shareButton: some View {
         SystemControlButton(
-            icon: "square.and.arrow.up",
-            padding: 10,
-            color: Color.white
-        ) {
-            //TODO -> Integrate share button
-        }
+            color: Color.white,
+            action: { /* TODO */ },
+            label: { Image(systemName: "square.and.arrow.up") }
+        )
         .glassEffect(.clear)
     }
     
     private var settingsButton: some View {
         SystemControlButton(
-            icon: "gearshape",
-            padding: 10,
-            color: Color.white
-        ) {
-            mainviewModel.settingsTapped()
-        }
+            color: Color.white,
+            action: { mainviewModel.settingsTapped() },
+            label: { Image(systemName: "gearshape") }
+        )
         .glassEffect(.clear)
     }
     
     private var summaryButton: some View {
         SystemControlButton(
-            icon: "rectangle.stack",
-            padding: 10,
-            color: Color.white
-        ) {
-            mainviewModel.summaryTapped()
-        }
+            color: Color.white,
+            action: { mainviewModel.summaryTapped() },
+            label: { Image(systemName: "rectangle.stack") }
+        )
         .glassEffect(.clear)
     }
 }

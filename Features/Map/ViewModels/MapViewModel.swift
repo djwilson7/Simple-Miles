@@ -4,8 +4,6 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
-// NOTE: When the user changes the map zoom while in .freeRoam mode, call cameraManager.setUserZoomLevel(currentAltitude) from your map view/coordinator to persist zoom.
-
 final class MapViewModel: NSObject, ObservableObject {
     @Published var currentLocation: CLLocation?
     @Published var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
@@ -30,8 +28,6 @@ final class MapViewModel: NSObject, ObservableObject {
 
     private var traceOrigin: CLLocationCoordinate2D?
     private var hasInitializedHeading = false
-    private let travelStateManager = TravelStateManager.shared
-    let tripViewModel: TripViewModel
 
     var locationIconName: String {
         switch cameraManager.orientationMode {
@@ -40,7 +36,9 @@ final class MapViewModel: NSObject, ObservableObject {
         case .reviewing: ""
         }
     }
-
+    
+    private let travelStateManager = TravelStateManager.shared
+    let tripViewModel = TripViewModel.shared
     let recordingManager = RecordingManager.shared
     private let cameraManager = CameraManager.shared
     let arrowManager = ArrowHeadingManager.shared
@@ -65,10 +63,7 @@ final class MapViewModel: NSObject, ObservableObject {
     // Anchor for animated tail (last fixed live point)
     private var liveTailAnchor: CLLocationCoordinate2D?
 
-    init(
-        tripViewModel: TripViewModel,
-    ) {
-        self.tripViewModel = tripViewModel
+    override init() {
         self.autoFollowEnabled = true
         self.cameraPosition = .automatic
         super.init()

@@ -10,7 +10,6 @@ struct SettingsView: View {
                 switch setting.controlType {
                 case .stepper:
                     SettingStepperRow(model: setting)
-                    SettingStepperRow(model: setting)
                 case .toggle:
                     SettingToggleRow(model: setting)
                 case .menu(let options):
@@ -19,6 +18,5 @@ struct SettingsView: View {
             }
         }
         .frame(maxWidth: layout.width.pct(0.8), maxHeight: layout.height.pct(0.4))
-        
     }
 }

@@ -2,20 +2,19 @@ import SwiftUI
 
 struct SystemControlButton: View {
     @Environment(\.layout) private var layout
-    let icon: String
+    let label: AnyView
     let opacity: Double
     let color: Color
     let action: () -> Void
 
     // Provide default values including color
     init(
-        icon: String,
         opacity: Double = 1.0,
-        padding: CGFloat = 5,
         color: Color = .primary,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        @ViewBuilder label: () -> some View
     ) {
-        self.icon = icon
+        self.label = AnyView(label())
         self.opacity = opacity
         self.color = color
         self.action = action
@@ -27,30 +26,33 @@ struct SystemControlButton: View {
                 Color.white.opacity(0.001)
                     .clipShape(Circle())
 
-                Image(systemName: icon)
-                    .font(.system(size: 30, weight: .medium))
+                label
                     .foregroundStyle(color)
-
             }
             .opacity(opacity)
             .frame(width: layout.buttonWidth, height: layout.buttonHeight)
         }
         .buttonStyle(.plain)
-
     }
 }
 
 
 #Preview("SystemControlButton Examples") {
     VStack(spacing: 32) {
-        SystemControlButton(icon: "gear", opacity: 1.0, color: .yellow) {
+        SystemControlButton(opacity: 1.0, color: .yellow, action: {
             print("Gear tapped")
+        }) {
+            Image(systemName: "gear")
+                .font(.system(size: 30, weight: .medium))
         }
         .glassEffect(.clear)
         .background(Color.clear.opacity(0.01))
-        
-        SystemControlButton(icon: "chevron.backward", opacity: 0.5, color: .accentColor) {
+
+        SystemControlButton(opacity: 0.5, color: .accentColor, action: {
             print("Back tapped")
+        }) {
+            Image(systemName: "chevron.backward")
+                .font(.system(size: 30, weight: .medium))
         }
         .glassEffect(.clear)
     }

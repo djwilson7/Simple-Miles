@@ -37,24 +37,23 @@ struct SettingStepperRow: View {
                     .font(.body)
                     .foregroundColor(Color.white)
                 Spacer()
-                Text(model.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-            }
-            HStack {
                 Text(displayFormatter(value))
                     .font(.body)
                     .foregroundColor(.white)
                     .lineLimit(1)
-                Spacer()
                 Stepper("", value: $value, in: range, step: step, onEditingChanged: { _ in
-                    // Persist new value into model and UserDefaults
                     model.value = .double(value)
                     UserDefaults.standard.set(value, forKey: model.userDefaultsKey)
                 })
                 .labelsHidden()
                 .glassEffect(.clear)
+            }
+            HStack {
+                Text(model.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                Spacer()
             }
         }
         .padding(5)
