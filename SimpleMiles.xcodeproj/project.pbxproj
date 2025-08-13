@@ -7,23 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		6A2C07DD2E3D5FF2005B8149 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A2C07DC2E3D5FF2005B8149 /* WidgetKit.framework */; };
-		6A2C07DF2E3D5FF2005B8149 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A2C07DE2E3D5FF2005B8149 /* SwiftUI.framework */; };
-		6A2C07F02E3D5FF5005B8149 /* LiveTripTrackingExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6A2C07DA2E3D5FF2005B8149 /* LiveTripTrackingExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6AC2F4F32E218E3C00F4064A /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6AC2F4F22E218E3C00F4064A /* FirebaseAuth */; };
 		6AC2F4F52E218E3C00F4064A /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6AC2F4F42E218E3C00F4064A /* FirebaseCore */; };
 		6ACE7CCC2E25F76D00D6F470 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 6ACE7CCB2E25F76D00D6F470 /* ZIPFoundation */; };
-		6ACE7CCE2E2693F100D6F470 /* DIRECTORYREFERENCE.md in Resources */ = {isa = PBXBuildFile; fileRef = 6ACE7CCD2E2693E100D6F470 /* DIRECTORYREFERENCE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		6A2C07EE2E3D5FF5005B8149 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 6AC2F4A42E2161CA00F4064A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 6A2C07D92E3D5FF2005B8149;
-			remoteInfo = LiveTripTrackingExtension;
-		};
 		6AC2F4BA2E2161CC00F4064A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6AC2F4A42E2161CA00F4064A /* Project object */;
@@ -47,7 +36,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				6A2C07F02E3D5FF5005B8149 /* LiveTripTrackingExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -55,48 +43,17 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6A2C07DA2E3D5FF2005B8149 /* LiveTripTrackingExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LiveTripTrackingExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6A2C07DC2E3D5FF2005B8149 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		6A2C07DE2E3D5FF2005B8149 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		6A2C07FD2E3E6249005B8149 /* LiveTripTrackingExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LiveTripTrackingExtension.entitlements; sourceTree = "<group>"; };
 		6A2C07FE2E3E62A1005B8149 /* SimpleMiles.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SimpleMiles.entitlements; sourceTree = "<group>"; };
-		6AB55A102E22CC4800DCEF27 /* TODO Backend.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "TODO Backend.md"; sourceTree = "<group>"; };
 		6AC2F4AC2E2161CA00F4064A /* SimpleMiles.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleMiles.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AC2F4B92E2161CC00F4064A /* SimpleMilesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleMilesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AC2F4C32E2161CC00F4064A /* SimpleMilesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleMilesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		6ACE7CCD2E2693E100D6F470 /* DIRECTORYREFERENCE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DIRECTORYREFERENCE.md; sourceTree = "<group>"; };
 		6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SimpleMiles-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6A13AF3E2E3EF7E50081F1DE /* Exceptions for "LiveTripTracking" folder in "SimpleMiles" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				AppIntent.swift,
-			);
-			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
-		};
-		6A2C07F42E3D5FF5005B8149 /* Exceptions for "LiveTripTracking" folder in "LiveTripTrackingExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 6A2C07D92E3D5FF2005B8149 /* LiveTripTrackingExtension */;
-		};
-		6A2C07FC2E3D6528005B8149 /* Exceptions for "Features" folder in "LiveTripTrackingExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Widgets/View/ActivityView.swift,
-			);
-			target = 6A2C07D92E3D5FF2005B8149 /* LiveTripTrackingExtension */;
-		};
-		6A2C08042E3E639E005B8149 /* Exceptions for "AppGroup" folder in "LiveTripTrackingExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				SharedAppGroup.swift,
-			);
-			target = 6A2C07D92E3D5FF2005B8149 /* LiveTripTrackingExtension */;
-		};
 		6AB55A2E2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMilesTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -122,28 +79,13 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6A2C07E02E3D5FF2005B8149 /* LiveTripTracking */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6A13AF3E2E3EF7E50081F1DE /* Exceptions for "LiveTripTracking" folder in "SimpleMiles" target */,
-				6A2C07F42E3D5FF5005B8149 /* Exceptions for "LiveTripTracking" folder in "LiveTripTrackingExtension" target */,
-			);
-			path = LiveTripTracking;
-			sourceTree = "<group>";
-		};
 		6A2C07FF2E3E6379005B8149 /* AppGroup */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6A2C08042E3E639E005B8149 /* Exceptions for "AppGroup" folder in "LiveTripTrackingExtension" target */,
-			);
 			path = AppGroup;
 			sourceTree = "<group>";
 		};
 		6AB55A122E22F84F00DCEF27 /* Features */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6A2C07FC2E3D6528005B8149 /* Exceptions for "Features" folder in "LiveTripTrackingExtension" target */,
-			);
 			path = Features;
 			sourceTree = "<group>";
 		};
@@ -153,11 +95,6 @@
 				6AB55A2E2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMilesTests" target */,
 			);
 			path = Utilities;
-			sourceTree = "<group>";
-		};
-		6AB55A2F2E22F9DA00DCEF27 /* Tests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Tests;
 			sourceTree = "<group>";
 		};
 		6AB55A442E22F9FC00DCEF27 /* Resources */ = {
@@ -174,18 +111,14 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		6AFEC42B2E4B808E0031837F /* Design */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Design;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		6A2C07D72E3D5FF2005B8149 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				6A2C07DF2E3D5FF2005B8149 /* SwiftUI.framework in Frameworks */,
-				6A2C07DD2E3D5FF2005B8149 /* WidgetKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6AC2F4A92E2161CA00F4064A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -225,17 +158,14 @@
 		6AC2F4A32E2161CA00F4064A = {
 			isa = PBXGroup;
 			children = (
+				6AFEC42B2E4B808E0031837F /* Design */,
 				6A2C07FF2E3E6379005B8149 /* AppGroup */,
 				6A2C07FE2E3E62A1005B8149 /* SimpleMiles.entitlements */,
 				6A2C07FD2E3E6249005B8149 /* LiveTripTrackingExtension.entitlements */,
-				6ACE7CCD2E2693E100D6F470 /* DIRECTORYREFERENCE.md */,
 				6AB55A462E22FA2100DCEF27 /* App */,
 				6AB55A442E22F9FC00DCEF27 /* Resources */,
-				6AB55A2F2E22F9DA00DCEF27 /* Tests */,
 				6AB55A252E22F90500DCEF27 /* Utilities */,
 				6AB55A122E22F84F00DCEF27 /* Features */,
-				6AB55A102E22CC4800DCEF27 /* TODO Backend.md */,
-				6A2C07E02E3D5FF2005B8149 /* LiveTripTracking */,
 				6A2C07DB2E3D5FF2005B8149 /* Frameworks */,
 				6AC2F4AD2E2161CA00F4064A /* Products */,
 				6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */,
@@ -248,7 +178,6 @@
 				6AC2F4AC2E2161CA00F4064A /* SimpleMiles.app */,
 				6AC2F4B92E2161CC00F4064A /* SimpleMilesTests.xctest */,
 				6AC2F4C32E2161CC00F4064A /* SimpleMilesUITests.xctest */,
-				6A2C07DA2E3D5FF2005B8149 /* LiveTripTrackingExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -256,28 +185,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6A2C07D92E3D5FF2005B8149 /* LiveTripTrackingExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6A2C07F12E3D5FF5005B8149 /* Build configuration list for PBXNativeTarget "LiveTripTrackingExtension" */;
-			buildPhases = (
-				6A2C07D62E3D5FF2005B8149 /* Sources */,
-				6A2C07D72E3D5FF2005B8149 /* Frameworks */,
-				6A2C07D82E3D5FF2005B8149 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				6A2C07E02E3D5FF2005B8149 /* LiveTripTracking */,
-			);
-			name = LiveTripTrackingExtension;
-			packageProductDependencies = (
-			);
-			productName = LiveTripTrackingExtension;
-			productReference = 6A2C07DA2E3D5FF2005B8149 /* LiveTripTrackingExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		6AC2F4AB2E2161CA00F4064A /* SimpleMiles */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6AC2F4CD2E2161CC00F4064A /* Build configuration list for PBXNativeTarget "SimpleMiles" */;
@@ -290,7 +197,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				6A2C07EF2E3D5FF5005B8149 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6A2C07FF2E3E6379005B8149 /* AppGroup */,
@@ -298,6 +204,7 @@
 				6AB55A252E22F90500DCEF27 /* Utilities */,
 				6AB55A442E22F9FC00DCEF27 /* Resources */,
 				6AB55A462E22FA2100DCEF27 /* App */,
+				6AFEC42B2E4B808E0031837F /* Design */,
 			);
 			name = SimpleMiles;
 			packageProductDependencies = (
@@ -321,9 +228,6 @@
 			);
 			dependencies = (
 				6AC2F4BB2E2161CC00F4064A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				6AB55A2F2E22F9DA00DCEF27 /* Tests */,
 			);
 			name = SimpleMilesTests;
 			packageProductDependencies = (
@@ -362,9 +266,6 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					6A2C07D92E3D5FF2005B8149 = {
-						CreatedOnToolsVersion = 16.4;
-					};
 					6AC2F4AB2E2161CA00F4064A = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -399,24 +300,15 @@
 				6AC2F4AB2E2161CA00F4064A /* SimpleMiles */,
 				6AC2F4B82E2161CC00F4064A /* SimpleMilesTests */,
 				6AC2F4C22E2161CC00F4064A /* SimpleMilesUITests */,
-				6A2C07D92E3D5FF2005B8149 /* LiveTripTrackingExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		6A2C07D82E3D5FF2005B8149 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6AC2F4AA2E2161CA00F4064A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6ACE7CCE2E2693F100D6F470 /* DIRECTORYREFERENCE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -437,13 +329,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		6A2C07D62E3D5FF2005B8149 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6AC2F4A82E2161CA00F4064A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -468,11 +353,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		6A2C07EF2E3D5FF5005B8149 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 6A2C07D92E3D5FF2005B8149 /* LiveTripTrackingExtension */;
-			targetProxy = 6A2C07EE2E3D5FF5005B8149 /* PBXContainerItemProxy */;
-		};
 		6AC2F4BB2E2161CC00F4064A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
@@ -486,64 +366,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		6A2C07F22E3D5FF5005B8149 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = LiveTripTrackingExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6N8KA8WNG4;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LiveTripTracking/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = LiveTripTracking;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "i-maneo.Simple-Miles.LiveTripTracking";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		6A2C07F32E3D5FF5005B8149 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = LiveTripTrackingExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6N8KA8WNG4;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = LiveTripTracking/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = LiveTripTracking;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "i-maneo.Simple-Miles.LiveTripTracking";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		6AC2F4CB2E2161CC00F4064A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -820,15 +642,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		6A2C07F12E3D5FF5005B8149 /* Build configuration list for PBXNativeTarget "LiveTripTrackingExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6A2C07F22E3D5FF5005B8149 /* Debug */,
-				6A2C07F32E3D5FF5005B8149 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		6AC2F4A72E2161CA00F4064A /* Build configuration list for PBXProject "SimpleMiles" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -12,7 +12,10 @@ final class TravelLocationPredictor: ObservableObject {
     static let shared = TravelLocationPredictor()
     
     /// Private initializer to enforce singleton usage.
-    private init() {}
+    private init() {
+        bindStreams()
+
+    }
 
     // MARK: - Published Properties
 
@@ -42,13 +45,6 @@ final class TravelLocationPredictor: ObservableObject {
     private var lastHeading: CLLocationDirection = 0
     /// The current travel state.
     private var currentTravelState: TravelState = .idle
-
-    // MARK: - Lifecycle
-
-    /// Sets up stream bindings. Call once after launch.
-    func initialize() {
-        bindStreams()
-    }
 
     // MARK: - Private Methods
 

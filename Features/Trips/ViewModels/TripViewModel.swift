@@ -3,9 +3,10 @@ import Combine
 import CoreLocation
 
 final class TripViewModel: ObservableObject {
+    static let shared = TripViewModel()
+    
     @Published var unclassifiedSegments: [TripSegment] = []
     @Published var selectedPath: [CLLocationCoordinate2D] = []
-    @Published var isReviewing: Bool = false
     @Published var currentTripIndex: Int = 0
 
     @Published var currentDistance: String = "0.0 miles"
@@ -15,8 +16,10 @@ final class TripViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let tripSegmentStore = TripSegmentStore.shared
     
-    init() {
-        TripSegmentStore.shared.uncommitedTripsUpdated
+    private init() {
+        self.unclassifiedSegments = tripSegmentStore.loadAllUnclassified()
+        
+        tripSegmentStore.uncommitedTripsUpdated
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 self?.unclassifiedSegments = self?.tripSegmentStore.loadAllUnclassified() ?? []
@@ -24,18 +27,18 @@ final class TripViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        $isReviewing
+        MainStateDriver.shared.$mainState
             .removeDuplicates()
-            .sink { [weak self] reviewing in
+            .sink { [weak self] state in
                 guard let self = self else { return }
-                unclassifiedSegments = tripSegmentStore.loadAllUnclassified()
-                if reviewing, !self.unclassifiedSegments.isEmpty {
+                if state == .review, !self.unclassifiedSegments.isEmpty {
                     self.updateSelectedPath(index: 0)
                 }
             }
             .store(in: &cancellables)
     }
 
+    
     func updateSelectedPath(index: Int) {
         guard unclassifiedSegments.indices.contains(index) else {
             selectedPath = []
@@ -111,7 +114,6 @@ final class TripViewModel: ObservableObject {
     
     func resetReviewState() {
         self.selectedPath = []
-        self.isReviewing = false
         self.currentTripIndex = 0
         self.currentDistance = "0.0 miles"
         self.currentDuration = "1H 2M 3s"

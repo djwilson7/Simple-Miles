@@ -32,13 +32,7 @@ final class ArrowHeadingManager: ObservableObject {
     // MARK: - Initialization
 
     /// Private initializer to enforce singleton usage
-    private init() { }
-
-    // MARK: - Setup / Binding
-
-    /// Initialize bindings to camera heading, travel heading, map heading, orientation mode, and travel state.
-    /// All heading and mode sources are combined into a single stream for unified updates.
-    func initialize() {
+    private init() {
         bind()
     }
 

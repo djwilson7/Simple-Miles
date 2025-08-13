@@ -49,6 +49,14 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     private let minNotificationInterval: TimeInterval = 10 * 60 // 10 minutes
     private var lastNotificationDate: Date?
     
+    // MARK: - Update Mode State
+    private var isGPSActive = false
+    private var isHeadingActive = false
+
+    // MARK: - Liveness / Heartbeat State
+    private var lastGPSUpdateAt: Date?
+    private var heartbeatTimer: Timer?
+    
     // MARK: - Public Publishers
     
     var locationPublisher: AnyPublisher<CLLocation, Never> {
@@ -73,12 +81,8 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         locationManager.distanceFilter = 10
         locationManager.headingFilter = 1
         locationManager.headingOrientation = .portrait
-    }
-    
-    // MARK: - Public API
-    
-    /// Requests Always location authorization and loads any saved last location.
-    func initialize() {
+        locationManager.activityType = .automotiveNavigation
+        locationManager.showsBackgroundLocationIndicator = false
         locationManager.requestAlwaysAuthorization()
         
         if let stored = lastKnownStore.latestLocation {
@@ -86,7 +90,11 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
             currentLocation = lastLocation
             locationSubject.send(lastLocation)
         }
+        NotificationCenter.default.addObserver(self, selector: #selector(appDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
     }
+    
+    // MARK: - Public API
     
     /// Starts monitoring significant location changes for background movement detection.
     /// Will wake the app and trigger `didUpdateLocations` even if terminated.
@@ -105,6 +113,64 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     func stopTracking() {
         locationManager.stopUpdatingLocation()
         locationManager.stopUpdatingHeading()
+        isGPSActive = false
+        isHeadingActive = false
+        stopHeartbeat()
+    }
+    
+    // MARK: - Continuous Updates Helpers
+    private func startContinuousUpdatesIfNeeded() {
+        if !isGPSActive {
+            locationManager.startUpdatingLocation()
+            isGPSActive = true
+        }
+        if !isHeadingActive {
+            locationManager.startUpdatingHeading()
+            isHeadingActive = true
+        }
+        startHeartbeat()
+    }
+
+    private func ensureBackgroundFlagsIfAllowed() {
+        // Keep continuous GPS behavior consistent in background
+        // Only has effect when Always authorization is granted
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.pausesLocationUpdatesAutomatically = false
+    }
+    
+    // MARK: - Heartbeat
+    private func startHeartbeat() {
+        heartbeatTimer?.invalidate()
+        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.heartbeatTick()
+        }
+    }
+
+    private func stopHeartbeat() {
+        heartbeatTimer?.invalidate()
+        heartbeatTimer = nil
+    }
+
+    private func heartbeatTick() {
+        guard isGPSActive else { return }
+        // If no GPS updates for 60s while active, reassert background flags and gently restart updates.
+        if let last = lastGPSUpdateAt, Date().timeIntervalSince(last) > 60 {
+            ensureBackgroundFlagsIfAllowed()
+            locationManager.stopUpdatingLocation()
+            isGPSActive = false
+            locationManager.startUpdatingLocation()
+            isGPSActive = true
+        }
+    }
+    
+    // MARK: - App Lifecycle Hooks
+    @objc private func appDidEnterBackground() {
+        ensureBackgroundFlagsIfAllowed()
+        startContinuousUpdatesIfNeeded()
+    }
+
+    @objc private func appWillEnterForeground() {
+        // No-op for now; keep updates running for consistency.
     }
     
     // MARK: - CLLocationManagerDelegate
@@ -112,17 +178,14 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         switch manager.authorizationStatus {
         case .authorizedAlways:
-            locationManager.allowsBackgroundLocationUpdates = true
-            locationManager.pausesLocationUpdatesAutomatically = false
-            locationManager.startUpdatingLocation()
-            locationManager.startUpdatingHeading()
+            ensureBackgroundFlagsIfAllowed()
+            startContinuousUpdatesIfNeeded()
             if let last = lastKnownStore.latestLocation {
                 locationSubject.send(last)
             }
             pollLocation()
         case .authorizedWhenInUse:
-            locationManager.startUpdatingLocation()
-            locationManager.startUpdatingHeading()
+            startContinuousUpdatesIfNeeded()
         default:
             break
         }
@@ -130,29 +193,21 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let latest = locations.last else { return }
+        lastGPSUpdateAt = Date()
         
         let appState = UIApplication.shared.applicationState
         
-        // --- Significant Change Wake Handling ---
-        if significantChangeActive && appState == .background {
-            // Start full GPS tracking immediately
-            locationManager.startUpdatingLocation()
-            locationManager.startUpdatingHeading()
-            locationManager.allowsBackgroundLocationUpdates = true
-            locationManager.pausesLocationUpdatesAutomatically = false
-            
+        // --- Significant Change Cold-Wake Escalation ---
+        if appState == .background && significantChangeActive && !isGPSActive {
+            ensureBackgroundFlagsIfAllowed()
+            startContinuousUpdatesIfNeeded()
+
             // Send notification if cooldown expired
             let now = Date()
             if lastNotificationDate == nil || now.timeIntervalSince(lastNotificationDate!) > minNotificationInterval {
                 lastNotificationDate = now
                 UserNotifier.shared.showMovementReminder()
             }
-        }
-        
-        // --- Legacy Passive Background Tracking Path ---
-        if appState == .background && !significantChangeActive {
-            beginPassiveBackgroundTracking(from: latest)
-            return
         }
         
         // --- Normal Foreground/Active Background Flow ---
@@ -183,45 +238,19 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
     
+    func locationManagerDidPauseLocationUpdates(_ manager: CLLocationManager) {
+        // iOS thinks we are stationary; we prefer continuous updates. Reassert.
+        ensureBackgroundFlagsIfAllowed()
+        startContinuousUpdatesIfNeeded()
+    }
+
+    func locationManagerDidResumeLocationUpdates(_ manager: CLLocationManager) {
+        // Resume bookkeeping.
+        lastGPSUpdateAt = Date()
+    }
+    
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("[LocationManager] Error: \(error.localizedDescription)")
-    }
-    
-    // MARK: - Passive Background Trip Start
-    
-    /// Minimal background location handling for non-significant-change background updates.
-    private func beginPassiveBackgroundTracking(from location: CLLocation) {
-        let taskRef = BackgroundTaskRef()
-        taskRef.id = UIApplication.shared.beginBackgroundTask(withName: "PassiveTripStart") {
-            UIApplication.shared.endBackgroundTask(taskRef.id)
-        }
-        
-        locationManager.startUpdatingLocation()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
-            self.evaluateBackgroundStart(from: location)
-            UIApplication.shared.endBackgroundTask(taskRef.id)
-        }
-    }
-    
-    /// Evaluates whether to trigger heading preference updates and location persistence in background.
-    private func evaluateBackgroundStart(from location: CLLocation) {
-        guard location.speed > 4 else { return }
-        
-        self.lastLocation = self.currentLocation
-        self.currentLocation = location
-        self.locationSubject.send(location)
-        
-        if let previous = self.lastLocation {
-            let deltaDistance = location.distance(from: previous)
-            let deltaTime = location.timestamp.timeIntervalSince(previous.timestamp)
-            if deltaTime > 0 {
-                self.speed = deltaDistance / deltaTime
-            }
-        }
-        
-        self.lastKnownStore.update(location)
-        self.evaluateHeadingPreference(for: location)
     }
     
     // MARK: - Heading Source Logic
@@ -280,11 +309,5 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
             }
         }
         attempt()
-    }
-    
-    // MARK: - Background Task Container
-    
-    final class BackgroundTaskRef {
-        var id: UIBackgroundTaskIdentifier = .invalid
     }
 }

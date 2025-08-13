@@ -57,13 +57,7 @@ final class TravelStateManager: ObservableObject {
     // MARK: - Init
     /// Private initializer to enforce singleton usage pattern.
     /// Ensures only one instance of TravelStateManager exists during app lifecycle.
-    private init() {}
-
-    // MARK: - Lifecycle Methods
-    /// Initializes the travel state manager by resetting pause timers and
-    /// subscribing to driving state updates.
-    /// Call this once during app setup or when resetting state.
-    func initialize() {
+    private init() {
         pauseRemainingTime = nil
         pauseTotalDuration = nil
         subscribeToDrivingState()
@@ -74,7 +68,7 @@ final class TravelStateManager: ObservableObject {
     /// Updates both remaining and total pause durations accordingly.
     /// If no pause timer exists, initializes it with the default interval.
     func extendPauseTimer() {
-        let interval = AppSettings.shared.pauseTimer //always pulled from settings.
+        let interval = AppSettings.shared.pauseTimerModel.value() as! Double //always pulled from settings.
         if let current = pauseRemainingTime {
             pauseRemainingTime = current + interval
         } else {
@@ -118,8 +112,8 @@ final class TravelStateManager: ObservableObject {
     /// and initializes pause timers from app settings.
     private func handleDrivingStarted() {
         guard state != .traveling else { return }
-        pauseRemainingTime = AppSettings.shared.pauseTimer
-        pauseTotalDuration = AppSettings.shared.pauseTimer
+        pauseRemainingTime = AppSettings.shared.pauseTimerModel.value()
+        pauseTotalDuration = AppSettings.shared.pauseTimerModel.value()
         pauseTimer?.invalidate()
         pauseTimer = nil
         
@@ -141,8 +135,8 @@ final class TravelStateManager: ObservableObject {
         state = .paused
         print("TravelState Transitioned: .paused")
         pauseTimer?.invalidate()
-        pauseRemainingTime = AppSettings.shared.pauseTimer
-        pauseTotalDuration = AppSettings.shared.pauseTimer
+        pauseRemainingTime = AppSettings.shared.pauseTimerModel.value()
+        pauseTotalDuration = AppSettings.shared.pauseTimerModel.value()
 
         pauseTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self else { return }

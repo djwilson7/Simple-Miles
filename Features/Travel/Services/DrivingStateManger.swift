@@ -50,11 +50,6 @@ final class DrivingStateManager: ObservableObject {
     
     /// Private initializer to enforce singleton usage.
     private init() {
-        // Intentionally left empty. Call initialize() to start observation.
-    }
-    
-    /// Initializes the DrivingStateManager's observation logic. Call once on app launch.
-    func initialize() {
         observeLocation()
     }
     

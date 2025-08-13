@@ -7,7 +7,7 @@ struct MapView: View {
     var body: some View {
         ZStack {
             Map(position: $viewModel.cameraPosition, interactionModes: .all) {
-                if !viewModel.tripViewModel.isReviewing {
+                if !(MainStateDriver.shared.mainState == .review) {
                     // Committed (stored) path
                     if !viewModel.commitedTracePath.isEmpty {
                         MapPolyline(coordinates: viewModel.commitedTracePath)
@@ -60,7 +60,7 @@ struct MapView: View {
                     }
                 }
 
-                if !viewModel.tripViewModel.isReviewing,
+                if !(MainStateDriver.shared.mainState == .review),
                    let coordinate = viewModel.currentLocation?.coordinate {
                     Annotation("", coordinate: coordinate, anchor: .center) {
                         Image(systemName: viewModel.locationIconName)
@@ -107,14 +107,14 @@ struct MapView: View {
                 )
                 .simultaneously(with:
                     TapGesture().onEnded {
-                        viewModel.userInteracting()
+                        MainStateDriver.shared.mainState = .main
                     }
                 )
             )
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: []))
             .edgesIgnoringSafeArea(.all)
             .onMapCameraChange(frequency: .onEnd) { context in
-                if !viewModel.tripViewModel.isReviewing {
+                if !(MainStateDriver.shared.mainState == .review) {
                     if CameraManager.shared.orientationMode == .freeRoam {
                         viewModel.updateLastCamera(context.camera)
                         viewModel.saveUserCameraDistance(context.camera.distance)
@@ -122,7 +122,7 @@ struct MapView: View {
                 }
             }
             .onMapCameraChange(frequency: .continuous) { context in
-                if !viewModel.tripViewModel.isReviewing {
+                if !(MainStateDriver.shared.mainState == .review) {
                     if CameraManager.shared.orientationMode == .freeRoam {
                         viewModel.updateFreeRoamHeading(context.camera.heading)
                     }

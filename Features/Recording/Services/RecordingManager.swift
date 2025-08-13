@@ -25,13 +25,7 @@ final class RecordingManager {
     static let shared = RecordingManager()
     
     /// Private initializer to enforce singleton usage.
-    private init() {}
-    
-    /// Sets up Combine publishers, binds state and location updates,
-    /// and loads all previously finalized trip segments from persistent storage.
-    ///
-    /// This method must be called once after accessing `RecordingManager.shared`.
-    func initialize() {
+    private init() {
         travelStatePublisher = TravelStateManager.shared.$state
         currentLocationPublisher = LocationManager.shared.$currentLocation
         lastLocationPublisher = LocationManager.shared.$lastLocation
@@ -53,7 +47,7 @@ final class RecordingManager {
     /// Publisher providing the previous GPS location.
     private var lastLocationPublisher: Published<CLLocation?>.Publisher!
     /// Manages persistence of trip segments on disk or database.
-    private let tripSegmentStore = TripSegmentStore()
+    private let tripSegmentStore = TripSegmentStore.shared
     /// Shared application settings, including minimum trip distance threshold.
     private let settings = AppSettings.shared
     
@@ -274,7 +268,7 @@ final class RecordingManager {
             tripSegmentStore.write(previousSegment!)
             commitedPath = previousSegment!.pathCoordinates
         } else {
-            let minimumMeters = settings.minimumTripDistance * 1609.34
+            let minimumMeters = settings.minimumTripDistanceModel.value()! * 1609.34
             if previousSegment!.distance >= minimumMeters {
                 previousSegment = persistAndDelete(previousSegment!)
             }
@@ -339,7 +333,7 @@ final class RecordingManager {
             }
         }
         
-        let minimumMeters = settings.minimumTripDistance * 1609.34
+        let minimumMeters = settings.minimumTripDistanceModel.value()! * 1609.34
         if previousSegment!.distance >= minimumMeters {
             previousSegment = persistAndDelete(previousSegment!)
             loadAllFinalizedSegments()

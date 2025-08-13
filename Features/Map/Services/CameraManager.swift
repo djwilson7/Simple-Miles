@@ -30,11 +30,8 @@ final class CameraManager: NSObject, ObservableObject {
     // MARK: - Initialization
     private override init() {
         super.init()
-    }
-    
-    /// Call this method after shared instance creation to start bindings.
-    public func initialize() {
         bindTravelMotionManager()
+
     }
 
     // MARK: - Binding

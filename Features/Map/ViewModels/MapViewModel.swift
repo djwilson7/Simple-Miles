@@ -30,7 +30,7 @@ final class MapViewModel: NSObject, ObservableObject {
 
     private var traceOrigin: CLLocationCoordinate2D?
     private var hasInitializedHeading = false
-    private let travelStateManager: TravelStateManager
+    private let travelStateManager = TravelStateManager.shared
     let tripViewModel: TripViewModel
 
     var locationIconName: String {
@@ -41,10 +41,10 @@ final class MapViewModel: NSObject, ObservableObject {
         }
     }
 
-    let recordingManager: RecordingManager
+    let recordingManager = RecordingManager.shared
     private let cameraManager = CameraManager.shared
-    let arrowManager: ArrowHeadingManager
-    private let travelLocationPredictor: TravelLocationPredictor
+    let arrowManager = ArrowHeadingManager.shared
+    private let travelLocationPredictor = TravelLocationPredictor.shared
     private var cancellables = Set<AnyCancellable>()
     
     private var savedFreeRoamZoom: CLLocationDistance?
@@ -66,19 +66,11 @@ final class MapViewModel: NSObject, ObservableObject {
     private var liveTailAnchor: CLLocationCoordinate2D?
 
     init(
-        travelLocationPredictor: TravelLocationPredictor,
-        arrowManager: ArrowHeadingManager,
-        travelStateManager: TravelStateManager,
         tripViewModel: TripViewModel,
-        recordingManager: RecordingManager
     ) {
-        self.travelLocationPredictor = travelLocationPredictor
-        self.arrowManager = arrowManager
-        self.travelStateManager = travelStateManager
         self.tripViewModel = tripViewModel
         self.autoFollowEnabled = true
         self.cameraPosition = .automatic
-        self.recordingManager = recordingManager
         super.init()
         
         cameraManager.$desiredCameraPosition
@@ -93,7 +85,7 @@ final class MapViewModel: NSObject, ObservableObject {
                 current?.centerCoordinate.longitude != newCamera.centerCoordinate.longitude
                 
                 if headingChanged || centerChanged {
-                    if self.travelStateManager.state == .idle {
+                    if self.travelStateManager.state == .idle && MainStateDriver.shared.mainState != .review {
                         // Instantly update camera, no animation
                         self.cameraPosition = .camera(newCamera)
                     } else {
@@ -101,7 +93,7 @@ final class MapViewModel: NSObject, ObservableObject {
                         cameraAnimationManager.animate(
                             from: current ?? newCamera,
                             to: newCamera,
-                            isReviewing: tripViewModel.isReviewing,
+                            isReviewing: MainStateDriver.shared.mainState == .review,
                             onUpdate: { [weak self] interpolated in
                                 self?.cameraPosition = .camera(interpolated)
                             }
@@ -220,12 +212,12 @@ final class MapViewModel: NSObject, ObservableObject {
             }
             .store(in: &cancellables)
 
-        tripViewModel.$isReviewing
+        MainStateDriver.shared.$mainState
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] isReviewing in
+            .sink { [weak self] mainState in
                 guard let self else { return }
-                if isReviewing {
+                if mainState == .review {
                     self.handleIsReviewing()
                 } else {
                     self.handleIsNotReviewing()
@@ -334,7 +326,7 @@ final class MapViewModel: NSObject, ObservableObject {
     // MARK: - Paths
 
     private func updateDisplayedTracePath() {
-        if tripViewModel.isReviewing {
+        if MainStateDriver.shared.mainState == .review {
             commitedTracePath = []
             nonCommitedTraceStatic = []
             nonCommitedTraceTail = []
