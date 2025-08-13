@@ -10,7 +10,7 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
     @State private var targetSize: CGSize = .zero
     
     var minWidth: CGFloat { layout.width.pct(0.3) }
-    var minHeight: CGFloat { layout.height.pct(0.05) }
+    var minHeight: CGFloat { max(40, layout.height.pct(0.05)) }
         
     let tripStatusContent: () -> TripStatusContent
     let settingsContent: () -> SettingsContent
