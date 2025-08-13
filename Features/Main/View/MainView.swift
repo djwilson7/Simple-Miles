@@ -55,11 +55,12 @@ struct MainView: View {
     
     private var previousButton: some View {
         let leftVisible = isReview && canGoPrev
-        let followX = (isReview && !leftVisible) ? barDrag.width : 0
-        let followY = (isReview && !leftVisible) ? barDrag.height : 0
+        let isDragging = isReview && (barDrag != .zero)
+        let followX = isDragging ? barDrag.width : 0
+        let followY = isDragging ? barDrag.height : 0
         let visibleX = -layout.width.pct(0.4)
         return SystemControlButton( //Left Button
-            opacity: leftVisible ? 1: 0,
+            opacity: !leftVisible || isDragging ? 0 : 1,
             color: Color.white,
             action: { TripViewModel.shared.selectPreviousSegment() },
             label: { AnimatedChevronButtonLabel(isLeftFacing: true) }
@@ -67,20 +68,22 @@ struct MainView: View {
         .frame(width: layout.buttonWidth, height: layout.buttonHeight)
         .buttonStyle(.plain)
         .glassEffect(.clear)
-        .opacity(leftVisible ? 1: 0)
-        .offset(x: leftVisible ? visibleX : followX, y: leftVisible ? 0 : followY)
+        .opacity(!leftVisible || isDragging ? 0 : 1)
+        .offset(x: isDragging ? followX : (leftVisible ? visibleX : 0),
+                y: isDragging ? followY : 0)
         .allowsHitTesting(leftVisible)
-        .animation(.spring(duration: 0.5), value: leftVisible)
-        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: barDrag)
+        .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
+        .animation(.spring(duration: layout.animationDurations.slow), value: leftVisible)
     }
     
     private var nextButton: some View {
         let rightVisible = isReview && canGoNext
-        let followX = (isReview && !rightVisible) ? barDrag.width : 0
-        let followY = (isReview && !rightVisible) ? barDrag.height : 0
+        let isDragging = isReview && (barDrag != .zero)
+        let followX = isDragging ? barDrag.width : 0
+        let followY = isDragging ? barDrag.height : 0
         let visibleX = layout.width.pct(0.4)
         return SystemControlButton(
-            opacity: rightVisible ? 1: 0,
+            opacity: !rightVisible || isDragging ? 0 : 1,
             color: Color.white,
             action: { TripViewModel.shared.selectNextSegment() },
             label: { AnimatedChevronButtonLabel(isLeftFacing: false) }
@@ -88,11 +91,12 @@ struct MainView: View {
         .buttonStyle(.plain)
         .frame(width: layout.buttonWidth, height: layout.buttonHeight)
         .glassEffect(.clear)
-        .opacity(rightVisible ? 1 : 0)
-        .offset(x: rightVisible ? visibleX : followX, y: rightVisible ? 0 : followY)
+        .opacity(!rightVisible || isDragging ? 0 : 1)
+        .offset(x: isDragging ? followX : (rightVisible ? visibleX : 0),
+                y: isDragging ? followY : 0)
         .allowsHitTesting(rightVisible)
-        .animation(.spring(duration: 0.5), value: rightVisible)
-        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: barDrag)
+        .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
+        .animation(.spring(duration: layout.animationDurations.slow), value: rightVisible)
     }
     
     private var contextBar: some View{
@@ -117,13 +121,11 @@ struct MainView: View {
                 }
                 .onEnded { _ in
                     if isReview {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.65)) {
-                            barDrag = .zero
-                        }
+                        barDrag = .zero
                     }
                 }
         )
-        .animation(.spring(response: 0.25, dampingFraction: 0.65), value: barDrag)
+        .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
     }
     
     private var controlButtons: some View {
