@@ -74,11 +74,12 @@ struct TitleBarView: View {
             HStack {
                 Spacer()
                 Text(viewModel.title)
-                    .foregroundColor(.white)
-                    .font(.headline)
+                    .foregroundColor(AppTheme.Colors.primaryDark)
+                    .font(.title)
                 Spacer()
             }
         }
+        .background(AppTheme.Colors.primaryDark.opacity(0.4))
         .frame(width: layout.titleWidth, height: layout.titleHeight)
         .glassEffect(.clear)
     }
