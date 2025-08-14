@@ -112,6 +112,8 @@ struct MainView: View {
                 TripSortingView()
             }
         )
+        .background(AppTheme.Colors.primaryDark.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 44))
         .contentShape(RoundedRectangle(cornerRadius: 44))
         .offset(isReview ? barDrag : .zero)

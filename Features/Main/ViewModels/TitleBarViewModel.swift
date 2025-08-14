@@ -54,7 +54,7 @@ class TBViewModel: ObservableObject {
         switch state {
         case .main:
             if travelState == .paused {
-                title = "Trip Ending In: \(formatTime(pauseRemainingTime))"
+                title = "\(TimeUtility.formatter(pauseRemainingTime ?? 0))"
             } else {
                 title = "Simple Miles"
             }
@@ -65,13 +65,7 @@ class TBViewModel: ObservableObject {
         }
     }
     
-    private func formatTime(_ time: TimeInterval?) -> String {
-        guard let time = time, time > 0 else { return "--:--" }
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = time >= 3600 ? [.hour, .minute, .second] : [.minute, .second]
-        formatter.zeroFormattingBehavior = .pad
-        return formatter.string(from: time) ?? "--:--"
-    }
+    
 
     private func updateSweepProgress() {
         if let remaining = pauseRemainingTime,

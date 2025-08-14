@@ -29,8 +29,10 @@ struct SystemControlButton: View {
                 label
                     .foregroundStyle(color)
             }
-            .opacity(opacity)
             .frame(width: layout.buttonWidth, height: layout.buttonHeight)
+            .background(AppTheme.Colors.primaryDark.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+            .opacity(opacity)
         }
         .buttonStyle(.plain)
     }

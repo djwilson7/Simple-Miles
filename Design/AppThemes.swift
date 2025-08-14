@@ -33,6 +33,8 @@ enum AppTheme {
         static var accentDark: Color   { Color("CA-Dark") }
         static var accentMedium: Color { Color("CA-Medium") }
         static var accentLight: Color  { Color("CA-Light") }
+        
+        static var customWhite: Color { Color("CWhite") }
     }
 
     // MARK: - Typography

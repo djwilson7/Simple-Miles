@@ -11,52 +11,24 @@ struct MapView: View {
                     // Committed (stored) path
                     if !viewModel.commitedTracePath.isEmpty {
                         MapPolyline(coordinates: viewModel.commitedTracePath)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.blue.opacity(0.6), Color.cyan.opacity(0.3)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 7
-                            )
+                            .stroke(AppTheme.Colors.accentDark, lineWidth: 7)
                     }
                     
                     // Live static path (fixed points except the anchor)
                     if !viewModel.nonCommitedTraceStatic.isEmpty {
                         MapPolyline(coordinates: viewModel.nonCommitedTraceStatic)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.orange.opacity(0.6), Color.red.opacity(0.3)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 7
-                            )
+                            .stroke(AppTheme.Colors.accentDark.opacity(0.5), lineWidth: 7)
                     }
                     
                     // Live tail (anchor -> interpolated head)
                     if viewModel.nonCommitedTraceTail.count >= 2 {
                         MapPolyline(coordinates: viewModel.nonCommitedTraceTail)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.orange.opacity(0.6), Color.red.opacity(0.3)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 7
-                            )
+                            .stroke(AppTheme.Colors.accentDark.opacity(0.5), lineWidth: 7)
                     }
                 } else {
                     if !viewModel.previousTripPath.isEmpty {
                         MapPolyline(coordinates: viewModel.previousTripPath)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.purple.opacity(0.6), Color.black.opacity(0.3)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 7
-                            )
+                            .stroke(AppTheme.Colors.accentDark, lineWidth: 7)
                     }
                 }
 
@@ -69,7 +41,7 @@ struct MapView: View {
                             .rotationEffect(Angle(degrees: viewModel.displayedArrowRotation), anchor: .center)
                             .animation(.easeInOut(duration: 0.3), value: viewModel.displayedArrowRotation)
                             .symbolRenderingMode(.monochrome)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(AppTheme.Colors.primaryMedium)
                     }
                 } else {
                     if let start = viewModel.tripMarkers.first {
