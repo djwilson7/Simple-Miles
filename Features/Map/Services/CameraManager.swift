@@ -19,7 +19,7 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var mapHeading: CLLocationDirection = 0
 
     // MARK: - Private Properties
-    private var lastLocation : CLLocation?
+    private var lastLocation : LocationPoint?
     private var lastHeading : CLLocationDirection?
     
     private let travelLocationPredictor = TravelLocationPredictor.shared
@@ -68,7 +68,7 @@ final class CameraManager: NSObject, ObservableObject {
     }
     
     private func handleCameraUpdate(
-        location: CLLocation,
+        location: LocationPoint,
         heading: CLLocationDirection,
         orientation: CameraOrientationMode
     ) {
@@ -80,7 +80,7 @@ final class CameraManager: NSObject, ObservableObject {
             break
         case .reviewing:
             // No op for now
-            print("Entered Reviewing, No Op")
+            break
         }
     }
     
@@ -97,7 +97,7 @@ final class CameraManager: NSObject, ObservableObject {
     }
 
     /// Sets the camera to "north up" orientation: heading fixed to north, using current location and zoom.
-    private func setCameraToNorthUp(_ location: CLLocation) {
+    private func setCameraToNorthUp(_ location: LocationPoint) {
         let altitude = CameraDistance.shared.loadDistance() ?? 1500
         let cameraModel = CameraModel(
             center: location.coordinate,
@@ -110,7 +110,7 @@ final class CameraManager: NSObject, ObservableObject {
     
     /// Sets the camera to "heading up" orientation: heading matches user's active heading, using current location and zoom.
     private func setCameraToHeadingUp(
-        _ location: CLLocation,
+        _ location: LocationPoint,
         _ heading: CLLocationDirection
     ) {
         let altitude = CameraDistance.shared.loadDistance() ?? 1500
@@ -136,7 +136,7 @@ final class CameraManager: NSObject, ObservableObject {
     func setCameraToReview(path: [CLLocationCoordinate2D]) {
         publishCameraPosition(from: CameraModel.forPath(path))
     }
-    
+          
     /// Reverts camera orientation back to the last non-free-roam mode.
     public func resetOrientation() {
         orientationMode = lastNonFreeRoamOrientation

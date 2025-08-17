@@ -13,10 +13,10 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     
     // MARK: - Public Published State
     
-    /// Most recent known location from GPS.
-    @Published private(set) var currentLocation: CLLocation?
-    /// The location received before the current one.
-    @Published private(set) var lastLocation: CLLocation?
+    /// Most recent known location from GPS, wrapped in LocationPoint.
+    @Published private(set) var currentLocation: LocationPoint?
+    /// The location received before the current one, wrapped in LocationPoint.
+    @Published private(set) var lastLocation: LocationPoint?
     /// Calculated speed from the most recent updates (m/s).
     @Published private(set) var speed: CLLocationSpeed = 0
     /// The current heading in degrees (true north if available).
@@ -31,8 +31,10 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     // MARK: - Private Core Location
     
     private let locationManager = CLLocationManager()
-    private let locationSubject = CurrentValueSubject<CLLocation?, Never>(nil)
+    /// Emits LocationPoint objects instead of CLLocation directly.
+    private let locationSubject = CurrentValueSubject<LocationPoint?, Never>(nil)
     private let headingSubject = PassthroughSubject<CLLocationDirection, Never>()
+    
     private let lastKnownStore = LastKnownLocationStore()
     
     // MARK: - Heading Preference State
@@ -47,20 +49,19 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     // MARK: - Significant Change State
     
     private var significantChangeActive: Bool = false
-    private let minNotificationInterval: TimeInterval = 10 * 60 // 10 minutes
+    private let minNotificationInterval: TimeInterval = 2 * 60 * 60 // 2 hours
     private var lastNotificationDate: Date?
     
     // MARK: - Update Mode State
     private var isGPSActive = false
     private var isHeadingActive = false
 
-    // MARK: - Liveness / Heartbeat State
-    private var lastGPSUpdateAt: Date?
-    private var heartbeatTimer: Timer?
-    
+    // MARK: - First Fix State
+    private var hasReceivedFirstFix = false
+
     // MARK: - Public Publishers
     
-    var locationPublisher: AnyPublisher<CLLocation, Never> {
+    var locationPublisher: AnyPublisher<LocationPoint, Never> {
         locationSubject.compactMap { $0 }.eraseToAnyPublisher()
     }
     
@@ -68,9 +69,12 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         headingSubject.eraseToAnyPublisher()
     }
     
-    /// Last saved location from persistent storage.
-    var lastKnownLocation: CLLocation? {
-        lastKnownStore.latestLocation
+    /// Last saved location from persistent storage, wrapped in LocationPoint.
+    var lastKnownLocation: LocationPoint? {
+        if let loc = lastKnownStore.latestLocation {
+            return LocationPoint(loc)
+        }
+        return nil
     }
     
     // MARK: - Initialization
@@ -87,9 +91,11 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         locationManager.requestAlwaysAuthorization()
         
         if let stored = lastKnownStore.latestLocation {
-            lastLocation = stored
-            currentLocation = lastLocation
-            locationSubject.send(lastLocation)
+            let wrapped = LocationPoint(stored)
+            lastLocation = nil
+            currentLocation = wrapped
+            hasReceivedFirstFix = true
+            locationSubject.send(wrapped)
         }
         NotificationCenter.default.addObserver(self, selector: #selector(appDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -139,7 +145,6 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         locationManager.stopUpdatingHeading()
         isGPSActive = false
         isHeadingActive = false
-        stopHeartbeat()
     }
     
     // MARK: - Continuous Updates Helpers
@@ -152,49 +157,22 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
             locationManager.startUpdatingHeading()
             isHeadingActive = true
         }
-        startHeartbeat()
     }
 
     private func ensureBackgroundFlagsIfAllowed() {
-        // Keep continuous GPS behavior consistent in background
-        // Only has effect when Always authorization is granted
+        guard locationManager.authorizationStatus == .authorizedAlways, isGPSActive else { return }
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.pausesLocationUpdatesAutomatically = false
-    }
-    
-    // MARK: - Heartbeat
-    private func startHeartbeat() {
-        heartbeatTimer?.invalidate()
-        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.heartbeatTick()
-        }
-    }
-
-    private func stopHeartbeat() {
-        heartbeatTimer?.invalidate()
-        heartbeatTimer = nil
-    }
-
-    private func heartbeatTick() {
-        guard isGPSActive else { return }
-        // If no GPS updates for 60s while active, reassert background flags and gently restart updates.
-        if let last = lastGPSUpdateAt, Date().timeIntervalSince(last) > 60 {
-            ensureBackgroundFlagsIfAllowed()
-            locationManager.stopUpdatingLocation()
-            isGPSActive = false
-            locationManager.startUpdatingLocation()
-            isGPSActive = true
-        }
     }
     
     // MARK: - App Lifecycle Hooks
     @objc private func appDidEnterBackground() {
         ensureBackgroundFlagsIfAllowed()
-        startContinuousUpdatesIfNeeded()
     }
 
     @objc private func appWillEnterForeground() {
-        // No-op for now; keep updates running for consistency.
+        ensureBackgroundFlagsIfAllowed()
+        startContinuousUpdatesIfNeeded()
     }
     
     // MARK: - CLLocationManagerDelegate
@@ -203,13 +181,21 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         switch manager.authorizationStatus {
         case .authorizedAlways:
             ensureBackgroundFlagsIfAllowed()
-            startContinuousUpdatesIfNeeded()
             if let last = lastKnownStore.latestLocation {
-                locationSubject.send(last)
+                let wrapped = LocationPoint(last)
+                currentLocation = wrapped
+                hasReceivedFirstFix = true
+                let s = wrapped.speed
+                speed = (s >= 0) ? s : 0
+                locationSubject.send(wrapped)
             }
-            pollLocation()
+            if UIApplication.shared.applicationState != .background {
+                startContinuousUpdatesIfNeeded()
+            }
         case .authorizedWhenInUse:
-            startContinuousUpdatesIfNeeded()
+            if UIApplication.shared.applicationState != .background {
+                startContinuousUpdatesIfNeeded()
+            }
         default:
             break
         }
@@ -217,16 +203,12 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let latest = locations.last else { return }
-        lastGPSUpdateAt = Date()
         
         let appState = UIApplication.shared.applicationState
         
         // --- Significant Change Cold-Wake Escalation ---
         if appState == .background && significantChangeActive && !isGPSActive {
-            ensureBackgroundFlagsIfAllowed()
-            startContinuousUpdatesIfNeeded()
-
-            // Send notification if cooldown expired
+            // Do NOT escalate to continuous GPS. Only notify the user.
             let now = Date()
             if lastNotificationDate == nil || now.timeIntervalSince(lastNotificationDate!) > minNotificationInterval {
                 lastNotificationDate = now
@@ -234,18 +216,21 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
             }
         }
         
-        // --- Normal Foreground/Active Background Flow ---
-        lastLocation = currentLocation
-        currentLocation = latest
-        locationSubject.send(latest)
-        
-        if let previous = lastLocation {
-            let deltaDistance = latest.distance(from: previous)
-            let deltaTime = latest.timestamp.timeIntervalSince(previous.timestamp)
-            if deltaTime > 0 {
-                speed = deltaDistance / deltaTime
-            }
+        let previous = currentLocation
+        let newPoint = LocationPoint(latest)
+
+        if hasReceivedFirstFix, let prev = previous {
+            lastLocation = prev
+        } else {
+            // First valid fix in this app session (or after cold start with no persisted point)
+            lastLocation = nil
+            hasReceivedFirstFix = true
         }
+
+        currentLocation = newPoint
+        locationSubject.send(newPoint)
+        let s = newPoint.speed
+        speed = (s >= 0) ? s : 0
         
         lastKnownStore.update(latest)
         evaluateHeadingPreference(for: latest)
@@ -272,7 +257,6 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidResumeLocationUpdates(_ manager: CLLocationManager) {
         // Resume bookkeeping.
-        lastGPSUpdateAt = Date()
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -314,26 +298,4 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
     
-    // MARK: - Helpers
-    
-    /// Polls for a location if none is currently available; retries up to 5 times.
-    private func pollLocation() {
-        var retryAttempts = 0
-        func attempt() {
-            guard self.locationManager.location == nil, retryAttempts < 5 else { return }
-            
-            self.locationManager.requestLocation()
-            retryAttempts += 1
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                if let current = self.locationManager.location {
-                    self.locationSubject.send(current)
-                    self.lastKnownStore.update(current)
-                } else {
-                    attempt()
-                }
-            }
-        }
-        attempt()
-    }
 }

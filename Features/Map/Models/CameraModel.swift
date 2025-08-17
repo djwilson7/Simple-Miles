@@ -20,7 +20,7 @@ struct PathCameraModel {
 extension CameraModel {
     static func forPath(_ path: [CLLocationCoordinate2D], pitch: CGFloat = 0) -> CameraModel {
         let fittedCamera = CameraUtility.cameraToFitPath(path)
-        return CameraModel(
+        return CameraModel( 
             center: fittedCamera.centerCoordinate,
             altitude: fittedCamera.distance,
             heading: fittedCamera.heading,

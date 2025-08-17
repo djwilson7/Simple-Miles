@@ -18,9 +18,14 @@ final class TripSegmentStore {
     // MARK: - Trip Count Management
     
     func refreshTripCount() {
-        let count = loadAllUnclassified().count
-        UserDefaults.standard.set(count, forKey: unsortedTripCountKey)
-        uncommitedTripsUpdated.send()
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            guard let self else { return }
+            let count = self.loadAllUnclassified().count
+            DispatchQueue.main.async {
+                UserDefaults.standard.set(count, forKey: self.unsortedTripCountKey)
+                self.uncommitedTripsUpdated.send()
+            }
+        }
     }
     
     // MARK: - Persistence

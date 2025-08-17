@@ -24,10 +24,11 @@ struct SettingToggleRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 8) {
                 Text(model.title)
-                    .font(.body)
+                    .font(.body).bold()
+                    .foregroundColor(AppTheme.Colors.primaryText)
                 Text(model.description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.Colors.primaryText80)
                     .lineLimit(2)
             }
             Spacer()
@@ -37,7 +38,7 @@ struct SettingToggleRow: View {
                     model.value = .bool(newValue)
                     UserDefaults.standard.set(newValue, forKey: model.userDefaultsKey)
                 }
-                .glassEffect(.clear)
+                .glassEffect()
         }
         .padding(5)
     }

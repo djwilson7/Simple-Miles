@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class MainStateDriver: ObservableObject {
     static let shared = MainStateDriver()
     @Published var mainState: MainModes = .main

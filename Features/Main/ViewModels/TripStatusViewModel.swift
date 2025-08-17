@@ -40,14 +40,12 @@ final class TripStatusViewModel: ObservableObject {
 
         recordingManager.$tripDistanceCommitted
             .removeDuplicates()
-            .map { $0 * 0.000621371 }
             .receive(on: DispatchQueue.main)
             .assign(to: \.tripDistanceCommittedMiles, on: self)
             .store(in: &cancellables)
 
         recordingManager.$tripDistanceLive
             .removeDuplicates()
-            .map { $0 * 0.000621371 }
             .receive(on: DispatchQueue.main)
             .assign(to: \.tripDistanceLiveMiles, on: self)
             .store(in: &cancellables)

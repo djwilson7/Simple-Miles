@@ -7,7 +7,6 @@ struct SystemControlButton: View {
     let color: Color
     let action: () -> Void
 
-    // Provide default values including color
     init(
         opacity: Double = 1.0,
         color: Color = .primary,
@@ -30,34 +29,12 @@ struct SystemControlButton: View {
                     .foregroundStyle(color)
             }
             .frame(width: layout.buttonWidth, height: layout.buttonHeight)
-            .background(AppTheme.Colors.primaryDark.opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
             .opacity(opacity)
         }
         .buttonStyle(.plain)
+        .frame(width: layout.buttonWidth, height: layout.buttonHeight)
+        .glassEffect(in: RoundedRectangle(cornerRadius: layout.radii.pill))
+        .opacity(opacity)
     }
-}
-
-
-#Preview("SystemControlButton Examples") {
-    VStack(spacing: 32) {
-        SystemControlButton(opacity: 1.0, color: .yellow, action: {
-            print("Gear tapped")
-        }) {
-            Image(systemName: "gear")
-                .font(.system(size: 30, weight: .medium))
-        }
-        .glassEffect(.clear)
-        .background(Color.clear.opacity(0.01))
-
-        SystemControlButton(opacity: 0.5, color: .accentColor, action: {
-            print("Back tapped")
-        }) {
-            Image(systemName: "chevron.backward")
-                .font(.system(size: 30, weight: .medium))
-        }
-        .glassEffect(.clear)
-    }
-    .padding()
-    .background(Color.black.opacity(0.9))
 }

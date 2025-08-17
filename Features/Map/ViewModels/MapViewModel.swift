@@ -4,8 +4,9 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
+@MainActor
 final class MapViewModel: NSObject, ObservableObject {
-    @Published var currentLocation: CLLocation?
+    @Published var currentLocation: LocationPoint?
     @Published var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @Published var autoFollowEnabled: Bool = false
     @Published var manualRecenterRequested: Bool = false
@@ -18,7 +19,7 @@ final class MapViewModel: NSObject, ObservableObject {
     @Published var commitedTracePath: [CLLocationCoordinate2D] = []
     @Published var nonCommitedTraceStatic: [CLLocationCoordinate2D] = []   // live path up to the last *fixed* point
     @Published var nonCommitedTraceTail: [CLLocationCoordinate2D] = []     // animated tail from last fixed to interpolated point
-    private var currentStaticLast: CLLocationCoordinate2D?
+    private var currentStaticLast: LocationPoint?
 
     // Review overlays
     @Published var tripMarkers: [CLLocationCoordinate2D] = []
@@ -56,12 +57,12 @@ final class MapViewModel: NSObject, ObservableObject {
     private let cameraAnimationManager = CameraAnimationManager()
 
     // Cached paths
-    private var cachedCommitedPath: [CLLocationCoordinate2D] = []
-    private var cachedNonCommitedPath: [CLLocationCoordinate2D] = []
-    private var cachedPreviousTripPath: [CLLocationCoordinate2D] = []
+    private var cachedCommitedPath: [LocationPoint] = []
+    private var cachedNonCommitedPath: [LocationPoint] = []
+    private var cachedPreviousTripPath: [LocationPoint] = []
 
     // Anchor for animated tail (last fixed live point)
-    private var liveTailAnchor: CLLocationCoordinate2D?
+    private var liveTailAnchor: LocationPoint?
 
     override init() {
         self.autoFollowEnabled = true
@@ -71,31 +72,33 @@ final class MapViewModel: NSObject, ObservableObject {
         cameraManager.$desiredCameraPosition
             .receive(on: RunLoop.main)
             .sink { [weak self] newCamera in
-                guard let self else { return }
-                guard let newCamera = newCamera else { return }
-                
-                let current = self.lastCamera
-                let headingChanged = (current?.heading ?? 0) != newCamera.heading
-                let centerChanged = current?.centerCoordinate.latitude != newCamera.centerCoordinate.latitude ||
-                current?.centerCoordinate.longitude != newCamera.centerCoordinate.longitude
-                
-                if headingChanged || centerChanged {
-                    if self.travelStateManager.state == .idle && MainStateDriver.shared.mainState != .review {
-                        // Instantly update camera, no animation
-                        self.cameraPosition = .camera(newCamera)
-                    } else {
-                        // Animate heading/camera change
-                        cameraAnimationManager.animate(
-                            from: current ?? newCamera,
-                            to: newCamera,
-                            isReviewing: MainStateDriver.shared.mainState == .review,
-                            onUpdate: { [weak self] interpolated in
-                                self?.cameraPosition = .camera(interpolated)
-                            }
-                        )
+                Task { @MainActor in
+                    guard let self else { return }
+                    guard let newCamera = newCamera else { return }
+                    
+                    let current = self.lastCamera
+                    let headingChanged = (current?.heading ?? 0) != newCamera.heading
+                    let centerChanged = current?.centerCoordinate.latitude != newCamera.centerCoordinate.latitude ||
+                    current?.centerCoordinate.longitude != newCamera.centerCoordinate.longitude
+                    
+                    if headingChanged || centerChanged {
+                        if self.travelStateManager.state == .idle && MainStateDriver.shared.mainState != .review {
+                            // Instantly update camera, no animation
+                            self.cameraPosition = .camera(newCamera)
+                        } else {
+                            // Animate heading/camera change
+                            self.cameraAnimationManager.animate(
+                                from: current ?? newCamera,
+                                to: newCamera,
+                                isReviewing: MainStateDriver.shared.mainState == .review,
+                                onUpdate: { [weak self] interpolated in
+                                    self?.cameraPosition = .camera(interpolated)
+                                }
+                            )
+                        }
                     }
+                    self.lastCamera = newCamera
                 }
-                self.lastCamera = newCamera
             }
             .store(in: &cancellables)
         cameraManager.updateOrientationMode(.northUp)
@@ -128,9 +131,9 @@ final class MapViewModel: NSObject, ObservableObject {
 
     // MARK: - Streams
 
-    private var lastAnimatedLocation: CLLocation?
+    private var lastAnimatedLocation: LocationPoint?
 
-    private func bindStreams() {
+    @MainActor private func bindStreams() {
         travelLocationPredictor.$activeLocation
             .receive(on: DispatchQueue.main)
             .sink { [weak self] location in
@@ -268,7 +271,7 @@ final class MapViewModel: NSObject, ObservableObject {
         locationAnimationManager.updateAnchors(live: nil, staticLast: nil)
 
         // Prepare trip markers
-        previousTripPath = cachedPreviousTripPath
+        previousTripPath = cachedPreviousTripPath.map(\.coordinate)
         if !previousTripPath.isEmpty {
             tripMarkers = [previousTripPath.first!, previousTripPath.last!]
         } else {
@@ -277,7 +280,7 @@ final class MapViewModel: NSObject, ObservableObject {
 
         // CameraManager now publishes the review camera position, which is then animated by the desiredCameraPosition sink.
         cameraManager.updateOrientationMode(.reviewing)
-        cameraManager.setCameraToReview(path: cachedPreviousTripPath)
+        cameraManager.setCameraToReview(path: cachedPreviousTripPath.map(\.coordinate))
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -325,7 +328,7 @@ final class MapViewModel: NSObject, ObservableObject {
             commitedTracePath = []
             nonCommitedTraceStatic = []
             nonCommitedTraceTail = []
-            previousTripPath = self.cachedPreviousTripPath
+            previousTripPath = self.cachedPreviousTripPath.map(\.coordinate)
             if !previousTripPath.isEmpty {
                 tripMarkers = [previousTripPath.first!, previousTripPath.last!]
             } else {
@@ -333,8 +336,8 @@ final class MapViewModel: NSObject, ObservableObject {
             }
             cameraManager.setCameraToReview(path: previousTripPath)
         } else {
-            commitedTracePath = self.cachedCommitedPath
-            nonCommitedTraceStatic = self.cachedNonCommitedPath
+            commitedTracePath = self.cachedCommitedPath.map(\.coordinate)
+            nonCommitedTraceStatic = self.cachedNonCommitedPath.map(\.coordinate)
             if !locationAnimationManager.isAnimating {
                 nonCommitedTraceTail = []
             }
@@ -342,12 +345,4 @@ final class MapViewModel: NSObject, ObservableObject {
             tripMarkers = []
         }
     }
-
-    // MARK: - Location (arrow) animation
-
-    
-    private func coordsEqual(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D, eps: Double = 1e-7) -> Bool {
-        abs(a.latitude - b.latitude) < eps && abs(a.longitude - b.longitude) < eps
-    }
-
 }

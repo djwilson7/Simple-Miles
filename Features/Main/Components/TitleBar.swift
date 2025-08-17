@@ -19,13 +19,12 @@ struct TitleBarView: View {
     private var backButton: some View {
         SystemControlButton(
             opacity: viewModel.isInMainState ? 0 : 1,
-            color: .white,
+            color: AppTheme.Colors.primaryText,
             action: {
                 viewModel.backButtonPressed()
             },
             label: { Image(systemName: "chevron.left") }
         )
-        .glassEffect(.clear)
         .disabled(viewModel.isInMainState)
         .allowsHitTesting(!viewModel.isInMainState)
         .offset(x: viewModel.isInMainState ? 0 : -layout.titleButtonOffset)
@@ -39,7 +38,6 @@ struct TitleBarView: View {
             action: { viewModel.extendPauseButtonPressed() },
             label: { Image(systemName: "plus") }
         )
-        .glassEffect(.clear)
         .disabled(viewModel.travelState != .paused)
         .allowsHitTesting(viewModel.travelState == .paused)
         .offset(x: viewModel.travelState == .paused ? layout.titleButtonOffset : 0)
@@ -48,7 +46,7 @@ struct TitleBarView: View {
     
     private var titleBar: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 50)
+            RoundedRectangle(cornerRadius: layout.radii.pill)
                 .fill(Color.clear)
             
             ZStack {
@@ -56,15 +54,15 @@ struct TitleBarView: View {
                 let rawEnd = start + viewModel.sweepProgress
                 
                 if rawEnd <= 1.0 {
-                    RoundedRectangle(cornerRadius: 50)
+                    RoundedRectangle(cornerRadius: layout.radii.pill)
                         .trim(from: start, to: rawEnd)
                         .stroke(Color.orange.opacity(viewModel.travelState == .paused ? 0.9 : 0), lineWidth: 3)
                 } else {
-                    RoundedRectangle(cornerRadius: 50)
+                    RoundedRectangle(cornerRadius: layout.radii.pill)
                         .trim(from: start, to: 1.0)
                         .stroke(Color.orange.opacity(viewModel.travelState == .paused ? 0.9 : 0), lineWidth: 3)
                     
-                    RoundedRectangle(cornerRadius: 50)
+                    RoundedRectangle(cornerRadius: layout.radii.pill)
                         .trim(from: 0.0, to: rawEnd - 1.0)
                         .stroke(Color.orange.opacity(viewModel.travelState == .paused ? 0.9 : 0), lineWidth: 3)
                 }
@@ -73,14 +71,13 @@ struct TitleBarView: View {
             HStack {
                 Spacer()
                 Text(viewModel.title)
-                    .foregroundColor(.white)
-                    .font(.title)
+                    .foregroundColor(AppTheme.Colors.primaryText)
+                    .font(.headline).bold().monospaced()
                 Spacer()
             }
         }
-        .frame(width: layout.titleWidth, height: layout.titleHeight)
-        .background(AppTheme.Colors.primaryDark.opacity(0.5))
+        .frame(width: layout.elementWidth, height: layout.titleHeight)
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-        .glassEffect(.clear)
+        .glassEffect()
     }
 }

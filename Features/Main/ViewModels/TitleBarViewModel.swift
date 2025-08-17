@@ -2,9 +2,10 @@ import Foundation
 import Combine
 import CoreGraphics
 
+@MainActor
 class TBViewModel: ObservableObject {
     @Published var travelState: TravelState = TravelStateManager.shared.state
-    @Published var state: MainModes = MainStateDriver.shared.mainState
+    @Published var state: MainModes = .main
     @Published var title: String = "Simple Miles"
     @Published var isInMainState: Bool = true
     @Published var sweepProgress: CGFloat = 0

@@ -8,25 +8,25 @@ import _MapKit_SwiftUI
 struct CameraUtility {
     /// Returns a MapCamera that fits the given path with a specified vertical offset.
     static func cameraToFitPath(
-        _ coordinates: [CLLocationCoordinate2D],
+        _ path: [CLLocationCoordinate2D],
         offset: CGFloat = 0.1,
         defaultLocation: CLLocationCoordinate2D? = nil
     ) -> MapCamera {
-        guard !coordinates.isEmpty else {
+        guard !path.isEmpty else {
             let fallback = defaultLocation ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
             return MapCamera(centerCoordinate: fallback, distance: 1500, heading: 0, pitch: 0)
         }
         
-        var minLat = coordinates[0].latitude
-        var maxLat = coordinates[0].latitude
-        var minLon = coordinates[0].longitude
-        var maxLon = coordinates[0].longitude
+        var minLat = path[0].latitude
+        var maxLat = path[0].latitude
+        var minLon = path[0].longitude
+        var maxLon = path[0].longitude
         
-        for coord in coordinates {
-            minLat = min(minLat, coord.latitude)
-            maxLat = max(maxLat, coord.latitude)
-            minLon = min(minLon, coord.longitude)
-            maxLon = max(maxLon, coord.longitude)
+        for p in path {
+            minLat = min(minLat, p.latitude)
+            maxLat = max(maxLat, p.latitude)
+            minLon = min(minLon, p.longitude)
+            maxLon = max(maxLon, p.longitude)
         }
 
         let centerLat = (minLat + maxLat) / 2

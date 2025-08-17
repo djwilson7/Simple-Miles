@@ -28,16 +28,19 @@ struct SettingMenuRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 8) {
                 Text(model.title)
-                    .font(.body)
+                    .font(.body).bold()
+                    .foregroundColor(AppTheme.Colors.primaryText)
                 Text(model.description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.Colors.primaryText80)
                     .lineLimit(2)
             }
             Spacer()
             Picker("", selection: $selected) {
                 ForEach(options, id: \.self) { option in
                     Text(option).tag(option)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.primaryText)
                 }
             }
             .pickerStyle(MenuPickerStyle())
@@ -47,7 +50,7 @@ struct SettingMenuRow: View {
                 // Example:
                 // model.setValue(.string(newValue))
             }
-            .glassEffect(.clear)
+            .glassEffect()
         }
         .padding(5)
     }

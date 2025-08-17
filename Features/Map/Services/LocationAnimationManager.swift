@@ -7,8 +7,8 @@ import CoreLocation
 final class LocationAnimationManager {
 
     private var animationTimer: Timer?
-    private var animationStartLocation: CLLocation?
-    private var animationTargetLocation: CLLocation?
+    private var animationStartLocation: LocationPoint?
+    private var animationTargetLocation: LocationPoint?
     private var animationStartTime: Date?
     private var animationDuration: TimeInterval = 1.0
 
@@ -37,16 +37,16 @@ final class LocationAnimationManager {
     }
 
     // VM calls this whenever nonCommitted or live anchor changes
-    func updateAnchors(live: CLLocationCoordinate2D?, staticLast: CLLocationCoordinate2D?) {
-        currentLiveAnchor = live
-        currentStaticLast = staticLast
+    func updateAnchors(live: LocationPoint?, staticLast: LocationPoint?) {
+        currentLiveAnchor = live?.coordinate
+        currentStaticLast = staticLast?.coordinate
     }
 
     func animate(
-        from start: CLLocation?,
-        to end: CLLocation,
+        from start: LocationPoint?,
+        to end: LocationPoint,
         travelStateIsTraveling: Bool,
-        onUpdate: @escaping (_ interpolated: CLLocation, _ tail: [CLLocationCoordinate2D]) -> Void
+        onUpdate: @escaping (_ interpolated: LocationPoint, _ tail: [CLLocationCoordinate2D]) -> Void
     ) {
         guard travelStateIsTraveling else {
             let anchor = currentLiveAnchor ?? currentStaticLast
@@ -64,7 +64,7 @@ final class LocationAnimationManager {
 
         // Tiny hop short-circuit
         let currentStartFallback = start ?? end
-        if currentStartFallback.distance(from: end) < 0.5 {
+        if currentStartFallback.distance(to: end) < 0.5 {
             let anchor = currentLiveAnchor ?? currentStaticLast ?? lastValidAnchor
             let tail: [CLLocationCoordinate2D] = anchor.map { [$0, end.coordinate] } ?? []
             if let a = anchor { lastValidAnchor = a }
@@ -73,7 +73,7 @@ final class LocationAnimationManager {
         }
 
         // Calculate current interpolated position if an animation is running to enable seamless retargeting
-        let currentPosition: CLLocation = {
+        let currentPosition: LocationPoint = {
             if let timer = animationTimer, timer.isValid,
                let animStart = animationStartLocation,
                let animEnd = animationTargetLocation,
@@ -82,7 +82,16 @@ final class LocationAnimationManager {
                 let clampedT = min(elapsed / animationDuration, 1.0)
                 let lat = animStart.coordinate.latitude + (animEnd.coordinate.latitude - animStart.coordinate.latitude) * clampedT
                 let lon = animStart.coordinate.longitude + (animEnd.coordinate.longitude - animStart.coordinate.longitude) * clampedT
-                return CLLocation(latitude: lat, longitude: lon)
+                let syntheticCL = CLLocation(
+                    coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    altitude: 0,
+                    horizontalAccuracy: Double.greatestFiniteMagnitude,
+                    verticalAccuracy: Double.greatestFiniteMagnitude,
+                    course: animStart.course,
+                    speed: smoothedSpeedMPS ?? animStart.speed,
+                    timestamp: Date()
+                )
+                return LocationPoint(syntheticCL)
             } else {
                 // No running animation - fallback to start or end location
                 return start ?? end
@@ -104,7 +113,7 @@ final class LocationAnimationManager {
         animationStartTime = now
 
         // Duration based on distance from current interpolated position to new target
-        let distance = currentPosition.distance(from: end)
+        let distance = currentPosition.distance(to: end)
         let mps = smoothedSpeedMPS ?? 12.0
         var duration = distance / mps
 
@@ -121,7 +130,7 @@ final class LocationAnimationManager {
     }
 
     private func startAnimationLoop(
-        onUpdate: @escaping (_ interpolated: CLLocation, _ tail: [CLLocationCoordinate2D]) -> Void
+        onUpdate: @escaping (_ interpolated: LocationPoint, _ tail: [CLLocationCoordinate2D]) -> Void
     ) {
         animationTimer?.invalidate()
 
@@ -138,8 +147,16 @@ final class LocationAnimationManager {
 
             let lat = start.coordinate.latitude + (end.coordinate.latitude - start.coordinate.latitude) * t
             let lon = start.coordinate.longitude + (end.coordinate.longitude - start.coordinate.longitude) * t
-            let interpolatedLocation = CLLocation(latitude: lat, longitude: lon)
-
+            let syntheticCL = CLLocation(
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                altitude: 0,
+                horizontalAccuracy: Double.greatestFiniteMagnitude,
+                verticalAccuracy: Double.greatestFiniteMagnitude,
+                course: start.course,
+                speed: self.smoothedSpeedMPS ?? start.speed,
+                timestamp: Date()
+            )
+            let interpolatedLocation = LocationPoint(syntheticCL)
             // Sample anchors *fresh each frame* to avoid stale captures
             let anchor = self.currentLiveAnchor ?? self.currentStaticLast ?? self.lastValidAnchor
             let tail: [CLLocationCoordinate2D] = anchor.map { [$0, interpolatedLocation.coordinate] } ?? []

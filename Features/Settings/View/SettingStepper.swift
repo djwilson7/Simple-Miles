@@ -34,24 +34,24 @@ struct SettingStepperRow: View {
         VStack {
             HStack {
                 Text(model.title)
-                    .font(.body)
-                    .foregroundColor(Color.white)
+                    .font(.body).bold()
+                    .foregroundColor(AppTheme.Colors.primaryText)
                 Spacer()
                 Text(displayFormatter(value))
                     .font(.body)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.Colors.primaryText)
                     .lineLimit(1)
                 Stepper("", value: $value, in: range, step: step, onEditingChanged: { _ in
                     model.value = .double(value)
                     UserDefaults.standard.set(value, forKey: model.userDefaultsKey)
                 })
                 .labelsHidden()
-                .glassEffect(.clear)
+                .glassEffect()
             }
             HStack {
                 Text(model.description)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.Colors.primaryText80)
                     .lineLimit(2)
                 Spacer()
             }

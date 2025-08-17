@@ -29,13 +29,13 @@ struct TripStatusView: View {
         HStack(spacing: 0) {
             // Left column (Distance)
             VStack(spacing: 6) {
-                Text(String(format: "%.1f mi", viewModel.tripDistanceLiveMiles))
+                Text(DistanceUtility.formatter(meters: viewModel.tripDistanceLiveMiles))
                     .font(.body)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.Colors.primaryText)
                 if showCommited {
-                    Text(String(format: "%.1f mi", viewModel.tripDistanceCommittedMiles))
+                    Text(DistanceUtility.formatter(meters: viewModel.tripDistanceCommittedMiles))
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(AppTheme.Colors.primaryText80)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -47,14 +47,14 @@ struct TripStatusView: View {
             
             Divider()
                 .frame(width: 1, height: rowHeight)
-                .background(.white.opacity(0.5))
+                .background(AppTheme.Colors.primaryText50)
             
             // Middle column (Status)
             VStack(spacing: 6) {
                 Spacer()
                 Text(viewModel.tripStateText)
                     .font(.headline).bold().monospaced()
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.Colors.primaryText)
                 Spacer()
             }
             .frame(maxWidth: .infinity)
@@ -66,17 +66,17 @@ struct TripStatusView: View {
             
             Divider()
                 .frame(width: 1, height: rowHeight)
-                .background(.white.opacity(0.5))
+                .background(AppTheme.Colors.primaryText50)
             
             // Right column (Trip Time)
             VStack(spacing: 6) {
                 Text(TimeUtility.formatter(viewModel.tripDurationLive))
                     .font(.body)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.Colors.primaryText)
                 if showCommited {
                     Text(TimeUtility.formatter(viewModel.tripDurationCommitted))
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(AppTheme.Colors.primaryText80)
                 }
             }
             .frame(maxWidth: .infinity)

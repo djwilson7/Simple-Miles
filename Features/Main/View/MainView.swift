@@ -21,25 +21,24 @@ struct MainView: View {
                 
                 GeometryReader { safeGeo in
                     VStack {
-                            VStack {
-                                Spacer()
-                                TitleBarView()
-                                Spacer()
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: safeGeo.size.height * 0.1)
-
-                            GlassEffectContainer {
-                                ZStack {
-                                    previousButton
-                                    contextBar
-                                    nextButton
-                                }
-                                .frame(maxWidth: .infinity, maxHeight: safeHeight * 0.9, alignment: .bottom)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .bottom)
-                            .frame(height: safeGeo.size.height * 0.9)
+                        VStack {
+                            Spacer()
+                            TitleBarView()
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: safeGeo.size.height * 0.1)
                         
+                        GlassEffectContainer {
+                            ZStack {
+                                previousButton
+                                contextBar
+                                nextButton
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: safeHeight * 0.9, alignment: .bottom)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .bottom)
+                        .frame(height: safeGeo.size.height * 0.9)
                     }
                     .frame(height: safeHeight)
                 }
@@ -59,19 +58,14 @@ struct MainView: View {
         let isDragging = isReview && (barDrag != .zero)
         let followX = isDragging ? barDrag.width : 0
         let followY = isDragging ? barDrag.height : 0
-        let visibleX = -layout.width.pct(0.4)
+        let visibleX = -layout.contextButtonOffset
         return SystemControlButton( //Left Button
             opacity: !leftVisible || isDragging ? 0 : 1,
-            color: Color.white,
+            color: AppTheme.Colors.primaryText,
             action: { TripViewModel.shared.selectPreviousSegment() },
             label: { AnimatedChevronButtonLabel(isLeftFacing: true) }
         )
-        .frame(width: layout.buttonWidth, height: layout.buttonHeight)
-        .buttonStyle(.plain)
-        .glassEffect(.clear)
-        .opacity(!leftVisible || isDragging ? 0 : 1)
-        .offset(x: isDragging ? followX : (leftVisible ? visibleX : 0),
-                y: isDragging ? followY : 0)
+        .offset(x: isDragging ? followX : (leftVisible ? visibleX : 0), y: isDragging ? followY : 0)
         .allowsHitTesting(leftVisible)
         .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
         .animation(.spring(duration: layout.animationDurations.slow), value: leftVisible)
@@ -82,19 +76,14 @@ struct MainView: View {
         let isDragging = isReview && (barDrag != .zero)
         let followX = isDragging ? barDrag.width : 0
         let followY = isDragging ? barDrag.height : 0
-        let visibleX = layout.width.pct(0.4)
+        let visibleX = layout.contextButtonOffset
         return SystemControlButton(
             opacity: !rightVisible || isDragging ? 0 : 1,
-            color: Color.white,
+            color: AppTheme.Colors.primaryText,
             action: { TripViewModel.shared.selectNextSegment() },
             label: { AnimatedChevronButtonLabel(isLeftFacing: false) }
         )
-        .buttonStyle(.plain)
-        .frame(width: layout.buttonWidth, height: layout.buttonHeight)
-        .glassEffect(.clear)
-        .opacity(!rightVisible || isDragging ? 0 : 1)
-        .offset(x: isDragging ? followX : (rightVisible ? visibleX : 0),
-                y: isDragging ? followY : 0)
+        .offset(x: isDragging ? followX : (rightVisible ? visibleX : 0), y: isDragging ? followY : 0)
         .allowsHitTesting(rightVisible)
         .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
         .animation(.spring(duration: layout.animationDurations.slow), value: rightVisible)
@@ -112,10 +101,8 @@ struct MainView: View {
                 TripSortingView()
             }
         )
-        .background(AppTheme.Colors.primaryDark.opacity(0.5))
+        .glassEffect(in: RoundedRectangle(cornerRadius: layout.radii.pill))
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-        .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 44))
-        .contentShape(RoundedRectangle(cornerRadius: 44))
         .offset(isReview ? barDrag : .zero)
         .simultaneousGesture(
             DragGesture()
@@ -155,37 +142,34 @@ struct MainView: View {
     
     private var recenterButton: some View {
         SystemControlButton(
-            color: Color.white,
+            color: AppTheme.Colors.primaryText,
             action: { mapViewModel.recenter() },
             label: { Image(systemName: mapViewModel.locationIconName) }
         )
-        .glassEffect(.clear)
     }
     
     private var shareButton: some View {
         SystemControlButton(
-            color: Color.white,
+            color: AppTheme.Colors.primaryText,
             action: { /* TODO */ },
             label: { Image(systemName: "square.and.arrow.up") }
         )
-        .glassEffect(.clear)
     }
     
     private var settingsButton: some View {
         SystemControlButton(
-            color: Color.white,
+            color: AppTheme.Colors.primaryText,
             action: { mainviewModel.settingsTapped() },
             label: { Image(systemName: "gearshape") }
         )
-        .glassEffect(.clear)
     }
     
     private var summaryButton: some View {
         SystemControlButton(
-            color: Color.white,
+            color: AppTheme.Colors.primaryText,
             action: { mainviewModel.summaryTapped() },
             label: { Image(systemName: "rectangle.stack") }
         )
-        .glassEffect(.clear)
     }
 }
+

@@ -10,25 +10,58 @@ struct MapView: View {
                 if !(MainStateDriver.shared.mainState == .review) {
                     // Committed (stored) path
                     if !viewModel.commitedTracePath.isEmpty {
-                        MapPolyline(coordinates: viewModel.commitedTracePath)
-                            .stroke(AppTheme.Colors.accentDark, lineWidth: 7)
+                        let path = viewModel.commitedTracePath
+                
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.1), lineWidth: 12)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.2), lineWidth: 11)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.3), lineWidth: 10)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.4), lineWidth: 9)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.5), lineWidth: 8)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.6), lineWidth: 7)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.7), lineWidth: 6)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.primaryPath, lineWidth: 5)
                     }
                     
                     // Live static path (fixed points except the anchor)
                     if !viewModel.nonCommitedTraceStatic.isEmpty {
-                        MapPolyline(coordinates: viewModel.nonCommitedTraceStatic)
-                            .stroke(AppTheme.Colors.accentDark.opacity(0.5), lineWidth: 7)
+                        let path = viewModel.nonCommitedTraceStatic
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.primaryPath60, lineWidth: 12)
                     }
                     
                     // Live tail (anchor -> interpolated head)
                     if viewModel.nonCommitedTraceTail.count >= 2 {
-                        MapPolyline(coordinates: viewModel.nonCommitedTraceTail)
-                            .stroke(AppTheme.Colors.accentDark.opacity(0.5), lineWidth: 7)
+                        let path = viewModel.nonCommitedTraceTail
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.primaryPath60, lineWidth: 12)
                     }
                 } else {
                     if !viewModel.previousTripPath.isEmpty {
-                        MapPolyline(coordinates: viewModel.previousTripPath)
-                            .stroke(AppTheme.Colors.accentDark, lineWidth: 7)
+                        let path = viewModel.previousTripPath
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.1), lineWidth: 12)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.2), lineWidth: 11)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.3), lineWidth: 10)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.4), lineWidth: 9)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.5), lineWidth: 8)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.6), lineWidth: 7)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.pathHalo.opacity(0.7), lineWidth: 6)
+                        MapPolyline(coordinates: path)
+                            .stroke(AppTheme.Colors.primaryPath, lineWidth: 5)
                     }
                 }
 
@@ -41,7 +74,7 @@ struct MapView: View {
                             .rotationEffect(Angle(degrees: viewModel.displayedArrowRotation), anchor: .center)
                             .animation(.easeInOut(duration: 0.3), value: viewModel.displayedArrowRotation)
                             .symbolRenderingMode(.monochrome)
-                            .foregroundStyle(AppTheme.Colors.primaryMedium)
+                            .foregroundStyle(AppTheme.Colors.primaryPath)
                     }
                 } else {
                     if let start = viewModel.tripMarkers.first {
@@ -118,5 +151,4 @@ struct MapView: View {
     func recenterOnUser() {
         viewModel.recenter()
     }
-
 }

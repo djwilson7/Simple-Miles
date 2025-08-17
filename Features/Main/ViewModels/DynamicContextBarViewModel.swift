@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 class DynamicContextBarViewModel: ObservableObject {
     static let shared = DynamicContextBarViewModel()
     @Published var mainState: MainModes = .main

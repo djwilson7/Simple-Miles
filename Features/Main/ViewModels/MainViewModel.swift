@@ -10,11 +10,11 @@ final class MainViewModel: ObservableObject {
     init() { }
 
     
-    func settingsTapped() {
+    @MainActor func settingsTapped() {
         MainStateDriver.shared.mainState = .settings // when we click settings -> main state settings
     }
     
-    func summaryTapped()  {
+    @MainActor func summaryTapped()  {
         MainStateDriver.shared.mainState = .review // when we click summary -> we set main state to review
     }
 

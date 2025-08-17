@@ -2,16 +2,17 @@ import Foundation
 import Combine
 import CoreLocation
 
-final class TripViewModel: ObservableObject {
+@MainActor final class TripViewModel: ObservableObject {
     static let shared = TripViewModel()
     
     @Published var unclassifiedSegments: [TripSegment] = []
-    @Published var selectedPath: [CLLocationCoordinate2D] = []
+    @Published var selectedPath: [LocationPoint] = []
     @Published var currentTripIndex: Int = 0
 
-    @Published var currentDistance: String = "0.0 miles"
-    @Published var currentDuration: String = "1H 2M 3s"
-    @Published var currentStartDate: String = "Jun 31, 2025 1:23pm"
+    @Published var tripDistance: String = "0 mi"
+    @Published var tripDuration: String = "0s"
+    @Published var startDate: String = "Jun 31, 2025"
+    @Published var startTime: String = "1:23pm"
 
     private var cancellables = Set<AnyCancellable>()
     private let tripSegmentStore = TripSegmentStore.shared
@@ -42,16 +43,18 @@ final class TripViewModel: ObservableObject {
     func updateSelectedPath(index: Int) {
         guard unclassifiedSegments.indices.contains(index) else {
             selectedPath = []
-            currentDistance = "0.0 miles"
-            currentDuration = "1H 2M 3s"
-            currentStartDate = "Jun 01, 2025 1:23pm"
+            tripDistance = "0.0 miles"
+            tripDuration = "1H 2M 3s"
+            startDate = "Jun 01, 2025"
+            startTime = "1:23pm"
             return
         }
         currentTripIndex = index
         selectedPath = unclassifiedSegments[index].pathCoordinates
-        currentDistance = formatDistance(unclassifiedSegments[index].distance)
-        currentDuration = formatDuration(unclassifiedSegments[index].duration)
-        currentStartDate = formatDateTime(unclassifiedSegments[index].startTimestamp)
+        tripDistance = DistanceUtility.formatter(meters: unclassifiedSegments[index].distance)
+        tripDuration = TimeUtility.formatter(unclassifiedSegments[index].duration)
+        startDate = TimeUtility.formatDate(unclassifiedSegments[index].startTimestamp)
+        startTime = TimeUtility.formatTime(unclassifiedSegments[index].startTimestamp)
     }
 
     func selectPreviousSegment() {
@@ -85,38 +88,13 @@ final class TripViewModel: ObservableObject {
         print("Business Trip Count: \(allBusinessCount)")
     }
     
-    func formatDateTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy h:mma"
-        formatter.amSymbol = "am"
-        formatter.pmSymbol = "pm"
-        return formatter.string(from: date).replacingOccurrences(of: ":00pm", with: "pm").replacingOccurrences(of: ":00am", with: "am")
-    }
-    
-    func formatDistance(_ meters: Double) -> String {
-        let miles = meters / 1609.344
-        return String(format: "%.1f miles", miles)
-    }
-    
-    func formatDuration(_ seconds: TimeInterval) -> String {
-        let totalSeconds = Int(seconds)
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let secs = totalSeconds % 60
-        if hours > 0 {
-            return "\(hours)H \(minutes)M \(secs)s"
-        } else if minutes > 0 {
-            return "\(minutes)M \(secs)s"
-        } else {
-            return "\(secs)s"
-        }
-    }
-    
     func resetReviewState() {
         self.selectedPath = []
         self.currentTripIndex = 0
-        self.currentDistance = "0.0 miles"
-        self.currentDuration = "1H 2M 3s"
-        self.currentStartDate = "Jun 31, 2025 1:23pm"
+        self.tripDistance = "0.0 miles"
+        self.tripDuration = "1H 2M 3s"
+        self.startDate = "Jun 31, 2025"
+        self.startTime = "1:23pm"
     }
 }
+

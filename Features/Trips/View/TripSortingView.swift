@@ -5,17 +5,39 @@ struct TripSortingView: View {
     @ObservedObject private var viewModel = TripViewModel.shared
     
     var body: some View {
-        HStack {
-            Text(TripViewModel.shared.currentStartDate)
-                .font(.body)
-                .foregroundColor(Color.white)
-
+        VStack(spacing: 6) {
+            Text(TripViewModel.shared.startDate)
+                .font(.headline)
+                .foregroundColor(AppTheme.Colors.primaryText)
+                .frame(width: layout.elementWidth)
+            HStack(spacing: 3) {
+                HStack {
+                    Spacer()
+                    Text(TripViewModel.shared.startTime)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.primaryText60)
+                }
+                .frame(width: layout.elementWidth * 0.3)
+                Text(TripViewModel.shared.tripDistance)
+                    .font(.body)
+                    .foregroundColor(AppTheme.Colors.primaryText80)
+                    .frame(width: layout.elementWidth * 0.4)
+                HStack {
+                    Text(TripViewModel.shared.tripDuration)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.primaryText60)
+                    Spacer()
+                }
+                .frame(width: layout.elementWidth * 0.3)
+            }
+            .frame(width: layout.elementWidth)
+            .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         }
-        .frame(width: layout.width.pct(0.5), height: layout.height.pct(0.05))
+        .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+        .frame(width: layout.elementWidth)
     }
 }
 
 #Preview {
-    // Provide a mock TripViewModel for preview
     TripSortingView()
 }

@@ -43,9 +43,9 @@ final class RecordingManager {
     /// Publisher providing current travel state updates (e.g. traveling, paused, idle).
     private var travelStatePublisher: Published<TravelState>.Publisher!
     /// Publisher providing the current GPS location.
-    private var currentLocationPublisher: Published<CLLocation?>.Publisher!
+    private var currentLocationPublisher: Published<LocationPoint?>.Publisher!
     /// Publisher providing the previous GPS location.
-    private var lastLocationPublisher: Published<CLLocation?>.Publisher!
+    private var lastLocationPublisher: Published<LocationPoint?>.Publisher!
     /// Manages persistence of trip segments on disk or database.
     private let tripSegmentStore = TripSegmentStore.shared
     /// Shared application settings, including minimum trip distance threshold.
@@ -66,9 +66,9 @@ final class RecordingManager {
     /// Flag indicating whether recording is currently active (traveling or paused).
     @Published var isRecording: Bool = false
     /// Coordinates aggregated from all finalized trip segments, representing the committed path.
-    @Published var commitedPath: [CLLocationCoordinate2D] = []
+    @Published var commitedPath: [LocationPoint] = []
     /// Coordinates of the currently recording trip segment, representing the live path.
-    @Published var nonCommitedPath: [CLLocationCoordinate2D] = []
+    @Published var nonCommitedPath: [LocationPoint] = []
     /// All loaded trip segments, both committed and possibly unclassified.
     @Published var allSegments: [TripSegment] = []
     
@@ -87,9 +87,9 @@ final class RecordingManager {
     /// Set of cancellables managing subscriptions to Combine publishers.
     private var cancellables = Set<AnyCancellable>()
     /// Current GPS location received from LocationManager.
-    private var currentLocation: CLLocation?
+    private var currentLocation: LocationPoint?
     /// Last known GPS location received from LocationManager.
-    private var lastLocation: CLLocation?
+    private var lastLocation: LocationPoint?
     /// Tracks the previous travel state to detect transitions.
     private var previousState: TravelState?
     /// Timer subscription updating the live trip duration every second.
@@ -102,7 +102,7 @@ final class RecordingManager {
     /// TripSegment representing the paused state, capturing the pause duration and path.
     private var pausedSegment: TripSegment?
     /// Location anchor point where the trip was paused.
-    private var pauseAnchor: CLLocation?
+    private var pauseAnchor: LocationPoint?
     
     
     // MARK: Public API
@@ -323,11 +323,11 @@ final class RecordingManager {
         guard previousState == .paused else { return }
         
         if let location = currentLocation {
-            let lastCoordinate = previousSegment?.pathCoordinates.last
+            let lastLocation = previousSegment?.pathCoordinates.last
             let currentCoordinate = location.coordinate
-            if lastCoordinate == nil ||
-                lastCoordinate!.latitude != currentCoordinate.latitude ||
-                lastCoordinate!.longitude != currentCoordinate.longitude
+            if lastLocation == nil ||
+                lastLocation?.coordinate.latitude != currentCoordinate.latitude ||
+                lastLocation?.coordinate.longitude != currentCoordinate.longitude
             {
                 previousSegment?.append(location: location)
             }
@@ -360,7 +360,17 @@ final class RecordingManager {
     private func finalizeAndWrite(_ segment: TripSegment?) {
         guard var segment = segment else { return }
         segment.finalize(at: Date())
-        tripSegmentStore.write(segment)
+        TripOptimizer.optimizeTrip(segment: segment) { result in
+            switch result {
+            case .success(let optimizedCoordinates):
+                segment.pathCoordinates = optimizedCoordinates
+                self.tripSegmentStore.write(segment)
+            case .failure(let error):
+                print("Trip optimization failed with error: \(error)")
+                self.tripSegmentStore.write(segment)
+            }
+        }
     }
+
     
 }

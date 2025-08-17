@@ -20,7 +20,7 @@ final class TravelLocationPredictor: ObservableObject {
     // MARK: - Published Properties
 
     /// The current predicted or device location.
-    @Published private(set) var activeLocation: CLLocation?
+    @Published private(set) var activeLocation: LocationPoint?
     /// The current heading in degrees clockwise from true north.
     @Published private(set) var activeHeading: CLLocationDirection = 0
     /// The user's speed in meters per second.
@@ -40,7 +40,7 @@ final class TravelLocationPredictor: ObservableObject {
     /// Timer used for periodic location prediction.
     private var predictionTimer: Cancellable?
     /// The most recent device location from the source.
-    private var lastLocation: CLLocation?
+    private var lastLocation: LocationPoint?
     /// The last known true heading.
     private var lastHeading: CLLocationDirection = 0
     /// The current travel state.
@@ -96,13 +96,26 @@ final class TravelLocationPredictor: ObservableObject {
     /// Calculates the next likely location based on speed, heading, and elapsed time.
     /// - Parameter location: Last known location.
     /// - Returns: New predicted location.
-    private func predictedLocation(from location: CLLocation) -> CLLocation {
+    private func predictedLocation(from location: LocationPoint) -> LocationPoint {
         let speed = max(location.speed, 0)
         let heading = location.course >= 0 ? location.course : activeHeading
         let predictionTime: TimeInterval = 1.0
         let distance = speed * predictionTime
+
         let projected = location.coordinate.coordinate(at: distance, bearing: heading)
-        return CLLocation(latitude: projected.latitude, longitude: projected.longitude)
+
+        // Create a synthetic CLLocation with projected coordinate
+        let predictedCL = CLLocation(
+            coordinate: projected,
+            altitude: 0,      // reuse altitude if you track it
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0,
+            course: heading,
+            speed: speed,
+            timestamp: Date()                 // prediction time = "now"
+        )
+
+        return LocationPoint(predictedCL)
     }
 }
 

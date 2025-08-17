@@ -34,4 +34,18 @@ struct TimeUtility {
             return "\(seconds)s"
         }
     }
+    
+    static func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
+    }
+    
+    static func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mma"
+        formatter.amSymbol = "am"
+        formatter.pmSymbol = "pm"
+        return formatter.string(from: date).replacingOccurrences(of: ":00pm", with: "pm").replacingOccurrences(of: ":00am", with: "am")
+    }
 }

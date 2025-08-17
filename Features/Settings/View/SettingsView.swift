@@ -16,7 +16,29 @@ struct SettingsView: View {
                     SettingMenuRow(model: setting, options: options)
                 }
             }
+            ForEach(viewModel.tripSettings, id: \.userDefaultsKey) { setting in
+                switch setting.controlType {
+                case .stepper:
+                    SettingStepperRow(model: setting)
+                case .toggle:
+                    SettingToggleRow(model: setting)
+                case .menu(let options):
+                    SettingMenuRow(model: setting, options: options)
+                }
+            }
+            ForEach(viewModel.tripSettings, id: \.userDefaultsKey) { setting in
+                switch setting.controlType {
+                case .stepper:
+                    SettingStepperRow(model: setting)
+                case .toggle:
+                    SettingToggleRow(model: setting)
+                case .menu(let options):
+                    SettingMenuRow(model: setting, options: options)
+                }
+            }
         }
         .frame(maxWidth: layout.width.pct(0.8), maxHeight: layout.height.pct(0.4))
+        .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+        .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
     }
 }
