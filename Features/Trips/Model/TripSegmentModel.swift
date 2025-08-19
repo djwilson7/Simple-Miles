@@ -10,7 +10,7 @@ public struct TripSegment: Codable {
     public var duration: TimeInterval
     public var headingSamples: [CLLocationDirection]
     public var speedSamples: [CLLocationSpeed]
-    public var tripType: TripType
+    var tripType: TripType //went from final class to enum -> cant decode old data to 'new' object type mismatch.
     
     // Added fileName property to hold file name, initialized to "temp_trip" on init, updated on finalize
     public private(set) var fileName: String = "temp_trip"
@@ -65,7 +65,6 @@ public struct TripSegment: Codable {
     // Updated init to set fileName to "temp_trip" during construction
     public init(
         startTimestamp: Date,
-        tripType: TripType = TripType(name: "unclassified")
     ) {
         self.id = UUID()
         self.startTimestamp = startTimestamp
@@ -74,11 +73,11 @@ public struct TripSegment: Codable {
         self.duration = 0
         self.headingSamples = []
         self.speedSamples = []
-        self.tripType = tripType
+        self.tripType = TripType.unclassified
         self.fileName = "temp_trip"
     }
     
-    public mutating func resortSegment(as newType: TripType) {
+    mutating func resortSegment(as newType: TripType) {
         self.tripType = newType
         updateFileName(suggestedFileName) // Now uses the new tripType’s prefix
     }

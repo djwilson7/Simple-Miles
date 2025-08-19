@@ -29,7 +29,7 @@ final class UserNotifier {
         updateBadgeCount()
         
         // Listen for trip store updates and refresh badge
-        TripSegmentStore.shared.uncommitedTripsUpdated
+        TripSegmentStore.shared.tripTotalsUpdated
             .sink { [weak self] in
                 self?.updateBadgeCount()
             }

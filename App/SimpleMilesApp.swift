@@ -10,7 +10,6 @@ struct SimpleMilesApp: App {
 
     init() {
         FirebaseApp.configure()
-        LocationManager.shared.startSignificantChangeMonitoring()
 
         mapViewModel = MapViewModel()
         mainViewModel = MainViewModel()

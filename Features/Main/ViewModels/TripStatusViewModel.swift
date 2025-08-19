@@ -17,6 +17,11 @@ final class TripStatusViewModel: ObservableObject {
     @Published var tripDurationLive: TimeInterval = 0
     @Published var remainingPauseTime: TimeInterval? = nil
 
+    @Published var personalTrips = SortedTripTotalsModel(tripType: .personal)
+    @Published var businessTrips = SortedTripTotalsModel(tripType: .business)
+    @Published var customTrips = SortedTripTotalsModel(tripType: .custom)
+    @Published var unclassifiedTrips = SortedTripTotalsModel(tripType: .unclassified)
+    
     private init() {
         travelStateManager.$state
             .removeDuplicates()

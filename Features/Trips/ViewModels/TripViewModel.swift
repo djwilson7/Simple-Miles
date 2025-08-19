@@ -20,7 +20,7 @@ import CoreLocation
     private init() {
         self.unclassifiedSegments = tripSegmentStore.loadAllUnclassified()
         
-        tripSegmentStore.uncommitedTripsUpdated
+        tripSegmentStore.tripTotalsUpdated
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 self?.unclassifiedSegments = self?.tripSegmentStore.loadAllUnclassified() ?? []
@@ -71,11 +71,10 @@ import CoreLocation
         }
     }
     
-    func classifyCurrentSegment(newClassification: String) {
+    func classifyCurrentSegment(newType: TripType) {
         guard unclassifiedSegments.indices.contains(currentTripIndex) else { return }
         var segment = unclassifiedSegments[currentTripIndex]
         tripSegmentStore.delete(segment)
-        let newType = TripType(name: newClassification)
         segment.resortSegment(as: newType)
         tripSegmentStore.write(segment)
         unclassifiedSegments = tripSegmentStore.loadAllUnclassified()

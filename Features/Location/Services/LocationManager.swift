@@ -4,197 +4,159 @@ import CoreLocation
 import Combine
 
 /// LocationManager is the single entry point for all location and heading updates in the app.
-/// It supports:
-/// - High-accuracy GPS streaming for active trip recording.
-/// - Significant Location Change monitoring to wake the app in the background when movement is detected.
-/// - Dynamic heading source switching (course vs. compass) based on speed.
-/// - Persistent last-known location storage.
+/// Minimal, always-on pipeline:
+///  - Requests Always authorization on init
+///  - Arms Significant Location Change monitoring
+///  - Starts continuous GPS + heading updates (re-asserts on auth changes)
+///  - Emits through Combine publishers
+/// On SLC cold-launch, we do not start continuous updates until the app becomes active; we only persist + optionally notify.
 final class LocationManager: NSObject, CLLocationManagerDelegate {
     
-    // MARK: - Public Published State
-    
-    /// Most recent known location from GPS, wrapped in LocationPoint.
+    // MARK: - Published State
     @Published private(set) var currentLocation: LocationPoint?
-    /// The location received before the current one, wrapped in LocationPoint.
     @Published private(set) var lastLocation: LocationPoint?
-    /// Calculated speed from the most recent updates (m/s).
-    @Published private(set) var speed: CLLocationSpeed = 0
-    /// The current heading in degrees (true north if available).
     @Published private(set) var trueHeading: CLLocationDirection = 0
-    /// The current compass heading in degrees (magnetic north fallback).
     @Published private(set) var compassHeading: CLLocationDirection = 0
     
     // MARK: - Singleton
-    
     static let shared = LocationManager()
     
-    // MARK: - Private Core Location
-    
+    // MARK: - Core Location
     private let locationManager = CLLocationManager()
-    /// Emits LocationPoint objects instead of CLLocation directly.
+    
+    // MARK: - Publishers
     private let locationSubject = CurrentValueSubject<LocationPoint?, Never>(nil)
     private let headingSubject = PassthroughSubject<CLLocationDirection, Never>()
-    
-    private let lastKnownStore = LastKnownLocationStore()
-    
-    // MARK: - Heading Preference State
-    
-    private var lowSpeedTimer: Timer?
-    private let lowSpeedThreshold: CLLocationSpeed = 2.24 // 5 mph
-    private let revertDelay: TimeInterval = 45            // seconds
-    private var preferCourseHeading: Bool = false
-    private var lastCLHeading: CLLocationDirection = 0
-    private var orientationOffset: CLLocationDirection = 0.0
-    
-    // MARK: - Significant Change State
-    
-    private var significantChangeActive: Bool = false
-    private let minNotificationInterval: TimeInterval = 2 * 60 * 60 // 2 hours
-    private var lastNotificationDate: Date?
-    
-    // MARK: - Update Mode State
-    private var isGPSActive = false
-    private var isHeadingActive = false
-
-    // MARK: - First Fix State
-    private var hasReceivedFirstFix = false
-
-    // MARK: - Public Publishers
-    
     var locationPublisher: AnyPublisher<LocationPoint, Never> {
         locationSubject.compactMap { $0 }.eraseToAnyPublisher()
     }
-    
     var headingPublisher: AnyPublisher<CLLocationDirection, Never> {
         headingSubject.eraseToAnyPublisher()
     }
     
-    /// Last saved location from persistent storage, wrapped in LocationPoint.
-    var lastKnownLocation: LocationPoint? {
-        if let loc = lastKnownStore.latestLocation {
-            return LocationPoint(loc)
+    // MARK: - Persistence
+    private let lastKnownStore = LastKnownLocationStore()
+    
+    // MARK: - Notification Throttle (persistent)
+    /// Persisted key for the last user notification time (Date).
+    private let lastNotificationDateKey = "LocationManager.lastNotificationDate"
+    
+    /// Last time we sent a user notification (persisted across launches).
+    /// Read/write goes through UserDefaults to survive app termination & relaunch.
+    private var lastNotificationDate: Date? {
+        get {
+            return UserDefaults.standard.object(forKey: lastNotificationDateKey) as? Date
         }
-        return nil
+        set {
+            if let value = newValue {
+                UserDefaults.standard.set(value, forKey: lastNotificationDateKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: lastNotificationDateKey)
+            }
+        }
     }
     
-    // MARK: - Initialization
+    /// Returns the elapsed time since the last notification was sent, if any.
+    /// - Returns: Number of seconds since the last notification, or nil if never sent.
+    func timeSinceLastNotification() -> TimeInterval? {
+        guard let last = lastNotificationDate else { return nil }
+        return Date().timeIntervalSince(last)
+    }
     
+    /// Whether we should notify the user, based on a minimum required interval.
+    /// - Parameter minInterval: Minimum seconds that must elapse between notifications.
+    func shouldNotifyUser(minInterval: TimeInterval) -> Bool {
+        guard let elapsed = timeSinceLastNotification() else {
+            return true // never notified; allowed
+        }
+        return elapsed >= minInterval
+    }
+    
+    /// Call this right after you dispatch a user notification so future checks are throttled.
+    func markUserNotifiedNow() {
+        lastNotificationDate = Date()
+    }
+    
+    /// Resets the remembered last notification time (e.g., user toggled a setting).
+    func resetNotificationThrottle() {
+        lastNotificationDate = nil
+    }
+    
+    // (Optional usage note to future maintainers in comments):
+    // When you actually send a notification (likely via `UserNotifier`), call `markUserNotifiedNow()`;
+    // to gate notifications, call `shouldNotifyUser(minInterval:)` before scheduling.
+    
+    // MARK: - Init
     private override init() {
         super.init()
+        setupLocationManager()
+        requestAuthorizationAndStart()
+        seedLastKnownIfAvailable()
+        // Observe app becoming active to clear SLC suppression and start continuous updates
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onDidBecomeActive(_:)),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+    
+    // MARK: - Setup
+    private func setupLocationManager() {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         locationManager.distanceFilter = 10
         locationManager.headingFilter = 1
-        locationManager.headingOrientation = .portrait
         locationManager.activityType = .automotiveNavigation
-        locationManager.showsBackgroundLocationIndicator = false
-        locationManager.requestAlwaysAuthorization()
-        
-        if let stored = lastKnownStore.latestLocation {
-            let wrapped = LocationPoint(stored)
-            lastLocation = nil
-            currentLocation = wrapped
-            hasReceivedFirstFix = true
-            locationSubject.send(wrapped)
-        }
-        NotificationCenter.default.addObserver(self, selector: #selector(appDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
-        
-        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
-        NotificationCenter.default.addObserver(self, selector: #selector(updateOrientationOffset), name: UIDevice.orientationDidChangeNotification, object: nil)
-        updateOrientationOffset()
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
-        UIDevice.current.endGeneratingDeviceOrientationNotifications()
-    }
-    
-    // MARK: - Orientation Handling
-    @objc private func updateOrientationOffset() {
-        switch UIDevice.current.orientation {
-        case .landscapeLeft:
-            orientationOffset = 90
-        case .portraitUpsideDown:
-            orientationOffset = 180
-        case .landscapeRight:
-            orientationOffset = 270
-        default:
-            orientationOffset = 0
-        }
-    }
-    
-    // MARK: - Public API
-    
-    /// Starts monitoring significant location changes for background movement detection.
-    /// Will wake the app and trigger `didUpdateLocations` even if terminated.
-    func startSignificantChangeMonitoring() {
-        significantChangeActive = true
-        locationManager.startMonitoringSignificantLocationChanges()
-    }
-    
-    /// Stops monitoring significant location changes.
-    func stopSignificantChangeMonitoring() {
-        significantChangeActive = false
-        locationManager.stopMonitoringSignificantLocationChanges()
-    }
-    
-    /// Stops active high-accuracy GPS and heading updates.
-    func stopTracking() {
-        locationManager.stopUpdatingLocation()
-        locationManager.stopUpdatingHeading()
-        isGPSActive = false
-        isHeadingActive = false
-    }
-    
-    // MARK: - Continuous Updates Helpers
-    private func startContinuousUpdatesIfNeeded() {
-        if !isGPSActive {
-            locationManager.startUpdatingLocation()
-            isGPSActive = true
-        }
-        if !isHeadingActive {
-            locationManager.startUpdatingHeading()
-            isHeadingActive = true
-        }
-    }
-
-    private func ensureBackgroundFlagsIfAllowed() {
-        guard locationManager.authorizationStatus == .authorizedAlways, isGPSActive else { return }
+        locationManager.showsBackgroundLocationIndicator = true
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.pausesLocationUpdatesAutomatically = false
     }
     
-    // MARK: - App Lifecycle Hooks
-    @objc private func appDidEnterBackground() {
-        ensureBackgroundFlagsIfAllowed()
+    private func requestAuthorizationAndStart() {
+        // Request Always; background streaming requires it (plus Background Modes in Info.plist)
+        locationManager.requestAlwaysAuthorization()
+        // Arm SLC immediately (safe to call repeatedly)
+        locationManager.startMonitoringSignificantLocationChanges()
+        // Removed startContinuousUpdates() here to avoid starting GPS on SLC cold wakes
     }
-
-    @objc private func appWillEnterForeground() {
-        ensureBackgroundFlagsIfAllowed()
-        startContinuousUpdatesIfNeeded()
+    
+    private func seedLastKnownIfAvailable() {
+        if let stored = lastKnownStore.latestLocation {
+            let wrapped = LocationPoint(stored)
+            lastLocation = nil
+            currentLocation = wrapped
+            locationSubject.send(wrapped)
+        }
+    }
+    
+    // MARK: - Public API
+    func stopTracking() {
+        locationManager.stopUpdatingLocation()
+        locationManager.stopUpdatingHeading()
+    }
+    
+    // MARK: - Start Helpers
+    private func startContinuousUpdates() {
+        // Allow background streaming when Always is granted
+        locationManager.startUpdatingLocation()
+        locationManager.startUpdatingHeading()
     }
     
     // MARK: - CLLocationManagerDelegate
-    
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         switch manager.authorizationStatus {
-        case .authorizedAlways:
-            ensureBackgroundFlagsIfAllowed()
-            if let last = lastKnownStore.latestLocation {
-                let wrapped = LocationPoint(last)
-                currentLocation = wrapped
-                hasReceivedFirstFix = true
-                let s = wrapped.speed
-                speed = (s >= 0) ? s : 0
-                locationSubject.send(wrapped)
-            }
-            if UIApplication.shared.applicationState != .background {
-                startContinuousUpdatesIfNeeded()
-            }
-        case .authorizedWhenInUse:
-            if UIApplication.shared.applicationState != .background {
-                startContinuousUpdatesIfNeeded()
+        case .authorizedAlways, .authorizedWhenInUse:
+            // Always arm SLC; safe to repeat
+            locationManager.startMonitoringSignificantLocationChanges()
+            // Start continuous updates only when app is foreground/active OR
+            // when this is not an SLC cold-launch suppression.
+            let state = UIApplication.shared.applicationState
+            if state == .active {
+                startContinuousUpdates()
+            } else if !suppressStreamingUntilForeground {
+                // Background but not a cold SLC relaunch → allowed to start (e.g., app was already running)
+                startContinuousUpdates()
             }
         default:
             break
@@ -204,98 +166,57 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let latest = locations.last else { return }
         
-        let appState = UIApplication.shared.applicationState
-        
-        // --- Significant Change Cold-Wake Escalation ---
-        if appState == .background && significantChangeActive && !isGPSActive {
-            // Do NOT escalate to continuous GPS. Only notify the user.
-            let now = Date()
-            if lastNotificationDate == nil || now.timeIntervalSince(lastNotificationDate!) > minNotificationInterval {
-                lastNotificationDate = now
-                UserNotifier.shared.showMovementReminder()
+        if suppressStreamingUntilForeground && UIApplication.shared.applicationState == .background {
+            if pendingSLCLaunch {
+                pendingSLCLaunch = false
+                // Persist last known for map centering when user eventually opens the app
+                lastKnownStore.update(latest)
+                // Throttled nudge
+                let minInterval: TimeInterval = 2 * 60 * 60
+                if shouldNotifyUser(minInterval: minInterval) {
+                    UserNotifier.shared.showMovementReminder()
+                    markUserNotifiedNow()
+                }
             }
+            return
         }
         
         let previous = currentLocation
         let newPoint = LocationPoint(latest)
-
-        if hasReceivedFirstFix, let prev = previous {
-            lastLocation = prev
-        } else {
-            // First valid fix in this app session (or after cold start with no persisted point)
-            lastLocation = nil
-            hasReceivedFirstFix = true
-        }
-
+        
+        if let prev = previous { lastLocation = prev } else { lastLocation = nil }
         currentLocation = newPoint
         locationSubject.send(newPoint)
-        let s = newPoint.speed
-        speed = (s >= 0) ? s : 0
         
+        // Persist last known
         lastKnownStore.update(latest)
-        evaluateHeadingPreference(for: latest)
+        
+        // If course is valid, mirror it to trueHeading for snappier map orientation
+        if latest.course >= 0 { trueHeading = latest.course; headingSubject.send(latest.course) }
     }
-    
-  
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        let heading = newHeading.trueHeading > 0 ? newHeading.trueHeading + orientationOffset : newHeading.magneticHeading + orientationOffset
-        lastCLHeading = heading
+        // Update compass and true heading from device sensors
+        let heading = newHeading.trueHeading > 0 ? newHeading.trueHeading : newHeading.magneticHeading
         compassHeading = heading
-        
-        if !preferCourseHeading {
-            trueHeading = heading
-            headingSubject.send(heading)
-        }
-    }
-    
-    func locationManagerDidPauseLocationUpdates(_ manager: CLLocationManager) {
-        // iOS thinks we are stationary; we prefer continuous updates. Reassert.
-        ensureBackgroundFlagsIfAllowed()
-        startContinuousUpdatesIfNeeded()
-    }
-
-    func locationManagerDidResumeLocationUpdates(_ manager: CLLocationManager) {
-        // Resume bookkeeping.
+        trueHeading = heading
+        headingSubject.send(heading)
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("[LocationManager] Error: \(error.localizedDescription)")
     }
     
-    // MARK: - Heading Source Logic
-    
-    /// Chooses between course heading and compass heading based on speed, with a delay before switching back to compass.
-    private func evaluateHeadingPreference(for location: CLLocation) {
-        let isFast = location.speed >= lowSpeedThreshold
-        
-        if isFast {
-            if !preferCourseHeading {
-                preferCourseHeading = true
-            }
-            lowSpeedTimer?.invalidate()
-            emitCourseHeadingIfValid(location)
-        } else {
-            if lowSpeedTimer == nil {
-                lowSpeedTimer = Timer.scheduledTimer(withTimeInterval: revertDelay, repeats: false) { [weak self] _ in
-                    guard let self = self else { return }
-                    self.preferCourseHeading = false
-                    self.lowSpeedTimer = nil
-                    self.trueHeading = self.lastCLHeading
-                    self.headingSubject.send(self.lastCLHeading)
-                }
-            }
-        }
+    @objc private func onDidBecomeActive(_ notification: Notification) {
+        suppressStreamingUntilForeground = false
+        startContinuousUpdates()
     }
     
-    /// Sends a course heading update if available; falls back to compass heading otherwise.
-    private func emitCourseHeadingIfValid(_ location: CLLocation) {
-        if location.course >= 0 {
-            trueHeading = location.course
-            headingSubject.send(location.course)
-        } else {
-            print("[LocationManager] Invalid course; falling back to compass if needed")
-        }
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
     }
     
+    // MARK: - Suppression flags for SLC cold-launch
+    private var suppressStreamingUntilForeground = true
+    private var pendingSLCLaunch = true
 }

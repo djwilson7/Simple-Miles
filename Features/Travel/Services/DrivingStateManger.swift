@@ -37,7 +37,7 @@ final class DrivingStateManager: ObservableObject {
         }
         
         let distance = current.distance(to: last)
-        let speed = locationManager.speed
+        let speed = current.speed
         
         // Ignore small movements (jitter)
         if distance < movementDistanceThreshold {

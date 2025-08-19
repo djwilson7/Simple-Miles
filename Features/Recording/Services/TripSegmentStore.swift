@@ -5,26 +5,56 @@ import Combine
 final class TripSegmentStore {
     static let shared = TripSegmentStore()
     
-    let uncommitedTripsUpdated = PassthroughSubject<Void, Never>()
+    let tripTotalsUpdated = PassthroughSubject<Void, Never>()
     
     private let fileManager = FileManager.default
     private let directory: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private let unsortedTripCountKey = "unsortedTripCount"
     
     init() {
-        refreshTripCount() // Ensure count is correct on startup
+        refreshAllTotals()
     }
     
-    // MARK: - Trip Count Management
-    
-    func refreshTripCount() {
-        DispatchQueue.global(qos: .background).async { [weak self] in
-            guard let self else { return }
-            let count = self.loadAllUnclassified().count
-            DispatchQueue.main.async {
-                UserDefaults.standard.set(count, forKey: self.unsortedTripCountKey)
-                self.uncommitedTripsUpdated.send()
+    /// Recompute and persist totals for all supported trip types, then emit `tripTotalsUpdated` once.
+    func refreshAllTotals() {
+        let types = TripType.allCases
+        
+        struct Agg { var d: CLLocationDistance = 0; var t: TimeInterval = 0; var c: Int = 0 }
+        var results: [(TripType, Agg)] = []
+        results.reserveCapacity(types.count)
+        let lock = NSLock()
+        let group = DispatchGroup()
+        
+        for type in types {
+            group.enter()
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+                
+                let segments = self.loadAll(for: type)
+                var agg = Agg()
+                for seg in segments {
+                    agg.d += seg.distance
+                    agg.t += seg.duration
+                    agg.c += 1
+                }
+                
+                lock.lock()
+                results.append((type, agg))
+                lock.unlock()
             }
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            for (type, agg) in results {
+                var totals = TripTotalsStore(tripType: type)
+                totals.totalDistance = agg.d
+                totals.totalDuration = agg.t
+                totals.tripCount = agg.c
+                print("TripTotals for '\(type.name)': totalDistance=\(agg.d), totalDuration=\(agg.t), tripCount=\(agg.c)")
+            }
+            self.tripTotalsUpdated.send()
         }
     }
     
@@ -39,10 +69,8 @@ final class TripSegmentStore {
                 let data = try encoder.encode(segment)
                 try data.write(to: url)
                 print("TripSegmentStore: Saved segment to \(url.lastPathComponent)")
-                if segment.tripType.urlPrefix == "unclassified_" {
-                    DispatchQueue.main.async {
-                        TripSegmentStore.shared.refreshTripCount()
-                    }
+                DispatchQueue.main.async {
+                    TripSegmentStore.shared.refreshAllTotals()
                 }
             } catch {
                 print("TripSegmentStore: Failed to save segment - \(error)")
@@ -56,10 +84,8 @@ final class TripSegmentStore {
             if fileManager.fileExists(atPath: url.path) {
                 try fileManager.removeItem(at: url)
                 print("TripSegmentStore: Deleted segment file \(url.lastPathComponent)")
-                if segment.tripType.urlPrefix == "unclassified_" {
-                    DispatchQueue.main.async {
-                        TripSegmentStore.shared.refreshTripCount()
-                    }
+                DispatchQueue.main.async {
+                    TripSegmentStore.shared.refreshAllTotals()
                 }
             } else {
                 print("TripSegmentStore: File not found for deletion: \(url.lastPathComponent)")
@@ -80,18 +106,23 @@ final class TripSegmentStore {
     }
     
     func loadAllUnclassified() -> [TripSegment] {
-        let unclassifiedTripType = TripType(name: "unclassified")
+        let unclassifiedTripType = TripType.unclassified
         return loadAll(for: unclassifiedTripType)
     }
     
     func loadAllPersonal() -> [TripSegment] {
-        let personalTripType = TripType(name: "personal")
+        let personalTripType = TripType.personal
         return loadAll(for: personalTripType)
     }
     
     func loadAllBusiness() -> [TripSegment] {
-        let businessTripType = TripType(name: "business")
+        let businessTripType = TripType.business
         return loadAll(for: businessTripType)
+    }
+    
+    func loadAllCustom() -> [TripSegment] {
+        let customTripType = TripType.custom
+        return loadAll(for: customTripType)
     }
     
     // MARK: - Helpers
