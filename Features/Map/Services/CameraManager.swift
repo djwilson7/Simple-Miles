@@ -72,6 +72,7 @@ final class CameraManager: NSObject, ObservableObject {
         heading: CLLocationDirection,
         orientation: CameraOrientationMode
     ) {
+        lastLocation = location
         switch orientation {
         case .northUp: setCameraToNorthUp(location)
         case .headingUp: setCameraToHeadingUp(location, heading)
@@ -134,7 +135,18 @@ final class CameraManager: NSObject, ObservableObject {
     
     /// Sets the camera to review mode: fits the camera to the provided path using the path-fitting utility.
     func setCameraToReview(path: [CLLocationCoordinate2D]) {
-        publishCameraPosition(from: CameraModel.forPath(path))
+        if !path.isEmpty {
+            publishCameraPosition(from: CameraModel.forPath(path))
+        } else if let last = lastLocation {
+            let altitude = CameraDistance.shared.loadDistance() ?? 1500
+            let cameraModel = CameraModel(
+                center: last.coordinate,
+                altitude: altitude,
+                heading: 0,
+                pitch: 0
+            )
+            publishCameraPosition(from: cameraModel)
+        }
     }
           
     /// Reverts camera orientation back to the last non-free-roam mode.

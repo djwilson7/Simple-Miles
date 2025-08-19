@@ -18,7 +18,7 @@ struct MainView: View {
     
     private var isReview: Bool { MainStateDriver.shared.mainState == .review }
     private var canGoPrev: Bool { TripViewModel.shared.currentTripIndex > 0 }
-    private var canGoNext: Bool { TripViewModel.shared.currentTripIndex < TripViewModel.shared.unclassifiedSegments.count - 1 }
+    private var canGoNext: Bool { TripViewModel.shared.currentTripIndex < TripViewModel.shared.loadedSegments.count - 1 }
     
     private let tripViewModel = TripViewModel.shared
     
@@ -200,7 +200,6 @@ struct MainView: View {
         VStack(spacing: 10) {
             settingsButton
             shareButton
-            summaryButton
             recenterButton
         }
         .padding(.trailing, layout.controlButtonsPadding - islandOffset)
@@ -239,14 +238,6 @@ struct MainView: View {
             color: AppTheme.Colors.primaryText,
             action: { mainviewModel.settingsTapped() },
             label: { Image(systemName: "gearshape") }
-        )
-    }
-    
-    private var summaryButton: some View {
-        SystemControlButton(
-            color: AppTheme.Colors.primaryText,
-            action: { mainviewModel.summaryTapped() },
-            label: { Image(systemName: "rectangle.stack") }
         )
     }
 }

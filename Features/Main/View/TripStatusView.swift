@@ -21,6 +21,12 @@ struct TripStatusView: View {
                     .tag(index)
                     .frame(width: layout.width.pct(0.8))
                     .fixedSize(horizontal: false, vertical: true)
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        if let type = page.tripType {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            viewModel.beginReview(for: type)
+                        }
+                    }
             }
         }
         .frame(width: layout.width.pct(0.8), height: layout.height.pct(0.2))

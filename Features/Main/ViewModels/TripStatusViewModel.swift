@@ -22,6 +22,7 @@ struct StatusPage: Identifiable, Equatable {
     let left: StatusBlock
     let center: StatusBlock
     let right: StatusBlock
+    let tripType: TripType?
 }
 
 final class TripStatusViewModel: ObservableObject {
@@ -41,6 +42,8 @@ final class TripStatusViewModel: ObservableObject {
     @Published var remainingPauseTime: TimeInterval? = nil
 
     @Published var currentPageIndex: Int = 0
+
+    var reviewTripType: TripType? = nil
 
     @Published var personalTrips = SortedTripTotalsModel(tripType: .personal)
     @Published var businessTrips = SortedTripTotalsModel(tripType: .business)
@@ -99,7 +102,14 @@ final class TripStatusViewModel: ObservableObject {
             .assign(to: \.remainingPauseTime, on: self)
             .store(in: &cancellables)
     }
+    
+    @MainActor func beginReview(for type: TripType) {
+        reviewTripType = type
+        MainStateDriver.shared.mainState = .review
+    }
 
+    func clearReviewRequest() { reviewTripType = nil }
+    
     // MARK: - Swipeable pages for TripStatusView
     var pages: [StatusPage] { makeStatusPages() }
 
@@ -124,37 +134,37 @@ final class TripStatusViewModel: ObservableObject {
             role: .value
         )
         var result: [StatusPage] = [
-            StatusPage(id: "page.home", left: homeLeft, center: homeCenter, right: homeRight)
+            StatusPage(id: "page.home", left: homeLeft, center: homeCenter, right: homeRight, tripType: nil)
         ]
 
         // Helper to build a totals page from a SortedTripTotalsModel
-        func totalsPage(id: String, model: SortedTripTotalsModel) -> StatusPage {
+        func totalsPage(model: SortedTripTotalsModel) -> StatusPage {
             let left = StatusBlock(
-                id: "\(id).distance",
+                id: "\(model.tripType.name.capitalized).distance",
                 primary: DistanceUtility.formatter(meters: model.totalDistance),
                 secondary: nil,
                 role: .value
             )
             let center = StatusBlock(
-                id: "\(id).count",
-                primary: id.capitalized,
+                id: "\(model.tripType.name.capitalized).count",
+                primary: model.tripType.name.capitalized,
                 secondary: "\(model.tripCount) trips",
                 role: .status
             )
             let right = StatusBlock(
-                id: "\(id).duration",
+                id: "\(model.tripType.name.capitalized).duration",
                 primary: TimeUtility.formatter(model.totalDuration),
                 secondary: nil,
                 role: .value
             )
-            return StatusPage(id: "page.\(id)", left: left, center: center, right: right)
+            return StatusPage(id: "page.\(model.tripType.name.capitalized)", left: left, center: center, right: right, tripType: model.tripType)
         }
 
         // Pages 1-4 — Personal, Business, Custom, Unclassified
-        result.append(totalsPage(id: "personal", model: personalTrips))
-        result.append(totalsPage(id: "business", model: businessTrips))
-        result.append(totalsPage(id: "custom", model: customTrips))
-        result.append(totalsPage(id: "unsorted", model: unclassifiedTrips))
+        result.append(totalsPage(model: personalTrips))
+        result.append(totalsPage(model: businessTrips))
+        result.append(totalsPage(model: customTrips))
+        result.append(totalsPage(model: unclassifiedTrips))
 
         return result
     }
