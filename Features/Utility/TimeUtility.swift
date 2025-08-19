@@ -16,7 +16,7 @@ struct TimeUtility {
         if hours > 0 {
             // Over an hour
             if minutes > 0 && seconds > 0 {
-                return "\(hours)h \(minutes)min \(seconds)s"
+                return "\(hours)h \(minutes)min"
             } else if minutes > 0 {
                 return "\(hours)h \(minutes)min"
             } else {
