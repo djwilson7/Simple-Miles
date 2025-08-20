@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 struct MainView: View {
     @Environment(\.layout) private var layout
@@ -165,6 +166,9 @@ struct MainView: View {
                 .onChanged { value in
                     if isReview {
                         barDrag = value.translation
+                        if isDragging == false {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        }
                         isDragging = true
 
                         updateHighlight(
@@ -182,12 +186,13 @@ struct MainView: View {
                         // Commit sort if a target was highlighted at drop
                         if let selected = highlighted {
                             tripViewModel.classifyCurrentSegment(newType: selected)
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
                         }
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             barDrag = .zero
                             isDragging = false
                         }
-                        // Clear highlight after commit/reset
+                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                         highlighted = nil
                         currentHighlightedArea = 0
                     }

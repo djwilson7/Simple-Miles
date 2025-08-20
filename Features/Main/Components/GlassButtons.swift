@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SystemControlButton: View {
     @Environment(\.layout) private var layout
@@ -20,7 +21,10 @@ struct SystemControlButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            action()
+        }) {
             ZStack {
                 Color.white.opacity(0.001)
                     .clipShape(Circle())

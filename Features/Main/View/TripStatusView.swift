@@ -23,7 +23,7 @@ struct TripStatusView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .onLongPressGesture(minimumDuration: 0.4) {
                         if let type = page.tripType {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
                             viewModel.beginReview(for: type)
                         }
                     }
@@ -31,7 +31,7 @@ struct TripStatusView: View {
         }
         .frame(width: layout.width.pct(0.8), height: layout.height.pct(0.2))
         .tabViewStyle(.page(indexDisplayMode: .automatic))
-        .onChange(of: viewModel.currentPageIndex) { _, _ in UISelectionFeedbackGenerator().selectionChanged() }
+        .onChange(of: viewModel.currentPageIndex) { _, _ in UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
     }
 }
 

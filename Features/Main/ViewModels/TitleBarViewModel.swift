@@ -62,7 +62,9 @@ class TBViewModel: ObservableObject {
         case .settings:
             title = "Settings"
         case .review:
-            title = "Trip Sorting"
+            if let type = TripStatusViewModel.shared.reviewTripType {
+                title = "\(type.name.capitalized) Trips"
+            }
         }
     }
     
