@@ -6,10 +6,19 @@ final class TripSegmentStore {
     static let shared = TripSegmentStore()
     
     let tripTotalsUpdated = PassthroughSubject<Void, Never>()
-    
-    private let fileManager = FileManager.default
-    private let directory: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private let unsortedTripCountKey = "unsortedTripCount"
+
+    // SQLite-backed store facade
+    private let store: TripStoreSQLite = {
+        let codecs = TripStoreSQLite.Codecs(
+            encodeRaw: { try PathEncoder.encodeRaw(points: $0) },
+            encodeDisplay: { try PathEncoder.encodeDisplay(coords: $0) },
+            decodeDisplay: { try PathDecoder.decodeDisplay($0, codec: $1, version: $2) },
+            decodeRaw: { try PathDecoder.decodeRaw($0, codec: $1, version: $2) },
+            codecName: "lzfse",
+            encodingVersion: 1
+        )
+        return TripStoreSQLite(codecs: codecs)
+    }()
     
     init() {
         refreshAllTotals()
@@ -17,124 +26,93 @@ final class TripSegmentStore {
     
     /// Recompute and persist totals for all supported trip types, then emit `tripTotalsUpdated` once.
     func refreshAllTotals() {
-        let types = TripType.allCases
-        
-        struct Agg { var d: CLLocationDistance = 0; var t: TimeInterval = 0; var c: Int = 0 }
-        var results: [(TripType, Agg)] = []
-        results.reserveCapacity(types.count)
-        let lock = NSLock()
-        let group = DispatchGroup()
-        
-        for type in types {
-            group.enter()
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                defer { group.leave() }
-                guard let self else { return }
-                
-                let segments = self.loadAll(for: type)
-                var agg = Agg()
-                for seg in segments {
-                    agg.d += seg.distance
-                    agg.t += seg.duration
-                    agg.c += 1
-                }
-                
-                lock.lock()
-                results.append((type, agg))
-                lock.unlock()
-            }
-        }
-        
-        group.notify(queue: .main) { [weak self] in
-            guard let self else { return }
-            for (type, agg) in results {
-                var totals = TripTotalsStore(tripType: type)
-                totals.totalDistance = agg.d
-                totals.totalDuration = agg.t
-                totals.tripCount = agg.c
-                print("TripTotals for '\(type.name)': totalDistance=\(agg.d), totalDuration=\(agg.t), tripCount=\(agg.c)")
-            }
-            self.tripTotalsUpdated.send()
+        // Totals are now pulled on demand by listeners (e.g., SortedTripTotalsModel)
+        // Emit a single signal so subscribers can refetch from SQLite.
+        DispatchQueue.main.async { [weak self] in
+            self?.tripTotalsUpdated.send()
         }
     }
     
-    // MARK: - Persistence
+    /// Fetch aggregated totals for a given type directly from SQLite.
+    func fetchTotals(type: TripType) throws -> Totals {
+        try store.fetchTotals(type: type)
+    }
+    
+    // MARK: - Persistence (SQLite)
     
     func write(_ segment: TripSegment) {
-        let url = directory.appendingPathComponent(segment.fileName + ".json")
-        DispatchQueue.global(qos: .utility).async {
+        let end = segment.endTimestamp ?? segment.startTimestamp
+        let display = segment.pathCoordinates.map { $0.coordinate }
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
             do {
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                let data = try encoder.encode(segment)
-                try data.write(to: url)
-                print("TripSegmentStore: Saved segment to \(url.lastPathComponent)")
-                DispatchQueue.main.async {
-                    TripSegmentStore.shared.refreshAllTotals()
-                }
+                _ = try self.store.save(
+                    id: segment.dbID,
+                    type: segment.tripType,
+                    start: segment.startTimestamp,
+                    end: end,
+                    distanceMeters: segment.distance,
+                    durationSeconds: segment.duration,
+                    rawPoints: segment.pathCoordinates,
+                    displayCoordinates: display
+                )
+                DispatchQueue.main.async { self.tripTotalsUpdated.send() }
             } catch {
-                print("TripSegmentStore: Failed to save segment - \(error)")
+                print("TripSegmentStore: DB save failed —\(error)")
             }
         }
     }
     
     func delete(_ segment: TripSegment) {
-        let url = directory.appendingPathComponent(segment.fileName + ".json")
-        do {
-            if fileManager.fileExists(atPath: url.path) {
-                try fileManager.removeItem(at: url)
-                print("TripSegmentStore: Deleted segment file \(url.lastPathComponent)")
-                DispatchQueue.main.async {
-                    TripSegmentStore.shared.refreshAllTotals()
-                }
-            } else {
-                print("TripSegmentStore: File not found for deletion: \(url.lastPathComponent)")
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+            do {
+                try self.store.delete(id: segment.dbID)
+                DispatchQueue.main.async { self.tripTotalsUpdated.send() }
+            } catch {
+                print("TripSegmentStore: DB delete failed —\(error)")
             }
-        } catch {
-            print("TripSegmentStore: Failed to delete segment file - \(error)")
         }
     }
     
-    // MARK: - Loading
-    
-    func loadAll(for tripType: TripType) -> [TripSegment] {
-        guard let files = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return [] }
-        let prefix = tripType.urlPrefix
-        let segmentFiles = files.filter { $0.lastPathComponent.hasPrefix(prefix) }
-        return segmentFiles.compactMap { read(from: $0) }
-            .sorted(by: { $0.startTimestamp > $1.startTimestamp })
-    }
-    
-    func loadAllUnclassified() -> [TripSegment] {
-        let unclassifiedTripType = TripType.unclassified
-        return loadAll(for: unclassifiedTripType)
-    }
-    
-    func loadAllPersonal() -> [TripSegment] {
-        let personalTripType = TripType.personal
-        return loadAll(for: personalTripType)
-    }
-    
-    func loadAllBusiness() -> [TripSegment] {
-        let businessTripType = TripType.business
-        return loadAll(for: businessTripType)
-    }
-    
-    func loadAllCustom() -> [TripSegment] {
-        let customTripType = TripType.custom
-        return loadAll(for: customTripType)
-    }
-    
-    // MARK: - Helpers
-    
-    private func read(from url: URL) -> TripSegment? {
-        do {
-            let data = try Data(contentsOf: url)
-            let decoder = JSONDecoder()
-            return try decoder.decode(TripSegment.self, from: data)
-        } catch {
-            print("TripSegmentStore: Failed to read segment - \(error)")
-            return nil
+
+    /// Reclassify a trip to a new type (DB-backed). Emits `tripTotalsUpdated` on success.
+    func reclassify(tripID: String, to newType: TripType) {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+            do {
+                try self.store.reclassify(id: tripID, to: newType)
+                DispatchQueue.main.async { self.tripTotalsUpdated.send() }
+            } catch {
+                print("TripSegmentStore: DB reclassify failed —\(error)")
+            }
         }
+    }
+
+    /// Convenience overload for TripMeta
+    func reclassify(_ meta: TripMeta, to newType: TripType) {
+        reclassify(tripID: meta.id, to: newType)
+    }
+
+    // MARK: - Paging / Loading (SQLite)
+
+    /// Fetch a page of metadata for a given type, newest first. Use `afterTs` for keyset pagination.
+    func fetchPage(for type: TripType, afterTs: Int64? = nil, limit: Int = 50) -> [TripMeta] {
+        (try? store.fetchPage(type: type, afterTs: afterTs, limit: limit)) ?? []
+    }
+
+    /// Convenience to fetch the initial page for a type.
+    func fetchInitial(for type: TripType, limit: Int = 50) -> [TripMeta] {
+        fetchPage(for: type, afterTs: nil, limit: limit)
+    }
+
+    /// Load the DISPLAY polyline for a given trip id (fast, simplified path for map rendering).
+    func fetchDisplayPath(for tripID: String) -> [CLLocationCoordinate2D] {
+        (try? store.fetchDisplayPath(id: tripID)) ?? []
+    }
+
+    /// Load the RAW points for a given trip id (full fidelity; heavier).
+    func fetchRawPoints(for tripID: String) -> [LocationPoint] {
+        (try? store.fetchRawPoints(id: tripID)) ?? []
     }
 }

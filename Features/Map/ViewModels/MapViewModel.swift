@@ -59,7 +59,7 @@ final class MapViewModel: NSObject, ObservableObject {
     // Cached paths
     private var cachedCommitedPath: [LocationPoint] = []
     private var cachedNonCommitedPath: [LocationPoint] = []
-    private var cachedPreviousTripPath: [LocationPoint] = []
+    private var cachedPreviousTripPath: [CLLocationCoordinate2D] = []
 
     // Anchor for animated tail (last fixed live point)
     private var liveTailAnchor: LocationPoint?
@@ -271,7 +271,7 @@ final class MapViewModel: NSObject, ObservableObject {
         locationAnimationManager.updateAnchors(live: nil, staticLast: nil)
 
         // Prepare trip markers
-        previousTripPath = cachedPreviousTripPath.map(\.coordinate)
+        previousTripPath = cachedPreviousTripPath
         if !previousTripPath.isEmpty {
             tripMarkers = [previousTripPath.first!, previousTripPath.last!]
         } else {
@@ -280,7 +280,7 @@ final class MapViewModel: NSObject, ObservableObject {
 
         // CameraManager now publishes the review camera position, which is then animated by the desiredCameraPosition sink.
         cameraManager.updateOrientationMode(.reviewing)
-        cameraManager.setCameraToReview(path: cachedPreviousTripPath.map(\.coordinate))
+        cameraManager.setCameraToReview(path: cachedPreviousTripPath)
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -328,7 +328,7 @@ final class MapViewModel: NSObject, ObservableObject {
             commitedTracePath = []
             nonCommitedTraceStatic = []
             nonCommitedTraceTail = []
-            previousTripPath = self.cachedPreviousTripPath.map(\.coordinate)
+            previousTripPath = self.cachedPreviousTripPath
             if !previousTripPath.isEmpty {
                 tripMarkers = [previousTripPath.first!, previousTripPath.last!]
             } else {

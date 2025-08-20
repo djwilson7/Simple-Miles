@@ -31,7 +31,6 @@ final class RecordingManager {
         lastLocationPublisher = LocationManager.shared.$lastLocation
         
         bindPublishers()
-        loadAllFinalizedSegments()
     }
     
     
@@ -69,8 +68,6 @@ final class RecordingManager {
     @Published var commitedPath: [LocationPoint] = []
     /// Coordinates of the currently recording trip segment, representing the live path.
     @Published var nonCommitedPath: [LocationPoint] = []
-    /// All loaded trip segments, both committed and possibly unclassified.
-    @Published var allSegments: [TripSegment] = []
     
     
     // MARK: Internal State
@@ -163,11 +160,6 @@ final class RecordingManager {
                 }
             }
             .store(in: &cancellables)
-    }
-    
-    /// Loads all previously finalized trip segments from persistent store into memory.
-    private func loadAllFinalizedSegments() {
-        allSegments = tripSegmentStore.loadAllUnclassified()
     }
     
     /// Resets internal state and published properties to initial values,
@@ -336,7 +328,6 @@ final class RecordingManager {
         let minimumMeters = settings.minimumTripDistanceModel.value()! * 1609.34
         if previousSegment!.distance >= minimumMeters {
             previousSegment = persistAndDelete(previousSegment!)
-            loadAllFinalizedSegments()
         }
         reset()
     }

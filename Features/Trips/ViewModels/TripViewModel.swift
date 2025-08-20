@@ -5,8 +5,8 @@ import CoreLocation
 @MainActor final class TripViewModel: ObservableObject {
     static let shared = TripViewModel()
     
-    @Published var loadedSegments: [TripSegment] = []
-    @Published var selectedPath: [LocationPoint] = []
+    @Published var loadedSegments: [TripMeta] = []
+    @Published var selectedPath: [CLLocationCoordinate2D] = []
     @Published var currentTripIndex: Int = 0
 
     @Published var tripDistance: String? = nil
@@ -24,7 +24,7 @@ import CoreLocation
             .sink { [weak self] in
                 guard let self = self else { return }
                 if let t = TripStatusViewModel.shared.reviewTripType {
-                    self.loadedSegments = self.tripSegmentStore.loadAll(for: t)
+                    self.loadedSegments = self.tripSegmentStore.fetchInitial(for: t, limit: 50)
                     if self.loadedSegments.isEmpty {
                         self.setEmptyMessage(tripType: t)
                     } else {
@@ -42,7 +42,7 @@ import CoreLocation
                 guard let self = self else { return }
                 if state == .review {
                     if let t = TripStatusViewModel.shared.reviewTripType {
-                        self.loadedSegments = self.tripSegmentStore.loadAll(for: t)
+                        self.loadedSegments = self.tripSegmentStore.fetchInitial(for: t, limit: 50)
                         if self.loadedSegments.isEmpty {
                             self.setEmptyMessage(tripType: t)
                         } else {
@@ -64,17 +64,19 @@ import CoreLocation
         tripDuration = nil
         startDate = nil
         startTime = nil
-        selectedPath = []
+        selectedPath = [] // CLLocationCoordinate2D
     }
     
     func updateSelectedPath(index: Int) {
         emptyMessage = nil
         currentTripIndex = index
-        selectedPath = loadedSegments[index].pathCoordinates
-        tripDistance = DistanceUtility.formatter(meters: loadedSegments[index].distance)
-        tripDuration = TimeUtility.formatter(loadedSegments[index].duration)
-        startDate = TimeUtility.formatDate(loadedSegments[index].startTimestamp)
-        startTime = TimeUtility.formatTime(loadedSegments[index].startTimestamp)
+        let meta = loadedSegments[index]
+        selectedPath = tripSegmentStore.fetchDisplayPath(for: meta.id)
+        tripDistance = DistanceUtility.formatter(meters: meta.distanceM)
+        tripDuration = TimeUtility.formatter(meta.durationS)
+        let start = meta.startDate
+        startDate = TimeUtility.formatDate(start)
+        startTime = TimeUtility.formatTime(start)
     }
 
     func selectPreviousSegment() {
@@ -93,14 +95,30 @@ import CoreLocation
     
     func classifyCurrentSegment(newType: TripType) {
         guard loadedSegments.indices.contains(currentTripIndex) else { return }
-        var segment = loadedSegments[currentTripIndex]
-        tripSegmentStore.delete(segment)
-        segment.resortSegment(as: newType)
-        tripSegmentStore.write(segment)
+        let meta = loadedSegments[currentTripIndex]
+        let tripID = meta.id
+
+        // Kick off DB change (it dispatches to a background queue internally)
+        tripSegmentStore.reclassify(tripID: tripID, to: newType)
+
+        // Decide if it should stay visible on this page
+        if let reviewType = TripStatusViewModel.shared.reviewTripType, reviewType != newType {
+            // Remove from current list and adjust selection
+            loadedSegments.remove(at: currentTripIndex)
+            if loadedSegments.isEmpty {
+                setEmptyMessage(tripType: reviewType)
+            } else {
+                let newIndex = min(currentTripIndex, loadedSegments.count - 1)
+                updateSelectedPath(index: newIndex)
+            }
+        } else {
+            // Same page; just refresh visible stats/path
+            updateSelectedPath(index: currentTripIndex)
+        }
     }
     
     func resetReviewState() {
-        self.selectedPath = []
+        self.selectedPath = [] // CLLocationCoordinate2D
         self.currentTripIndex = 0
         self.tripDistance = nil
         self.tripDuration = nil
