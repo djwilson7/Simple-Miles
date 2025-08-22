@@ -47,6 +47,51 @@ enum TripsDAO {
         }
     }
 
+    /// Update-only: modifies an existing trips row by id. Fails if the row does not exist.
+    static func update(_ meta: TripMeta) throws {
+        try Database.shared.inWrite { db in
+            let sql = """
+            UPDATE trips SET
+              type=?,
+              start_ts=?,
+              end_ts=?,
+              distance_m=?,
+              duration_s=?,
+              bbox_min_lat=?,
+              bbox_min_lon=?,
+              bbox_max_lat=?,
+              bbox_max_lon=?,
+              size_bytes=?,
+              version=?
+            WHERE id=?;
+            """
+            var stmt: OpaquePointer?
+            defer { sqlite3_finalize(stmt) }
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            sqlite3_bind_int(stmt, 1, Int32(meta.type))
+            sqlite3_bind_int64(stmt, 2, meta.startTs)
+            sqlite3_bind_int64(stmt, 3, meta.endTs)
+            sqlite3_bind_double(stmt, 4, meta.distanceM)
+            sqlite3_bind_double(stmt, 5, meta.durationS)
+            sqlite3_bind_int(stmt, 6, meta.bboxMinLat)
+            sqlite3_bind_int(stmt, 7, meta.bboxMinLon)
+            sqlite3_bind_int(stmt, 8, meta.bboxMaxLat)
+            sqlite3_bind_int(stmt, 9, meta.bboxMaxLon)
+            sqlite3_bind_int64(stmt, 10, meta.sizeBytes)
+            sqlite3_bind_int(stmt, 11, Int32(meta.version))
+            bindText(stmt, 12, meta.id)
+            guard sqlite3_step(stmt) == SQLITE_DONE else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            // Optional: ensure a row was actually updated
+            if sqlite3_changes(db) == 0 {
+                throw DBError.sqlite(message: "No rows updated for id=\(meta.id)")
+            }
+        }
+    }
+
     static func reclassify(id: String, to newType: Int) throws {
         try Database.shared.inWrite { db in
             let sql = "UPDATE trips SET type=? WHERE id=?;"
@@ -146,6 +191,24 @@ enum TripsDAO {
             return Totals(totalDistanceM: dist, totalDurationS: dura, tripCount: count)
         }
     }
+
+    /// Count trips for a given type.
+    static func count(for type: Int) throws -> Int {
+        return try Database.shared.inRead { db in
+            let sql = "SELECT COUNT(*) FROM trips WHERE type=?;"
+            var stmt: OpaquePointer?
+            defer { sqlite3_finalize(stmt) }
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            sqlite3_bind_int(stmt, 1, Int32(type))
+            guard sqlite3_step(stmt) == SQLITE_ROW else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            return Int(sqlite3_column_int64(stmt, 0))
+        }
+    }
+    
 
     // MARK: - Row decoding & helpers
 

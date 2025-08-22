@@ -158,7 +158,7 @@ public class TripOptimizer {
             
             var optimizedCoordinates: [LocationPoint] = []
             let directionsSemaphore = DispatchSemaphore(value: 0)
-            var lastError: Error?
+            var lastError: Error? = nil
             
             for (outerIndex, subSegment) in subSegments.enumerated() {
                 // ---- Sub-segment \(outerIndex) (\(subSegment.count) pts) ---- (removed for brevity)
@@ -197,6 +197,9 @@ public class TripOptimizer {
                             optimizedCoordinates.append(contentsOf: routePoints)
                         } else {
                             optimizedCoordinates.append(contentsOf: Array(subSegment))
+                            if let error = error {
+                                lastError = error
+                            }
                         }
                         directionsSemaphore.signal()
                     }
@@ -535,3 +538,4 @@ private func clipFinalPath(
     print("clipFinalPath: no tail-window match — returning original")
     return optimized
 }
+

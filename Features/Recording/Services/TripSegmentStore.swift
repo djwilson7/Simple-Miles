@@ -10,10 +10,8 @@ final class TripSegmentStore {
     // SQLite-backed store facade
     private let store: TripStoreSQLite = {
         let codecs = TripStoreSQLite.Codecs(
-            encodeRaw: { try PathEncoder.encodeRaw(points: $0) },
             encodeDisplay: { try PathEncoder.encodeDisplay(coords: $0) },
             decodeDisplay: { try PathDecoder.decodeDisplay($0, codec: $1, version: $2) },
-            decodeRaw: { try PathDecoder.decodeRaw($0, codec: $1, version: $2) },
             codecName: "lzfse",
             encodingVersion: 1
         )
@@ -93,17 +91,40 @@ final class TripSegmentStore {
     func reclassify(_ meta: TripMeta, to newType: TripType) {
         reclassify(tripID: meta.id, to: newType)
     }
+    
+    /// Update an existing trip row using the segment's own dbID.
+    /// Mirrors the reclassify threading pattern: background do, main post.
+    func update(_ segment: TripSegment) {
+        let end = segment.endTimestamp ?? segment.startTimestamp
+        let display = segment.pathCoordinates.map { $0.coordinate }
 
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+            do {
+                try self.store.update(
+                    id: segment.dbID,
+                    type: segment.tripType,
+                    start: segment.startTimestamp,
+                    end: end,
+                    distanceMeters: segment.distance,
+                    durationSeconds: segment.duration,
+                    rawPoints: segment.pathCoordinates,
+                    displayCoordinates: display
+                )
+                DispatchQueue.main.async {
+                    self.tripTotalsUpdated.send()
+                }
+            } catch {
+                print("TripSegmentStore: DB update (by segment.dbID) failed —\(error)")
+            }
+        }
+    }
     // MARK: - Paging / Loading (SQLite)
 
-    /// Fetch a page of metadata for a given type, newest first. Use `afterTs` for keyset pagination.
-    func fetchPage(for type: TripType, afterTs: Int64? = nil, limit: Int = 50) -> [TripMeta] {
-        (try? store.fetchPage(type: type, afterTs: afterTs, limit: limit)) ?? []
-    }
-
-    /// Convenience to fetch the initial page for a type.
-    func fetchInitial(for type: TripType, limit: Int = 50) -> [TripMeta] {
-        fetchPage(for: type, afterTs: nil, limit: limit)
+    /// Fetch just the trip IDs for a single page (newest first). Cheap: avoids decoding meta.
+    func fetchTripIDPage(for type: TripType, afterTs: Int64? = nil, limit: Int = 50) -> [String] {
+        let page: [TripMeta] = (try? store.fetchPage(type: type, afterTs: afterTs, limit: limit)) ?? []
+        return page.map { $0.id }
     }
 
     /// Load the DISPLAY polyline for a given trip id (fast, simplified path for map rendering).
@@ -111,8 +132,12 @@ final class TripSegmentStore {
         (try? store.fetchDisplayPath(id: tripID)) ?? []
     }
 
-    /// Load the RAW points for a given trip id (full fidelity; heavier).
-    func fetchRawPoints(for tripID: String) -> [LocationPoint] {
-        (try? store.fetchRawPoints(id: tripID)) ?? []
+    /// Load TripMeta for a given trip id (no blobs). Thin façade over SQLite layer.
+    func fetchMeta(id: String) throws -> TripMeta {
+        try store.fetchMeta(id: id)
+    }
+    
+    func count(type: TripType) throws -> Int {
+        try store.count(type: type)
     }
 }

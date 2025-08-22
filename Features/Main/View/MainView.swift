@@ -19,7 +19,7 @@ struct MainView: View {
     
     private var isReview: Bool { MainStateDriver.shared.mainState == .review }
     private var canGoPrev: Bool { TripViewModel.shared.currentTripIndex > 0 }
-    private var canGoNext: Bool { TripViewModel.shared.currentTripIndex < TripViewModel.shared.loadedSegments.count - 1 }
+    private var canGoNext: Bool { TripViewModel.shared.currentTripIndex < TripViewModel.shared.tripCount - 1 }
     
     private let tripViewModel = TripViewModel.shared
     

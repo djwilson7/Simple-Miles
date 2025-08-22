@@ -48,32 +48,50 @@ struct TitleBarView: View {
         ZStack {
             RoundedRectangle(cornerRadius: layout.radii.pill)
                 .fill(Color.clear)
-            
-            ZStack {
+
+            TimelineView(.animation) { _ in
                 let start: CGFloat = 0.75
-                let rawEnd = start + viewModel.sweepProgress
-                
-                if rawEnd <= 1.0 {
-                    RoundedRectangle(cornerRadius: layout.radii.pill)
-                        .trim(from: start, to: rawEnd)
-                        .stroke(Color.orange.opacity(viewModel.travelState == .paused ? 0.9 : 0), lineWidth: 3)
-                } else {
-                    RoundedRectangle(cornerRadius: layout.radii.pill)
-                        .trim(from: start, to: 1.0)
-                        .stroke(Color.orange.opacity(viewModel.travelState == .paused ? 0.9 : 0), lineWidth: 3)
-                    
-                    RoundedRectangle(cornerRadius: layout.radii.pill)
-                        .trim(from: 0.0, to: rawEnd - 1.0)
-                        .stroke(Color.orange.opacity(viewModel.travelState == .paused ? 0.9 : 0), lineWidth: 3)
+                let isPaused = viewModel.travelState == .paused
+                if isPaused, let snap = viewModel.pauseSnapshot {
+                    let remaining = max(0, snap.end.timeIntervalSinceNow)
+                    let total = max(0.001, snap.total) // avoid divide-by-zero
+                    let progress = max(0, min(1, 1 - (remaining / total)))
+                    let rawEnd = start + CGFloat(progress)
+
+                    ZStack {
+                        if rawEnd <= 1.0 {
+                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                                .trim(from: start, to: rawEnd)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+                        } else {
+                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                                .trim(from: start, to: 1.0)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+
+                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                                .trim(from: 0.0, to: rawEnd - 1.0)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+                        }
+                    }
                 }
             }
-            
-            HStack {
-                Spacer()
-                Text(viewModel.title)
-                    .foregroundColor(AppTheme.Colors.primaryText)
-                    .font(.headline).bold().monospaced()
-                Spacer()
+
+            TimelineView(.animation) { _ in
+                HStack {
+                    Spacer()
+                    if viewModel.travelState == .paused && viewModel.state == .main, let snap = viewModel.pauseSnapshot {
+                        let remaining = max(0, snap.end.timeIntervalSinceNow)
+                        Text(TimeUtility.formatter(remaining))
+                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .font(.headline).bold().monospaced()
+                            .id(snap.id) // reset if snapshot changes
+                    } else {
+                        Text(viewModel.title)
+                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .font(.headline).bold().monospaced()
+                    }
+                    Spacer()
+                }
             }
         }
         .frame(width: layout.elementWidth, height: layout.titleHeight)

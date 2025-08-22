@@ -2,17 +2,23 @@ import Foundation
 import Combine
 import CoreGraphics
 
+struct PauseTimerSnapshot: Equatable, Identifiable, Codable {
+    let id: UUID
+    let start: Date
+    let end: Date
+    let total: TimeInterval
+}
+
 @MainActor
 class TBViewModel: ObservableObject {
     @Published var travelState: TravelState = TravelStateManager.shared.state
     @Published var state: MainModes = .main
     @Published var title: String = "Simple Miles"
     @Published var isInMainState: Bool = true
-    @Published var sweepProgress: CGFloat = 0
+    @Published var pauseSnapshot: PauseTimerSnapshot? = nil
 
     private var cancellables = Set<AnyCancellable>()
-    private var pauseRemainingTime: TimeInterval? = nil
-    private var totalPauseDuration: TimeInterval? = nil
+    private var latestPauseTotal: TimeInterval? = nil
 
     init() {
         TravelStateManager.shared.$state
@@ -20,24 +26,33 @@ class TBViewModel: ObservableObject {
             .sink { [weak self] newState in
                 self?.travelState = newState
                 self?.updateTitle()
-            }
-            .store(in: &cancellables)
-        
-        TravelStateManager.shared.$pauseRemainingTime
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] remaining in
-                self?.pauseRemainingTime = remaining
-                self?.updateSweepProgress()
-                self?.updateTitle()
+                guard let self = self else { return }
+                switch newState {
+                case .paused:
+                    // Build a fresh snapshot from now using the latest known total
+                    if let total = self.latestPauseTotal, total > 0 {
+                        let start = Date()
+                        self.pauseSnapshot = PauseTimerSnapshot(id: UUID(), start: start, end: start.addingTimeInterval(total), total: total)
+                    } else {
+                        self.pauseSnapshot = nil
+                    }
+                default:
+                    // Leaving paused: clear snapshot
+                    self.pauseSnapshot = nil
+                }
             }
             .store(in: &cancellables)
         
         TravelStateManager.shared.$pauseTotalDuration
             .receive(on: DispatchQueue.main)
             .sink { [weak self] total in
-                self?.totalPauseDuration = total
-                self?.updateSweepProgress()
-                self?.updateTitle()
+                guard let self = self else { return }
+                self.latestPauseTotal = total
+                // If we are currently paused and have a snapshot, extend by pushing end forward (keep start constant)
+                if self.travelState == .paused, let start = self.pauseSnapshot?.start, let total = total, total > 0 {
+                    self.pauseSnapshot = PauseTimerSnapshot(id: UUID(), start: start, end: start.addingTimeInterval(total), total: total)
+                }
+                self.updateTitle()
             }
             .store(in: &cancellables)
 
@@ -54,8 +69,9 @@ class TBViewModel: ObservableObject {
     private func updateTitle() {
         switch state {
         case .main:
-            if travelState == .paused {
-                title = "\(TimeUtility.formatter(pauseRemainingTime ?? 0))"
+            if travelState == .paused, let snap = pauseSnapshot {
+                let remaining = max(0, snap.end.timeIntervalSinceNow)
+                title = "\(TimeUtility.formatter(remaining))"
             } else {
                 title = "Simple Miles"
             }
@@ -67,18 +83,6 @@ class TBViewModel: ObservableObject {
             }
         }
     }
-    
-    
-
-    private func updateSweepProgress() {
-        if let remaining = pauseRemainingTime,
-           let total = totalPauseDuration,
-           total > 0 {
-            sweepProgress = CGFloat(1 - (remaining / total))
-        } else {
-            sweepProgress = 0
-        }
-    }
 
     func backButtonPressed() {
         MainStateDriver.shared.mainState = .main // when we tap back button we set main state back to main
@@ -88,4 +92,3 @@ class TBViewModel: ObservableObject {
         TravelStateManager.shared.extendPauseTimer()
     }
 }
-

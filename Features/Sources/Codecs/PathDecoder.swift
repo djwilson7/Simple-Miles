@@ -30,6 +30,8 @@ enum PathDecodeError: Error, LocalizedError {
     }
 }
 
+
+
 /// Mirror of PathEncoder; decodes RAW (full LocationPoint) and DISPLAY (coords only) payloads.
 public enum PathDecoder {
 
@@ -58,65 +60,7 @@ public enum PathDecoder {
         return coords
     }
 
-    /// Decode a RAW blob to full LocationPoint series (coord + timestamp + speed + course).
-    public static func decodeRaw(_ bytes: Data, codec: String, version: Int) throws -> [LocationPoint] {
-        let h = try Header(bytes)
-        guard version == h.version else { throw PathDecodeError.unsupportedVersion(version) }
-        let body = try decompressBody(bytes, headerSize: h.headerSize, codec: codec)
-        var r = VarintReader(body)
-
-        // Sanity flags
-        guard h.hasTime else { throw PathDecodeError.corrupt }
-
-        var points: [LocationPoint] = []
-        points.reserveCapacity(Int(h.count))
-
-        // Anchors
-        var lat = h.lat0
-        var lon = h.lon0
-        var t   = h.t0 ?? 0
-        var s   = Int(h.s0 ?? 0) // cm/s
-        var c   = Int(h.c0 ?? 0) // centi-deg 0..35999
-
-        // First point from anchors
-        let firstCoord = CLLocationCoordinate2D(latitude: toDegrees(lat), longitude: toDegrees(lon))
-        let firstLoc = CLLocation(
-            coordinate: firstCoord,
-            altitude: 0,                               // default
-            horizontalAccuracy: kCLLocationAccuracyNearestTenMeters, // default placeholder
-            verticalAccuracy: kCLLocationAccuracyNearestTenMeters,   // default placeholder
-            course: Double(c) / 100.0,
-            speed: Double(s) / 100.0,
-            timestamp: Date(timeIntervalSince1970: TimeInterval(t) / 1000.0)
-        )
-        points.append(LocationPoint(firstLoc))
-
-        // Subsequent points
-        if h.count > 1 {
-            for _ in 1..<h.count {
-                lat &+= Int32(truncatingIfNeeded: r.readZigZag())
-                lon &+= Int32(truncatingIfNeeded: r.readZigZag())
-                if h.hasTime { t &+= Int64(r.readUnsigned()) }
-                if h.hasSpeed { s &+= Int(r.readZigZag()) }
-                if h.hasCourse {
-                    let delta = Int(r.readZigZag())
-                    c = wrapAngleCenti(c + delta)
-                }
-                let coord = CLLocationCoordinate2D(latitude: toDegrees(lat), longitude: toDegrees(lon))
-                let loc = CLLocation(
-                    coordinate: coord,
-                    altitude: 0,                               // default
-                    horizontalAccuracy: kCLLocationAccuracyNearestTenMeters, // default placeholder
-                    verticalAccuracy: kCLLocationAccuracyNearestTenMeters,   // default placeholder
-                    course: Double(c) / 100.0,
-                    speed: Double(s) / 100.0,
-                    timestamp: Date(timeIntervalSince1970: TimeInterval(t) / 1000.0)
-                )
-                points.append(LocationPoint(loc))
-            }
-        }
-        return points
-    }
+   
 
     // MARK: - Internals
 

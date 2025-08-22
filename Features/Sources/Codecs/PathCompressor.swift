@@ -97,3 +97,27 @@ public enum PathCompressor {
         }
     }
 }
+
+// MARK: - Persistence helpers for Codec
+public extension PathCompressor.Codec {
+    /// Initialize from a stored/raw string (e.g., values coming from SQLite)
+    /// Unrecognized or nil strings default to `.none` for safety/back-compat.
+    init(raw: String?) {
+        switch raw?.lowercased() {
+        case "lzfse": self = .lzfse
+        case "lz4":   self = .lz4
+        case "none":  fallthrough
+        case nil:      self = .none
+        default:       self = .none
+        }
+    }
+
+    /// Stable string value to persist alongside the blob in storage
+    var raw: String {
+        switch self {
+        case .lzfse: return "lzfse"
+        case .lz4:   return "lz4"
+        case .none:  return "none"
+        }
+    }
+}

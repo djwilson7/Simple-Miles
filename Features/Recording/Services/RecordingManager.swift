@@ -5,23 +5,21 @@ import SwiftUI
 
 /// Singleton responsible for managing trip recording lifecycle, handling travel state transitions,
 /// and aggregating trip data such as distance, duration, and segments.
-/// 
+///
 /// It listens to location and travel state updates, manages live and committed trip segments,
-/// and provides interpolated paths for UI updates.  
-/// 
+/// and provides interpolated paths for UI updates.
+///
 /// Usage:
 /// 1. Access the shared instance via `RecordingManager.shared`.
 /// 2. Call `initialize()` once to bind publishers and load existing segments.
 /// 3. Observe published properties to reflect recording status and trip data.
 /// 4. TravelState changes (traveling, paused, idle) drive the recording lifecycle internally.
 final class RecordingManager {
-    
     // MARK: Singleton & Initialization
     /// Singleton instance for centralized recording management.
-    /// 
+    ///
     /// Call `initialize()` once after accessing this instance to set up publishers and load saved data.
-    
-    /// Shared singleton instance of `RecordingManager`.
+    /// Shared singleton instance of `RecordingManager`
     static let shared = RecordingManager()
     
     /// Private initializer to enforce singleton usage.
@@ -29,52 +27,58 @@ final class RecordingManager {
         travelStatePublisher = TravelStateManager.shared.$state
         currentLocationPublisher = LocationManager.shared.$currentLocation
         lastLocationPublisher = LocationManager.shared.$lastLocation
-        
         bindPublishers()
     }
     
-    
     // MARK: Dependencies
     /// External dependencies and publishers for location, heading, and travel state updates.
-    
     /// Publisher providing compass heading updates from LocationManager.
     private let compassHeadingPublisher = LocationManager.shared.$compassHeading
+    
     /// Publisher providing current travel state updates (e.g. traveling, paused, idle).
     private var travelStatePublisher: Published<TravelState>.Publisher!
+    
     /// Publisher providing the current GPS location.
     private var currentLocationPublisher: Published<LocationPoint?>.Publisher!
+    
     /// Publisher providing the previous GPS location.
     private var lastLocationPublisher: Published<LocationPoint?>.Publisher!
+    
     /// Manages persistence of trip segments on disk or database.
     private let tripSegmentStore = TripSegmentStore.shared
+    
     /// Shared application settings, including minimum trip distance threshold.
     private let settings = AppSettings.shared
     
-    
     // MARK: Published Properties
     /// Publicly observable properties representing trip recording state and aggregated data.
-    
     /// Total distance (meters) from all committed (finalized) trip segments.
     @Published var tripDistanceCommitted: CLLocationDistance = 0
+    
     /// Distance (meters) of the current live trip segment during recording.
     @Published var tripDistanceLive: CLLocationDistance = 0
+    
     /// Total duration (seconds) from all committed (finalized) trip segments.
     @Published var tripDurationCommitted: TimeInterval = 0
+    
     /// Duration (seconds) of the current live trip segment during recording.
     @Published var tripDurationLive: TimeInterval = 0
+    
     /// Flag indicating whether recording is currently active (traveling or paused).
     @Published var isRecording: Bool = false
+    
     /// Coordinates aggregated from all finalized trip segments, representing the committed path.
     @Published var commitedPath: [LocationPoint] = []
+    
     /// Coordinates of the currently recording trip segment, representing the live path.
     @Published var nonCommitedPath: [LocationPoint] = []
     
     
     // MARK: Internal State
     /// Internal state variables to track compass heading, timing, location, and current segments.
-    
     /// Current compass heading (degrees) from LocationManager.
     private var compassHeading: CLLocationDirection?
+    
     /// Buffer to accumulate compass headings received while the recording is paused.
     private var pausedHeadingBuffer: [CLLocationDirection] = []
     
@@ -83,24 +87,30 @@ final class RecordingManager {
     
     /// Set of cancellables managing subscriptions to Combine publishers.
     private var cancellables = Set<AnyCancellable>()
+    
     /// Current GPS location received from LocationManager.
     private var currentLocation: LocationPoint?
+    
     /// Last known GPS location received from LocationManager.
     private var lastLocation: LocationPoint?
+    
     /// Tracks the previous travel state to detect transitions.
     private var previousState: TravelState?
+    
     /// Timer subscription updating the live trip duration every second.
     private var durationTimer: AnyCancellable?
     
     /// TripSegment currently being recorded live.
     private var liveSegment: TripSegment?
+    
     /// Most recent finalized or paused trip segment.
     private var previousSegment: TripSegment?
+    
     /// TripSegment representing the paused state, capturing the pause duration and path.
     private var pausedSegment: TripSegment?
+    
     /// Location anchor point where the trip was paused.
     private var pauseAnchor: LocationPoint?
-    
     
     // MARK: Public API
     /// Interpolates intermediate coordinates between two geographic points.
@@ -223,7 +233,7 @@ final class RecordingManager {
     }
     
     /// Called when travel state changes to `.traveling`.
-    /// 
+    ///
     /// Starts or resumes recording a live trip segment. If resuming from paused,
     /// merges paused segment with previous segment if appropriate. Writes segments to persistence.
     private func transitionToTraveling() {
@@ -237,14 +247,6 @@ final class RecordingManager {
         if currentLocation != nil {
             liveSegment!.append(location: currentLocation!)
         }
-        
-        if previousSegment != nil {
-            tripSegmentStore.write(previousSegment!)
-        }
-        
-        if liveSegment != nil {
-            tripSegmentStore.write(liveSegment!)
-        }
     }
     
     /// Handles the special case transition from `.paused` to `.traveling`.
@@ -257,12 +259,17 @@ final class RecordingManager {
         
         if PauseSegmentClassifier.shouldMerge(pausedSegment!, anchorHeading: pauseAnchor!.course, headingBuffer: pausedHeadingBuffer) {
             previousSegment!.merge(with: pausedSegment!)
-            tripSegmentStore.write(previousSegment!)
+            tripSegmentStore.update(previousSegment!)
             commitedPath = previousSegment!.pathCoordinates
         } else {
             let minimumMeters = settings.minimumTripDistanceModel.value()! * 1609.34
             if previousSegment!.distance >= minimumMeters {
-                previousSegment = persistAndDelete(previousSegment!)
+                finalizeInMemory(previousSegment!) //finalize previous segement
+                previousSegment = pausedSegment //replace old previous
+                tripSegmentStore.write(previousSegment!) //write a new previous file
+            } else {
+                tripSegmentStore.delete(previousSegment!)
+                previousSegment = nil
             }
             commitedPath = []
         }
@@ -270,7 +277,6 @@ final class RecordingManager {
         tripDistanceCommitted = previousSegment?.distance ?? 0
         tripDurationCommitted = previousSegment?.duration ?? 0
         pausedHeadingBuffer.removeAll()
-        pausedSegment = nil
         pauseAnchor = nil
     }
    
@@ -287,11 +293,12 @@ final class RecordingManager {
         
         if previousSegment != nil {
             previousSegment?.merge(with: liveSegment!)
+            tripSegmentStore.update(previousSegment!)
         } else {
             previousSegment = liveSegment
+            commitedPath = previousSegment!.pathCoordinates
+            tripSegmentStore.write(previousSegment!)
         }
-        commitedPath = previousSegment!.pathCoordinates
-        tripSegmentStore.write(previousSegment!)
         nonCommitedPath = []
         
         tripDurationCommitted = previousSegment!.duration
@@ -327,7 +334,9 @@ final class RecordingManager {
         
         let minimumMeters = settings.minimumTripDistanceModel.value()! * 1609.34
         if previousSegment!.distance >= minimumMeters {
-            previousSegment = persistAndDelete(previousSegment!)
+            finalizeInMemory(previousSegment!)
+        } else {
+            tripSegmentStore.delete(previousSegment!)
         }
         reset()
     }
@@ -339,29 +348,18 @@ final class RecordingManager {
     ///
     /// - Parameter segment: The trip segment to finalize and delete.
     /// - Returns: Always returns nil.
-    private func persistAndDelete(_ segment: TripSegment) -> TripSegment? {
-        finalizeAndWrite(segment)
-        tripSegmentStore.delete(segment)
-        return nil
-    }
-    
-    /// Finalizes a trip segment by setting its end timestamp and writes it to persistent storage.
-    ///
-    /// - Parameter segment: The trip segment to finalize and write.
-    private func finalizeAndWrite(_ segment: TripSegment?) {
+    private func finalizeInMemory(_ segment: TripSegment?) {
         guard var segment = segment else { return }
         segment.finalize(at: Date())
         TripOptimizer.optimizeTrip(segment: segment) { result in
             switch result {
             case .success(let optimizedCoordinates):
                 segment.pathCoordinates = optimizedCoordinates
-                self.tripSegmentStore.write(segment)
+                self.tripSegmentStore.update(segment)
             case .failure(let error):
                 print("Trip optimization failed with error: \(error)")
-                self.tripSegmentStore.write(segment)
+                self.tripSegmentStore.update(segment)
             }
         }
     }
-
-    
 }

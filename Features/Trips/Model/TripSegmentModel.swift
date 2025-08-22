@@ -18,7 +18,7 @@ public struct TripSegment {
         self.pathCoordinates = []
         self.distance = 0
         self.duration = 0
-        self.tripType = .unclassified
+        self.tripType = .unsorted
     }
 
     // MARK: - Mutations

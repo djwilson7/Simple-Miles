@@ -1,4 +1,3 @@
-
 //  PathEncoder.swift
 //  SimpleMiles
 //
@@ -35,94 +34,9 @@ public enum PathEncoder {
 
     // MARK: - Public API
 
-    /// Encode full-fidelity RAW points (coord + timestamp + speed + course)
-    public static func encodeRaw(points: [LocationPoint]) throws -> Data {
-        guard !points.isEmpty else { return Data() }
-        let hasSpeed = true, hasCourse = true, hasTime = true
-
-        // Quantize anchors
-        let first = points[0]
-        let lat0 = toMicro(first.coordinate.latitude)
-        let lon0 = toMicro(first.coordinate.longitude)
-        let t0   = toMillis(first.timestamp)
-        let s0   = toCentimetersPerSecond(first.speed)
-        let c0   = toCentiDegrees(first.course)
-
-        // BBox (compute from coords)
-        let bbox = bboxFrom(points.map { $0.coordinate })
-
-        // Body writer (uncompressed varint stream)
-        var body = VarintWriter()
-        var prevLat = lat0
-        var prevLon = lon0
-        var prevT   = t0
-        var prevS   = s0
-        var prevC   = c0
-
-        for p in points.dropFirst() {
-            let lat = toMicro(p.coordinate.latitude)
-            let lon = toMicro(p.coordinate.longitude)
-            let Δlat = lat &- prevLat
-            let Δlon = lon &- prevLon
-            body.writeZigZag(Int64(Δlat))
-            body.writeZigZag(Int64(Δlon))
-            if hasTime {
-                let t = toMillis(p.timestamp)
-                let Δt = t &- prevT // non-negative
-                body.writeUnsigned(UInt64(Δt))
-                prevT = t
-            }
-            if hasSpeed {
-                let s = toCentimetersPerSecond(p.speed)
-                let Δs = Int64(s) - Int64(prevS)
-                body.writeZigZag(Δs)
-                prevS = s
-            }
-            if hasCourse {
-                let c = toCentiDegrees(p.course)
-                let Δc = shortestAngularDeltaCenti(prev: Int(prevC), next: Int(c))
-                body.writeZigZag(Int64(Δc))
-                prevC = c
-            }
-            prevLat = lat
-            prevLon = lon
-        }
-
-        // Header (uncompressed)
-        var header = Data()
-        header.append(contentsOf: [0x53, 0x4D, 0x50, 0x54]) // "SMPT"
-        header.append(1) // version
-        var flags: UInt8 = 0
-        if hasSpeed { flags |= 0b00000001 }
-        if hasCourse { flags |= 0b00000010 }
-        if hasTime { flags |= 0b00000100 }
-        header.append(flags)
-        header.append(0) // reserved
-        header.appendUInt32(UInt32(points.count))
-        header.appendInt32(lat0)
-        header.appendInt32(lon0)
-        if hasTime { header.appendInt64(t0) }
-        if hasSpeed { header.appendUInt16(UInt16(clamping: Int(s0))) }
-        if hasCourse { header.appendUInt16(UInt16(clamping: Int(c0))) }
-        header.appendInt32(bbox.minLat)
-        header.appendInt32(bbox.minLon)
-        header.appendInt32(bbox.maxLat)
-        header.appendInt32(bbox.maxLon)
-
-        // Compress body with LZFSE
-        let compressedBody = compressLZFSE(body.data)
-
-        // Payload = header + compressed body
-        var payload = Data(capacity: header.count + compressedBody.count)
-        payload.append(header)
-        payload.append(compressedBody)
-        return payload
-    }
-
     /// Encode DISPLAY path (coordinates only). Timestamps/speed/course omitted.
     public static func encodeDisplay(coords: [CLLocationCoordinate2D]) throws -> Data {
         guard !coords.isEmpty else { return Data() }
-        let hasSpeed = false, hasCourse = false, hasTime = false
 
         let first = coords[0]
         let lat0 = toMicro(first.latitude)
@@ -144,10 +58,7 @@ public enum PathEncoder {
         var header = Data()
         header.append(contentsOf: [0x53, 0x4D, 0x50, 0x54]) // "SMPT"
         header.append(1) // version
-        var flags: UInt8 = 0
-        if hasSpeed { flags |= 0b00000001 }
-        if hasCourse { flags |= 0b00000010 }
-        if hasTime { flags |= 0b00000100 }
+        let flags: UInt8 = 0
         header.append(flags)
         header.append(0)
         header.appendUInt32(UInt32(coords.count))

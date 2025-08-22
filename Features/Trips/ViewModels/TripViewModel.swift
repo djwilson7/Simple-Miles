@@ -5,9 +5,12 @@ import CoreLocation
 @MainActor final class TripViewModel: ObservableObject {
     static let shared = TripViewModel()
     
-    @Published var loadedSegments: [TripMeta] = []
+    @Published var tripCount: Int = 0                // total trips for current review type
     @Published var selectedPath: [CLLocationCoordinate2D] = []
     @Published var currentTripIndex: Int = 0
+
+    // Paged IDs cache: pageIndex -> [tripID]
+    private var idPages: [Int: [String]] = [:]
 
     @Published var tripDistance: String? = nil
     @Published var tripDuration: String? = nil
@@ -17,6 +20,7 @@ import CoreLocation
     
     private var cancellables = Set<AnyCancellable>()
     private let tripSegmentStore = TripSegmentStore.shared
+    private let pageSize: Int = 10
     
     private init() {
         tripSegmentStore.tripTotalsUpdated
@@ -24,11 +28,20 @@ import CoreLocation
             .sink { [weak self] in
                 guard let self = self else { return }
                 if let t = TripStatusViewModel.shared.reviewTripType {
-                    self.loadedSegments = self.tripSegmentStore.fetchInitial(for: t, limit: 50)
-                    if self.loadedSegments.isEmpty {
+                    let oldIndex = self.currentTripIndex
+                    let total = (try? self.tripSegmentStore.count(type: t)) ?? 0
+                    self.tripCount = total
+                    self.idPages.removeAll()
+                    if total == 0 {
+                        self.currentTripIndex = 0
                         self.setEmptyMessage(tripType: t)
                     } else {
-                        self.updateSelectedPath(index: 0)
+                        // Preserve current index when possible; clamp to last item if needed
+                        let preserved = min(max(0, oldIndex), total - 1)
+                        self.currentTripIndex = preserved
+                        let page = preserved / self.pageSize
+                        self.ensurePageLoaded(page, for: t)
+                        self.updateSelectedPath(index: preserved)
                     }
                 } else {
                     return
@@ -42,10 +55,14 @@ import CoreLocation
                 guard let self = self else { return }
                 if state == .review {
                     if let t = TripStatusViewModel.shared.reviewTripType {
-                        self.loadedSegments = self.tripSegmentStore.fetchInitial(for: t, limit: 50)
-                        if self.loadedSegments.isEmpty {
+                        let total = (try? self.tripSegmentStore.count(type: t)) ?? 0
+                        self.tripCount = total
+                        self.currentTripIndex = 0
+                        self.idPages.removeAll()
+                        if total == 0 {
                             self.setEmptyMessage(tripType: t)
                         } else {
+                            self.ensurePageLoaded(0, for: t)
                             self.updateSelectedPath(index: 0)
                         }
                     } else {
@@ -58,6 +75,23 @@ import CoreLocation
             .store(in: &cancellables)
     }
     
+    /// Ensure a specific page of IDs is loaded into the cache.
+    private func ensurePageLoaded(_ pageIndex: Int, for type: TripType) {
+        if idPages[pageIndex] != nil { return }
+
+        var afterTs: Int64? = nil
+        if pageIndex > 0 {
+            // Ensure previous page exists to derive the cursor
+            ensurePageLoaded(pageIndex - 1, for: type)
+            guard let prevIDs = idPages[pageIndex - 1],
+                  let lastID = prevIDs.last,
+                  let lastMeta = try? tripSegmentStore.fetchMeta(id: lastID) else { return }
+            afterTs = lastMeta.startTs
+        }
+        let ids = tripSegmentStore.fetchTripIDPage(for: type, afterTs: afterTs, limit: pageSize)
+        idPages[pageIndex] = ids
+    }
+
     func setEmptyMessage(tripType: TripType) {
         emptyMessage = "No \(tripType.name) trips"
         tripDistance = nil
@@ -68,53 +102,79 @@ import CoreLocation
     }
     
     func updateSelectedPath(index: Int) {
+        guard let reviewType = TripStatusViewModel.shared.reviewTripType else { return }
+        guard index >= 0, index < tripCount else { return }
         emptyMessage = nil
         currentTripIndex = index
-        let meta = loadedSegments[index]
-        selectedPath = tripSegmentStore.fetchDisplayPath(for: meta.id)
-        tripDistance = DistanceUtility.formatter(meters: meta.distanceM)
-        tripDuration = TimeUtility.formatter(meta.durationS)
-        let start = meta.startDate
-        startDate = TimeUtility.formatDate(start)
-        startTime = TimeUtility.formatTime(start)
+
+        let page = index / pageSize
+        let inner = index % pageSize
+        ensurePageLoaded(page, for: reviewType)
+        guard let pageIDs = idPages[page], inner < pageIDs.count else { return }
+        let tripID = pageIDs[inner]
+
+        let tripSegmentStore = self.tripSegmentStore
+        Task {
+            async let metaTask: TripMeta? = { try? tripSegmentStore.fetchMeta(id: tripID) }()
+            async let pathTask: [CLLocationCoordinate2D] = { tripSegmentStore.fetchDisplayPath(for: tripID) }()
+            let meta = await metaTask
+            let path = await pathTask
+            await MainActor.run {
+                self.selectedPath = path
+                if let meta = meta {
+                    self.tripDistance = DistanceUtility.formatter(meters: meta.distanceM)
+                    self.tripDuration = TimeUtility.formatter(meta.durationS)
+                    let start = meta.startDate
+                    self.startDate = TimeUtility.formatDate(start)
+                    self.startTime = TimeUtility.formatTime(start)
+                } else {
+                    self.tripDistance = nil
+                    self.tripDuration = nil
+                    self.startDate = nil
+                    self.startTime = nil
+                }
+            }
+        }
     }
 
     func selectPreviousSegment() {
-        if currentTripIndex > 0 {
-            currentTripIndex -= 1
-            updateSelectedPath(index: currentTripIndex)
-        }
+        if currentTripIndex > 0 { updateSelectedPath(index: currentTripIndex - 1) }
     }
 
     func selectNextSegment() {
-        if currentTripIndex + 1 < loadedSegments.count {
-            currentTripIndex += 1
-            updateSelectedPath(index: currentTripIndex)
-        }
+        if currentTripIndex + 1 < tripCount { updateSelectedPath(index: currentTripIndex + 1) }
     }
     
     func classifyCurrentSegment(newType: TripType) {
-        guard loadedSegments.indices.contains(currentTripIndex) else { return }
-        let meta = loadedSegments[currentTripIndex]
-        let tripID = meta.id
+        guard let reviewType = TripStatusViewModel.shared.reviewTripType else { return }
+        guard currentTripIndex >= 0, currentTripIndex < tripCount else { return }
+        let page = currentTripIndex / pageSize
+        let inner = currentTripIndex % pageSize
+        ensurePageLoaded(page, for: reviewType)
+        guard let pageIDs = idPages[page], inner < pageIDs.count else { return }
+        let tripID = pageIDs[inner]
 
-        // Kick off DB change (it dispatches to a background queue internally)
+        // No-op if type is unchanged
+        if let meta = try? tripSegmentStore.fetchMeta(id: tripID), meta.type == newType.dbValue {
+            return
+        }
+
+        // Kick off DB change
         tripSegmentStore.reclassify(tripID: tripID, to: newType)
 
-        // Decide if it should stay visible on this page
-        if let reviewType = TripStatusViewModel.shared.reviewTripType, reviewType != newType {
-            // Remove from current list and adjust selection
-            loadedSegments.remove(at: currentTripIndex)
-            if loadedSegments.isEmpty {
-                setEmptyMessage(tripType: reviewType)
-            } else {
-                let newIndex = min(currentTripIndex, loadedSegments.count - 1)
-                updateSelectedPath(index: newIndex)
-            }
-        } else {
-            // Same page; just refresh visible stats/path
-            updateSelectedPath(index: currentTripIndex)
+        // Refresh count for the current review type, then decide the next index.
+        let newTotal = (try? tripSegmentStore.count(type: reviewType)) ?? max(0, tripCount - 1)
+        tripCount = newTotal
+        idPages.removeAll() // force fresh paging so removed item doesn't linger
+
+        if newTotal == 0 {
+            setEmptyMessage(tripType: reviewType)
+            return
         }
+
+        // If we removed the last item, clamp to the new last index; otherwise stay at the same index (next item slides into this slot).
+        let nextIndex = min(currentTripIndex, newTotal - 1)
+        updateSelectedPath(index: nextIndex)
     }
     
     func resetReviewState() {
@@ -127,4 +187,3 @@ import CoreLocation
         self.emptyMessage = nil
     }
 }
-

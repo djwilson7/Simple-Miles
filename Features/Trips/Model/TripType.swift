@@ -4,7 +4,7 @@ enum TripType: String, Codable, Hashable, CaseIterable {
     case personal
     case business
     case custom
-    case unclassified
+    case unsorted
     
     var name: String { rawValue }
     
@@ -17,7 +17,7 @@ enum TripType: String, Codable, Hashable, CaseIterable {
         case .personal: return 0
         case .business: return 1
         case .custom: return 2
-        case .unclassified: return 3
+        case .unsorted: return 3
         }
     }
     
@@ -26,7 +26,7 @@ enum TripType: String, Codable, Hashable, CaseIterable {
         case 0: self = .personal
         case 1: self = .business
         case 2: self = .custom
-        case 3: self = .unclassified
+        case 3: self = .unsorted
         default: return nil
         }
     }

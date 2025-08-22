@@ -22,14 +22,10 @@ final class TripStoreSQLite {
     /// Encoders/Decoders used for blob payloads.
     /// Provide implementations (e.g., PathEncoder/PathDecoder) when wiring.
     struct Codecs {
-        /// Return compressed bytes (e.g., LZFSE) for the given path of full LocationPoints
-        var encodeRaw: (_ points: [LocationPoint]) throws -> Data
         /// Return compressed bytes for the simplified/path-for-display (coordinates only is fine)
         var encodeDisplay: (_ points: [CLLocationCoordinate2D]) throws -> Data
         /// Decode a compressed DISPLAY blob to coordinates for rendering
         var decodeDisplay: (_ bytes: Data, _ codec: String, _ version: Int) throws -> [CLLocationCoordinate2D]
-        /// Decode a compressed RAW blob to full LocationPoints (for export/analysis)
-        var decodeRaw: (_ bytes: Data, _ codec: String, _ version: Int) throws -> [LocationPoint]
         /// Codec name to persist in DB (e.g., "lzfse")
         var codecName: String = "lzfse"
         /// Binary layout version (start at 1)
@@ -55,8 +51,7 @@ final class TripStoreSQLite {
               durationSeconds: Double,
               rawPoints: [LocationPoint],
               displayCoordinates: [CLLocationCoordinate2D]) throws -> TripMeta {
-        // Encode blobs
-        let rawBytes = try codecs.encodeRaw(rawPoints)
+        // NOTE: We no longer persist RAW to SQL. RAW is transformed upstream; TripStore only writes DISPLAY.
         let displayBytes = try codecs.encodeDisplay(displayCoordinates)
 
         // Compute bbox from display (good enough for fit; raw would be equivalent)
@@ -80,18 +75,63 @@ final class TripStoreSQLite {
         try TripsDAO.insertOrReplace(meta)
 
         // Write blobs (DB-backed)
-        try TripBlobsDAO.writeBlob(tripID: id,
-                                   kind: .raw,
-                                   codec: codecs.codecName,
-                                   encodingVersion: codecs.encodingVersion,
-                                   bytes: rawBytes)
-        try TripBlobsDAO.writeBlob(tripID: id,
-                                   kind: .display,
-                                   codec: codecs.codecName,
-                                   encodingVersion: codecs.encodingVersion,
-                                   bytes: displayBytes)
-
+        try TripBlobsDAO.writeCompressedBlob(
+            tripID: id,
+            kind: .display,
+            encodingVersion: codecs.encodingVersion,
+            rawBytes: displayBytes,
+            preferredCodec: .lzfse
+        )
         // Return the final metadata (with updated size)
+        return try TripsDAO.fetch(by: id) ?? meta
+    }
+
+    /// Update an existing trip and its blobs with provided data.
+    /// Callers should ensure the row already exists. This does not create; it updates.
+    @discardableResult
+    func update(id: String,
+                type: TripType,
+                start: Date,
+                end: Date,
+                distanceMeters: Double,
+                durationSeconds: Double,
+                rawPoints: [LocationPoint],
+                displayCoordinates: [CLLocationCoordinate2D]) throws -> TripMeta {
+        // NOTE: We no longer persist RAW to SQL. RAW is transformed upstream; TripStore only writes DISPLAY.
+        let displayBytes = try codecs.encodeDisplay(displayCoordinates)
+
+        // Compute bbox from display (good enough for fit)
+        let bbox = Self.computeBBox(from: displayCoordinates)
+
+        // Prepare metadata payload
+        let meta = TripMeta(
+            id: id,
+            type: type.dbValue,
+            startTs: Self.epochMillis(start),
+            endTs: Self.epochMillis(end),
+            distanceM: distanceMeters,
+            durationS: durationSeconds,
+            bboxMinLat: bbox.minLat,
+            bboxMinLon: bbox.minLon,
+            bboxMaxLat: bbox.maxLat,
+            bboxMaxLon: bbox.maxLon,
+            sizeBytes: 0,           // will be updated after blob writes
+            version: 1
+        )
+
+        // Update metadata row. This should fail if the row doesn't exist.
+        // TODO: Implement TripsDAO.update(_:) to update-only (no insert) the row by id.
+        try TripsDAO.update(meta)
+
+        // Overwrite blobs (DB-backed) for display kind only
+        try TripBlobsDAO.writeCompressedBlob(
+            tripID: id,
+            kind: .display,
+            encodingVersion: codecs.encodingVersion,
+            rawBytes: displayBytes,
+            preferredCodec: .lzfse
+        )
+        // Return the updated metadata (size may have changed post-blob write)
         return try TripsDAO.fetch(by: id) ?? meta
     }
 
@@ -119,22 +159,27 @@ final class TripStoreSQLite {
         try TripsDAO.fetchTotals(for: type.dbValue)
     }
 
+    /// Fetch a single TripMeta row by primary key.
+    /// Throws if the trip does not exist.
+    func fetchMeta(id: String) throws -> TripMeta {
+        if let meta = try TripsDAO.fetch(by: id) {
+            return meta
+        }
+        struct NotFound: Error {}
+        throw NotFound()
+    }
+
     /// Load coordinates for the DISPLAY blob (used by map rendering).
     func fetchDisplayPath(id: String) throws -> [CLLocationCoordinate2D] {
-        guard let row = try TripBlobsDAO.readBlob(tripID: id, kind: .display) else {
+        guard let row = try TripBlobsDAO.readDecompressedBlob(tripID: id, kind: .display) else {
             return []
         }
         return try codecs.decodeDisplay(row.bytes, row.codec, row.encodingVersion)
     }
-
-    /// Load RAW points for export/analysis.
-    func fetchRawPoints(id: String) throws -> [LocationPoint] {
-        guard let row = try TripBlobsDAO.readBlob(tripID: id, kind: .raw) else {
-            return []
-        }
-        return try codecs.decodeRaw(row.bytes, row.codec, row.encodingVersion)
+    
+    func count(type: TripType) throws -> Int {
+        try TripsDAO.count(for: type.dbValue)
     }
-
     // MARK: - Utilities
 
     private static func epochMillis(_ date: Date) -> Int64 {

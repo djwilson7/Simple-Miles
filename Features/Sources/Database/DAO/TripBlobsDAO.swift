@@ -1,4 +1,3 @@
-
 //  TripBlobsDAO.swift
 //  SimpleMiles
 //
@@ -19,6 +18,56 @@ enum BlobKind: String {
 /// DAO for reading/writing compressed geometry payloads backed by the `trip_blobs` table.
 /// Blobs are opaque to SQLite; we keep `codec` (e.g., "lzfse") and `encoding_version` for decoder choice.
 enum TripBlobsDAO {
+
+    // Compression defaults
+    private static let defaultCodec: PathCompressor.Codec = .lzfse
+    private static let minCompressibleBytes: Int = 512
+
+    // MARK: - Convenience (compressed) Writes/Reads
+
+    /// Always-compress-on-write helper. Uses `.none` for tiny payloads.
+    static func writeCompressedBlob(
+        tripID: String,
+        kind: BlobKind,
+        encodingVersion: Int,
+        rawBytes: Data,
+        preferredCodec: PathCompressor.Codec = defaultCodec
+    ) throws {
+        let codecToUse: PathCompressor.Codec = (rawBytes.count >= minCompressibleBytes) ? preferredCodec : .none
+        let bytesToStore: Data
+        switch codecToUse {
+        case .none:
+            bytesToStore = rawBytes
+        default:
+            bytesToStore = PathCompressor.compress(rawBytes, codec: codecToUse)
+        }
+        try writeBlob(
+            tripID: tripID,
+            kind: kind,
+            codec: codecToUse.raw,
+            encodingVersion: encodingVersion,
+            bytes: bytesToStore
+        )
+    }
+
+    /// Auto-decompress-on-read helper.
+    /// - Returns: (bytes: decompressed Data, encodingVersion, codecString) or nil if missing
+    static func readDecompressedBlob(
+        tripID: String,
+        kind: BlobKind
+    ) throws -> (bytes: Data, encodingVersion: Int, codec: String)? {
+        guard let tuple = try readBlob(tripID: tripID, kind: kind) else { return nil }
+        let codec = PathCompressor.Codec(raw: tuple.codec)
+        switch codec {
+        case .none:
+            return (tuple.bytes, tuple.encodingVersion, codec.raw)
+        default:
+            let out = PathCompressor.decompress(tuple.bytes, codec: codec)
+            // Safety: if decompression fails (empty), fall back to stored bytes
+            let decompressed = out.isEmpty ? tuple.bytes : out
+            return (decompressed, tuple.encodingVersion, codec.raw)
+        }
+    }
 
     // MARK: - Writes
 
@@ -151,4 +200,3 @@ enum TripBlobsDAO {
 
 // Required by sqlite3_bind_text/blob when passing Swift-managed memory
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-

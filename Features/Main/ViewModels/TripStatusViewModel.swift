@@ -48,7 +48,7 @@ final class TripStatusViewModel: ObservableObject {
     @Published var personalTrips = SortedTripTotalsModel(tripType: .personal)
     @Published var businessTrips = SortedTripTotalsModel(tripType: .business)
     @Published var customTrips = SortedTripTotalsModel(tripType: .custom)
-    @Published var unclassifiedTrips = SortedTripTotalsModel(tripType: .unclassified)
+    @Published var unclassifiedTrips = SortedTripTotalsModel(tripType: .unsorted)
     
     private init() {
         travelStateManager.$state
