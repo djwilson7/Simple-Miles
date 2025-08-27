@@ -6,49 +6,55 @@ struct TripSortingView: View {
     
     var body: some View {
         if viewModel.emptyMessage != nil {
-            VStack {
-                HStack {
-                    Spacer()
-                    Text(viewModel.emptyMessage ?? "")
-                        .font(.headline)
-                        .foregroundColor(AppTheme.Colors.primaryText60)
-                    Spacer()
-                }
-                .frame(width: layout.elementWidth)
+            HStack {
+                Spacer()
+                Text(viewModel.emptyMessage ?? "")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.Colors.primaryText60)
+                Spacer()
             }
             .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-            .frame(width: layout.elementWidth)
+            .frame(width: layout.width.pct(0.5))
+            .background(
+                GeometryReader { g in
+                    Color.clear
+                        .preference(key: DynamicContextBarDesiredHeightKey.self, value: g.size.height)
+                        .preference(key: DynamicContextBarDesiredWidthKey.self, value: g.size.width)
+                }
+            )
         } else {
-            VStack(spacing: 6) {
-                Text(TripViewModel.shared.startDate ?? "")
-                    .font(.headline)
-                    .foregroundColor(AppTheme.Colors.primaryText)
-                    .frame(width: layout.elementWidth)
-                HStack(spacing: 3) {
-                    HStack {
-                        Spacer()
-                        Text(TripViewModel.shared.startTime ?? "")
-                            .font(.caption)
-                            .foregroundColor(AppTheme.Colors.primaryText60)
-                    }
-                    .frame(width: layout.elementWidth * 0.3)
+            HStack(alignment: .center, spacing: 6) {
+//                Text(TripViewModel.shared.startTime ?? "")
+//                    .font(.caption)
+//                    .foregroundColor(AppTheme.Colors.primaryText60)
+//                    .lineLimit(1)
+                VStack(spacing: 4) {
+                    Text(TripViewModel.shared.startDate ?? "")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.Colors.primaryText)
+                        .lineLimit(1)
                     Text(TripViewModel.shared.tripDistance ?? "")
                         .font(.body)
                         .foregroundColor(AppTheme.Colors.primaryText80)
-                        .frame(width: layout.elementWidth * 0.4)
-                    HStack {
-                        Text(TripViewModel.shared.tripDuration ?? "")
-                            .font(.caption)
-                            .foregroundColor(AppTheme.Colors.primaryText60)
-                        Spacer()
-                    }
-                    .frame(width: layout.elementWidth * 0.3)
+                        .lineLimit(1)
                 }
-                .frame(width: layout.elementWidth)
-                .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .layoutPriority(1)
+//                Text(TripViewModel.shared.tripDuration ?? "")
+//                    .font(.caption)
+//                    .foregroundColor(AppTheme.Colors.primaryText60)
+//                    .lineLimit(1)
             }
+            .frame(width: layout.width.pct(0.5))
             .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-            .frame(width: layout.elementWidth)
+            .padding(10)
+            .background(
+                GeometryReader { g in
+                    Color.clear
+                        .preference(key: DynamicContextBarDesiredHeightKey.self, value: g.size.height)
+                        .preference(key: DynamicContextBarDesiredWidthKey.self, value: g.size.width)
+                }
+            )
         }
     }
 }

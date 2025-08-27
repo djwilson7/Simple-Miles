@@ -27,7 +27,7 @@ import CoreLocation
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in
                 guard let self = self else { return }
-                if let t = TripStatusViewModel.shared.reviewTripType {
+                if let t = TripStatusViewModel.shared.selectedTripType {
                     let oldIndex = self.currentTripIndex
                     let total = (try? self.tripSegmentStore.count(type: t)) ?? 0
                     self.tripCount = total
@@ -54,7 +54,7 @@ import CoreLocation
             .sink { [weak self] state in
                 guard let self = self else { return }
                 if state == .review {
-                    if let t = TripStatusViewModel.shared.reviewTripType {
+                    if let t = TripStatusViewModel.shared.selectedTripType {
                         let total = (try? self.tripSegmentStore.count(type: t)) ?? 0
                         self.tripCount = total
                         self.currentTripIndex = 0
@@ -102,7 +102,7 @@ import CoreLocation
     }
     
     func updateSelectedPath(index: Int) {
-        guard let reviewType = TripStatusViewModel.shared.reviewTripType else { return }
+        guard let reviewType = TripStatusViewModel.shared.selectedTripType else { return }
         guard index >= 0, index < tripCount else { return }
         emptyMessage = nil
         currentTripIndex = index
@@ -146,7 +146,7 @@ import CoreLocation
     }
     
     func classifyCurrentSegment(newType: TripType) {
-        guard let reviewType = TripStatusViewModel.shared.reviewTripType else { return }
+        guard let reviewType = TripStatusViewModel.shared.selectedTripType else { return }
         guard currentTripIndex >= 0, currentTripIndex < tripCount else { return }
         let page = currentTripIndex / pageSize
         let inner = currentTripIndex % pageSize

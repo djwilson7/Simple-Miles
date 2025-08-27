@@ -12,7 +12,7 @@
 		<key>Promises (Playground).xcscheme</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>1</integer>
+			<integer>2</integer>
 		</dict>
 		<key>Simple Miles.xcscheme_^#shared#^_</key>
 		<dict>
@@ -21,6 +21,8 @@
 		</dict>
 		<key>SimpleMiles.xcscheme_^#shared#^_</key>
 		<dict>
+			<key>isShown</key>
+			<true/>
 			<key>orderHint</key>
 			<integer>0</integer>
 		</dict>

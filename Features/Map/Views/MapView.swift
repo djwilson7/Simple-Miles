@@ -113,6 +113,11 @@ struct MapView: View {
                 )
                 .simultaneously(with:
                     TapGesture().onEnded {
+                        if TripSubMenuViewModel.shared.isVisible && MainStateDriver.shared.mainState == .main {
+                            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                            TripSubMenuViewModel.shared.isVisible = false
+                        }
+                    
                         if MainStateDriver.shared.mainState != .main {
                             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                             MainStateDriver.shared.mainState = .main

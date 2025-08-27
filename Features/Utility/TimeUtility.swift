@@ -15,20 +15,10 @@ struct TimeUtility {
         
         if hours > 0 {
             // Over an hour
-            if minutes > 0 && seconds > 0 {
-                return "\(hours)h \(minutes)min"
-            } else if minutes > 0 {
-                return "\(hours)h \(minutes)min"
-            } else {
-                return "\(hours)h"
-            }
+            return "\(hours)h \(minutes)min"
         } else if minutes > 0 {
             // Over a minute but under an hour
-            if seconds > 0 {
-                return "\(minutes)min \(seconds)s"
-            } else {
-                return "\(minutes)min"
-            }
+            return "\(minutes)min"
         } else {
             // Under a minute
             return "\(seconds)s"

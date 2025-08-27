@@ -10,29 +10,58 @@ private struct RowHeightKey: PreferenceKey {
     }
 }
 
+// Per-page intrinsic row height (max of columns) reported by StatusRowBuilder
+private struct PageIntrinsicRowHeightKey: PreferenceKey {
+    static var defaultValue: [Int: CGFloat] = [:]
+    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+// Per-page width collector for TabView pages
+private struct PageWidthKey: PreferenceKey {
+    static var defaultValue: [Int: CGFloat] = [:]
+    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
 struct TripStatusView: View {
     @Environment(\.layout) private var layout
     @ObservedObject var viewModel = TripStatusViewModel.shared
     @State private var rowHeight: CGFloat = 0
-    
+    @State private var indicatorHeight: CGFloat = 0
+    @State private var indicatorWidth: CGFloat = 0
+    @State private var intrinsicRowHeights: [Int: CGFloat] = [:]
+    @State private var pageWidths: [Int: CGFloat] = [:]
+
     var body: some View {
-        TabView(selection: $viewModel.currentPageIndex) {
-            ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { index, page in
-                StatusRowBuilder(page: page)
-                    .tag(index)
-                    .frame(width: layout.width.pct(0.8))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .onLongPressGesture(minimumDuration: 0.4) {
-                        if let type = page.tripType {
-                            UINotificationFeedbackGenerator().notificationOccurred(.success)
-                            viewModel.beginReview(for: type)
+        VStack(spacing: 0) {
+            TabView(selection: $viewModel.currentPageIndex) {
+                ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { index, page in
+                    StatusRowBuilder(page: page, index: index)
+                        .tag(index)
+                        .frame(width: layout.width.pct(0.8))
+                        .background(
+                            GeometryReader { g in
+                                Color.clear
+                                    .preference(key: PageWidthKey.self, value: [index: g.size.width])
+                            }
+                        )
+                        .onLongPressGesture(minimumDuration: 0.4) {
+                            if let type = page.tripType {
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                viewModel.longPress(for: type)
+                            }
                         }
-                    }
+                        .onTapGesture {
+                            TripSubMenuViewModel.shared.isVisible = false
+                        }
+                }
             }
-        }
-        .frame(width: layout.width.pct(0.8), height: layout.height.pct(0.2))
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .overlay(alignment: .bottom) {
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .padding(.bottom, 8)
+
             PageIndicators(
                 pages: viewModel.pages,
                 current: viewModel.currentPageIndex,
@@ -40,9 +69,59 @@ struct TripStatusView: View {
                     withAnimation(.easeInOut) { viewModel.currentPageIndex = index }
                 }
             )
-            .padding(.bottom, 8)
+            .background(
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { indicatorHeight = g.size.height; indicatorWidth = g.size.width }
+                        .onChange(of: g.size.height) { _, h in indicatorHeight = h }
+                        .onChange(of: g.size.width) { _, w in indicatorWidth = w }
+                }
+            )
+            .onTapGesture {
+                TripSubMenuViewModel.shared.isVisible = false
+            }
         }
-        .onChange(of: viewModel.currentPageIndex) { _, _ in UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
+        .frame(width: layout.width.pct(0.8))
+        .onPreferenceChange(PageIntrinsicRowHeightKey.self) { intrinsicRowHeights = $0; emitDesiredHeight() }
+        .onPreferenceChange(PageWidthKey.self) { pageWidths = $0 }
+        .onChange(of: viewModel.currentPageIndex) { _, _ in
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            TripSubMenuViewModel.shared.isVisible = false
+            emitDesiredHeight()
+            emitDesiredWidth()
+        }
+        .onChange(of: indicatorHeight) { _, _ in emitDesiredHeight() }
+        .onChange(of: pageWidths) { _, _ in emitDesiredWidth() }
+        .onChange(of: indicatorWidth) { _, _ in emitDesiredWidth() }
+        .preference(key: DynamicContextBarDesiredHeightKey.self, value: computedDesiredHeight())
+        .preference(key: DynamicContextBarDesiredWidthKey.self, value: computedDesiredWidth())
+    }
+
+    private func currentPageHeight() -> CGFloat {
+        let row = intrinsicRowHeights[viewModel.currentPageIndex] ?? layout.height.pct(0.10)
+        let internalPadding: CGFloat = 12 // account for VStack spacing, top/bottom breathing room
+        return row + internalPadding
+    }
+
+    private func computedDesiredHeight() -> CGFloat {
+        // Sum of current page content + indicator + the bottom padding we applied to TabView (8)
+        currentPageHeight() + indicatorHeight + 8
+    }
+
+    private func emitDesiredHeight() {
+        // Intentionally empty; the `.preference` uses computedDesiredHeight()
+    }
+
+    private func currentPageWidth() -> CGFloat {
+        pageWidths[viewModel.currentPageIndex] ?? layout.width.pct(0.8)
+    }
+
+    private func computedDesiredWidth() -> CGFloat {
+        max(currentPageWidth(), indicatorWidth)
+    }
+
+    private func emitDesiredWidth() {
+        // Intentionally empty; the `.preference` uses computedDesiredWidth()
     }
 }
 
@@ -72,6 +151,8 @@ private struct PageIndicators: View {
             return "star"
         case .unsorted:
             return "questionmark"
+        case .trash:
+            return "trash"
         case .none:
             return "record.circle"
         }
@@ -82,7 +163,8 @@ private struct PageIndicators: View {
         case .business: return "Business"
         case .personal: return "Personal"
         case .custom: return "Custom"
-        case .unsorted: return "Unclassified"
+        case .unsorted: return "Unsorted"
+        case .trash: return "Trash"
         case .none: return "Status"
         }
     }
@@ -153,6 +235,9 @@ private struct PageIndicators: View {
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+            .onTapGesture {
+                TripSubMenuViewModel.shared.isVisible = false
+            }
             .gesture(
                 DragGesture(minimumDistance: 3, coordinateSpace: .local)
                     .onChanged { value in
@@ -190,6 +275,7 @@ private struct PageIndicators: View {
 // MARK: - Reusable three-column status row
 private struct StatusRowBuilder: View {
     let page: StatusPage
+    let index: Int
     @State private var rowHeight: CGFloat = 0
 
     var body: some View {
@@ -214,6 +300,9 @@ private struct StatusRowBuilder: View {
                 .background(GeometryReader { g in Color.clear.preference(key: RowHeightKey.self, value: g.size.height) })
         }
         .onPreferenceChange(RowHeightKey.self) { rowHeight = $0 }
+        .background(
+            Color.clear.preference(key: PageIntrinsicRowHeightKey.self, value: [index: rowHeight])
+        )
     }
 }
 

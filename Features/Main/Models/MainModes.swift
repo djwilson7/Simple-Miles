@@ -11,5 +11,6 @@ enum MainModes: String, CaseIterable, Identifiable {
     case main = "main"
     case settings = "settings"
     case review = "review"
+    case summary = "summary"
     var id: String { rawValue }
 }

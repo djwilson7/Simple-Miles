@@ -24,3 +24,21 @@ struct BarFrameKey: PreferenceKey {
         }
     }
 }
+
+/// Universal preference key for child views rendered inside the Dynamic Context Bar
+/// to report their desired total height upward. The parent (DynamicContextBar) reads this
+/// and animates its height accordingly.
+struct DynamicContextBarDesiredHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+
+struct DynamicContextBarDesiredWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}

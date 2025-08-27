@@ -23,6 +23,7 @@ struct SystemControlButton: View {
     var body: some View {
         Button(action: {
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            TripSubMenuViewModel.shared.isVisible = false
             action()
         }) {
             ZStack {

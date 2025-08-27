@@ -130,22 +130,34 @@ final class CameraManager: NSObject, ObservableObject {
         if let heading = heading {
             mapHeading = heading
         }
-        // No programmatic camera updates; the mapHeading property serves as the reference for free roam heading.
+    }
+    
+    /// Publishes a default camera centered on the last known location using saved altitude.
+    private func publishFallbackToLastLocation() {
+        guard let last = lastLocation else { return }
+        let altitude = CameraDistance.shared.loadDistance() ?? 1500
+        let cameraModel = CameraModel(
+            center: last.coordinate,
+            altitude: altitude,
+            heading: 0,
+            pitch: 0
+        )
+        publishCameraPosition(from: cameraModel)
     }
     
     /// Sets the camera to review mode: fits the camera to the provided path using the path-fitting utility.
     func setCameraToReview(path: [CLLocationCoordinate2D]) {
-        if !path.isEmpty {
-            publishCameraPosition(from: CameraModel.forPath(path))
-        } else if let last = lastLocation {
-            let altitude = CameraDistance.shared.loadDistance() ?? 1500
-            let cameraModel = CameraModel(
-                center: last.coordinate,
-                altitude: altitude,
-                heading: 0,
-                pitch: 0
-            )
+        // If there is no path, use last known location
+        guard !path.isEmpty else {
+            publishFallbackToLastLocation()
+            return
+        }
+
+        // Try to fit the path; if that fails, fall back to last location
+        if let cameraModel = CameraModel.forPath(path) {
             publishCameraPosition(from: cameraModel)
+        } else {
+            publishFallbackToLastLocation()
         }
     }
           

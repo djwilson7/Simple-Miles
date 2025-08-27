@@ -16,12 +16,22 @@ struct MainView: View {
     @State var optionAnchorsState: [TripType: Anchor<CGRect>] = [:]
     @State var barAnchorState: Anchor<CGRect>? = nil
     @State private var overlayProxy: GeometryProxy? = nil
+    @StateObject private var subMenuVM = TripSubMenuViewModel.shared
     
     private var isReview: Bool { MainStateDriver.shared.mainState == .review }
     private var canGoPrev: Bool { TripViewModel.shared.currentTripIndex > 0 }
     private var canGoNext: Bool { TripViewModel.shared.currentTripIndex < TripViewModel.shared.tripCount - 1 }
     
     private let tripViewModel = TripViewModel.shared
+    
+    private var tripSubMenu: some View {
+        return TripSubMenu()
+            .frame(maxWidth: .infinity)
+            .offset( y: subMenuVM.isVisible ? -layout.height.pct(0.2) : 0)
+            .opacity(subMenuVM.isVisible ? 1 : 0)
+            .animation(.spring(response: 0.55, dampingFraction: 0.85), value: subMenuVM.isVisible)
+            
+    }
     
     var body: some View {
         GeometryReader { geo in
@@ -38,17 +48,18 @@ struct MainView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: geo.size.height * 0.1)
                         
-                        ZStack {
+                        ZStack(alignment: .center) {
                             GlassEffectContainer {
                                 ZStack(alignment: .center) {
                                     TripSortingBackgroundView(highlighted: highlighted)
-                                        .opacity(isDragging ? 1 : 0)
+                                        .opacity(isReview && isDragging ? 1 : 0)
                                         .animation(.easeInOut(duration: 0.3), value: isDragging)
                                     
-                                    ZStack {
+                                    ZStack(alignment: .center) {
+                                        tripSubMenu
                                         previousButton
-                                        contextBar(geo: geo)
                                         nextButton
+                                        contextBar(geo: geo)
                                     }
                                     .frame(maxWidth: .infinity, maxHeight: geo.size.height * 0.9, alignment: .bottom)
                                 }
@@ -58,7 +69,7 @@ struct MainView: View {
                             .frame(height: geo.size.height * 0.9)
                             
                             TripSortingTextView(highlighted: highlighted)
-                                .opacity(isDragging ? 1 : 0)
+                                .opacity(isReview && isDragging ? 1 : 0)
                                 .animation(.easeInOut(duration: 0.3), value: isDragging)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -145,6 +156,8 @@ struct MainView: View {
         .animation(.spring(duration: layout.animationDurations.slow), value: rightVisible)
     }
     
+  
+    
     private func contextBar(geo: GeometryProxy) -> some View {
         DynamicContextBar(
             tripStatusContent: {
@@ -155,12 +168,18 @@ struct MainView: View {
             },
             reviewContent: {
                 TripSortingView()
+            },
+            summaryContent: {
+                SummaryView()
             }
         )
         .glassEffect(in: RoundedRectangle(cornerRadius: layout.radii.pill))
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         .offset(isReview ? barDrag : .zero)
         .anchorPreference(key: BarFrameKey.self, value: .bounds) { $0 }
+        .onTapGesture {
+            TripSubMenuViewModel.shared.isVisible = false
+        }
         .simultaneousGesture(
             DragGesture()
                 .onChanged { value in
@@ -170,7 +189,7 @@ struct MainView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                         isDragging = true
-
+                        
                         updateHighlight(
                             proxy: overlayProxy ?? geo,
                             optionAnchors: optionAnchorsState,
@@ -247,7 +266,7 @@ struct MainView: View {
     }
 }
 
-func updateHighlight(
+@MainActor func updateHighlight(
     proxy: GeometryProxy,
     optionAnchors: [TripType: Anchor<CGRect>],
     barAnchor: Anchor<CGRect>?,
@@ -255,6 +274,11 @@ func updateHighlight(
     currentHighlightedArea: inout CGFloat,
     drag: CGSize
 ) {
+    if MainStateDriver.shared.mainState != .review {
+        highlighted = nil
+        currentHighlightedArea = 0
+        return
+    }
     guard let barAnchor = barAnchor else {
         highlighted = nil
         currentHighlightedArea = 0
@@ -265,10 +289,10 @@ func updateHighlight(
         currentHighlightedArea = 0
         return
     }
-
+    
     let baseRect = proxy[barAnchor]
     let barRect = baseRect.offsetBy(dx: drag.width, dy: drag.height)
-
+    
     var best: (opt: TripType, area: CGFloat)? = nil
     for (opt, anchor) in optionAnchors {
         let rect = proxy[anchor]
@@ -278,7 +302,7 @@ func updateHighlight(
             if best == nil || area > best!.area { best = (opt, area) }
         }
     }
-
+    
     let hysteresis: CGFloat = 1.10
     if let candidate = best {
         if let current = highlighted {

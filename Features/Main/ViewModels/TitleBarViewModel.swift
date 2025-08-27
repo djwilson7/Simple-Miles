@@ -78,10 +78,15 @@ class TBViewModel: ObservableObject {
         case .settings:
             title = "Settings"
         case .review:
-            if let type = TripStatusViewModel.shared.reviewTripType {
+            if let type = TripStatusViewModel.shared.selectedTripType {
                 title = "\(type.name.capitalized) Trips"
             }
+        case .summary:
+            if let type = TripStatusViewModel.shared.selectedTripType {
+                title = "\(type.name.capitalized) Summary"
+            }
         }
+        
     }
 
     func backButtonPressed() {

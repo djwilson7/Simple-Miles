@@ -3,6 +3,7 @@ import Combine
 import CoreLocation
 import MapKit
 import SwiftUI
+import UIKit
 
 @MainActor
 final class MapViewModel: NSObject, ObservableObject {
@@ -103,9 +104,25 @@ final class MapViewModel: NSObject, ObservableObject {
             .store(in: &cancellables)
         cameraManager.updateOrientationMode(.northUp)
         bindStreams()
+        
+        // Listen for app active notifications so we can recenter on resume
+        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.handleAppDidBecomeActive()
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Public Controls
+
+    // Called when the application becomes active again
+    private func handleAppDidBecomeActive() {
+        // Only recenter when not reviewing
+        if MainStateDriver.shared.mainState == .main {
+            recenter()
+        }
+    }
 
     func recenter() {
         autoFollowEnabled = true
@@ -195,7 +212,7 @@ final class MapViewModel: NSObject, ObservableObject {
         $autoFollowEnabled
             .removeDuplicates()
             .sink { value in
-                print("[MapViewModel] AutoFollow state changed: \(value)")
+                Log("\(value)")
             }
             .store(in: &cancellables)
 
@@ -219,6 +236,7 @@ final class MapViewModel: NSObject, ObservableObject {
                     self.handleIsReviewing()
                 } else {
                     self.handleIsNotReviewing()
+                    self.recenter()
                 }
             }
             .store(in: &cancellables)
@@ -254,7 +272,7 @@ final class MapViewModel: NSObject, ObservableObject {
                 )
                 self.updateDisplayedTracePath()
 
-                print("[MapViewModel] Live path updated. static=\(self.cachedNonCommitedPath.count) anchor=\(self.liveTailAnchor != nil)")
+                Log("static=\(self.cachedNonCommitedPath.count) anchor=\(self.liveTailAnchor != nil)")
             }
             .store(in: &cancellables)
     }

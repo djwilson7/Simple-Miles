@@ -7,15 +7,27 @@ import _MapKit_SwiftUI
 
 struct CameraUtility {
     /// Returns a MapCamera that fits the given path with a specified vertical offset.
+    /// Returns nil if the path is empty or contains out-of-bounds coordinates.
     static func cameraToFitPath(
         _ path: [CLLocationCoordinate2D],
         offset: CGFloat = 0.1,
         defaultLocation: CLLocationCoordinate2D? = nil
-    ) -> MapCamera {
+    ) -> MapCamera? {
         guard !path.isEmpty else {
-            let fallback = defaultLocation ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
-            return MapCamera(centerCoordinate: fallback, distance: 1500, heading: 0, pitch: 0)
+            // Empty path – let caller decide on default centering by handling nil
+            return nil
         }
+        
+        // Latitude ∈ [-90, 90], Longitude ∈ [-180, 180], and both must be finite
+        var invalidIndices: [Int] = []
+        for (idx, p) in path.enumerated() {
+            let latOK = p.latitude.isFinite && p.latitude >= -90.0 && p.latitude <= 90.0
+            let lonOK = p.longitude.isFinite && p.longitude >= -180.0 && p.longitude <= 180.0
+            if !(latOK && lonOK) {
+                invalidIndices.append(idx)
+            }
+        }
+        if !invalidIndices.isEmpty { return nil }
         
         var minLat = path[0].latitude
         var maxLat = path[0].latitude
@@ -57,6 +69,8 @@ struct CameraUtility {
 
         // Clamp altitude to sensible range
         let clampedAltitude = min(max(paddedDistance, 1250), 350000)
+        
+        Log("Camera Center: LAT \(adjustedCenter.latitude) LON \(adjustedCenter.longitude)")
         return MapCamera(
             centerCoordinate: adjustedCenter,
             distance: clampedAltitude,

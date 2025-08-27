@@ -40,8 +40,8 @@ final class TripStoreSQLite {
 
     // MARK: - Save/Delete/Reclassify
 
-    /// Save a trip with both blobs. If `displayCoordinates` is nil, the caller can pass the same
-    /// coordinates derived from the raw points (you may RDP-simplify before calling).
+    /// Save a trip using RAW points as the single source of truth.
+    /// This layer derives display coordinates from RAW when encoding.
     @discardableResult
     func save(id: String,
               type: TripType,
@@ -49,13 +49,10 @@ final class TripStoreSQLite {
               end: Date,
               distanceMeters: Double,
               durationSeconds: Double,
-              rawPoints: [LocationPoint],
-              displayCoordinates: [CLLocationCoordinate2D]) throws -> TripMeta {
-        // NOTE: We no longer persist RAW to SQL. RAW is transformed upstream; TripStore only writes DISPLAY.
-        let displayBytes = try codecs.encodeDisplay(displayCoordinates)
-
-        // Compute bbox from display (good enough for fit; raw would be equivalent)
-        let bbox = Self.computeBBox(from: displayCoordinates)
+              rawPoints: [LocationPoint]
+    ) throws -> TripMeta {
+        let pointBytes = try codecs.encodeDisplay(rawPoints.map(\.coordinate))
+        let bbox = Self.computeBBox(from: rawPoints.map(\.coordinate))
 
         // Insert/replace metadata row (store TripType as INTEGER via dbValue)
         let meta = TripMeta(
@@ -69,7 +66,7 @@ final class TripStoreSQLite {
             bboxMinLon: bbox.minLon,
             bboxMaxLat: bbox.maxLat,
             bboxMaxLon: bbox.maxLon,
-            sizeBytes: 0,           // will be updated after blob writes
+            sizeBytes: 0,
             version: 1
         )
         try TripsDAO.insertOrReplace(meta)
@@ -79,7 +76,7 @@ final class TripStoreSQLite {
             tripID: id,
             kind: .display,
             encodingVersion: codecs.encodingVersion,
-            rawBytes: displayBytes,
+            rawBytes: pointBytes,
             preferredCodec: .lzfse
         )
         // Return the final metadata (with updated size)
@@ -95,13 +92,9 @@ final class TripStoreSQLite {
                 end: Date,
                 distanceMeters: Double,
                 durationSeconds: Double,
-                rawPoints: [LocationPoint],
-                displayCoordinates: [CLLocationCoordinate2D]) throws -> TripMeta {
-        // NOTE: We no longer persist RAW to SQL. RAW is transformed upstream; TripStore only writes DISPLAY.
-        let displayBytes = try codecs.encodeDisplay(displayCoordinates)
-
-        // Compute bbox from display (good enough for fit)
-        let bbox = Self.computeBBox(from: displayCoordinates)
+                rawPoints: [LocationPoint]) throws -> TripMeta {
+        let pointBytes = try codecs.encodeDisplay(rawPoints.map(\.coordinate))
+        let bbox = Self.computeBBox(from: rawPoints.map(\.coordinate))
 
         // Prepare metadata payload
         let meta = TripMeta(
@@ -115,12 +108,10 @@ final class TripStoreSQLite {
             bboxMinLon: bbox.minLon,
             bboxMaxLat: bbox.maxLat,
             bboxMaxLon: bbox.maxLon,
-            sizeBytes: 0,           // will be updated after blob writes
+            sizeBytes: 0,
             version: 1
         )
 
-        // Update metadata row. This should fail if the row doesn't exist.
-        // TODO: Implement TripsDAO.update(_:) to update-only (no insert) the row by id.
         try TripsDAO.update(meta)
 
         // Overwrite blobs (DB-backed) for display kind only
@@ -128,7 +119,7 @@ final class TripStoreSQLite {
             tripID: id,
             kind: .display,
             encodingVersion: codecs.encodingVersion,
-            rawBytes: displayBytes,
+            rawBytes: pointBytes,
             preferredCodec: .lzfse
         )
         // Return the updated metadata (size may have changed post-blob write)
@@ -137,8 +128,6 @@ final class TripStoreSQLite {
 
     /// Delete a trip and its blobs
     func delete(id: String) throws {
-        // ON DELETE CASCADE on trip_blobs -> trips requires deleting the parent or the children first.
-        // Here we delete the parent row; CASCADE will remove blobs.
         try TripsDAO.delete(id: id)
     }
 
@@ -148,6 +137,16 @@ final class TripStoreSQLite {
     }
 
     // MARK: - Queries
+
+    /// Fetch summed distance for a type (and overall totals) within an optional date range.
+    /// - Parameters:
+    ///   - type: TripType to filter for the type-specific total
+    ///   - from: Optional epoch millis lower bound (inclusive)
+    ///   - to:   Optional epoch millis upper bound (inclusive)
+    /// - Returns: Tuple of (typeMiles, totalMiles). NOTE: values are raw meters even though labels say "Miles".
+    func fetchMilesData(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> (typeMeters: Double, totalMeters: Double) {
+        try TripsDAO.fetchMilesData(for: type, from: from, to: to)
+    }
 
     /// Fetch a metadata page for a given type, newest first. Keyset pagination via `afterTs`.
     func fetchPage(type: TripType, afterTs: Int64? = nil, limit: Int = 50) throws -> [TripMeta] {

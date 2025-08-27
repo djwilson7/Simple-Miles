@@ -21,10 +21,10 @@ public struct TripSegment {
         self.tripType = .unsorted
     }
 
-    // MARK: - Mutations
-    mutating func resortSegment(as newType: TripType) {
-        self.tripType = newType
-    }
+//    // MARK: - Mutations
+//    mutating func resortSegment(as newType: TripType) {
+//        self.tripType = newType
+//    }
 
     public mutating func finalize(at endTimestamp: Date) {
         self.endTimestamp = endTimestamp

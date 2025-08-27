@@ -8,6 +8,7 @@
 import Foundation
 import SQLite3
 
+private func currentUnixTime() -> Int64 { Int64(Date().timeIntervalSince1970) }
 
 /// Data Access Object for the `trips` metadata table.
 /// All calls are funneled through `Database.shared` (thread-safe via internal queue).
@@ -94,16 +95,66 @@ enum TripsDAO {
 
     static func reclassify(id: String, to newType: Int) throws {
         try Database.shared.inWrite { db in
-            let sql = "UPDATE trips SET type=? WHERE id=?;"
-            var stmt: OpaquePointer?
-            defer { sqlite3_finalize(stmt) }
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                throw DBError.sqlite(message: lastError(db))
+            // 1) Fetch current type to detect transitions
+            var oldType: Int32 = -1
+            do {
+                let sel = "SELECT type FROM trips WHERE id=? LIMIT 1;"
+                var s: OpaquePointer?
+                defer { sqlite3_finalize(s) }
+                guard sqlite3_prepare_v2(db, sel, -1, &s, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                bindText(s, 1, id)
+                if sqlite3_step(s) == SQLITE_ROW {
+                    oldType = sqlite3_column_int(s, 0)
+                } else {
+                    throw DBError.sqlite(message: "No trip found for id=\(id)")
+                }
             }
-            sqlite3_bind_int(stmt, 1, Int32(newType))
-            bindText(stmt, 2, id)
-            guard sqlite3_step(stmt) == SQLITE_DONE else {
-                throw DBError.sqlite(message: lastError(db))
+
+            // 2) Update trips.type
+            do {
+                let sql = "UPDATE trips SET type=? WHERE id=?;"
+                var stmt: OpaquePointer?
+                defer { sqlite3_finalize(stmt) }
+                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                sqlite3_bind_int(stmt, 1, Int32(newType))
+                bindText(stmt, 2, id)
+                guard sqlite3_step(stmt) == SQLITE_DONE else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+            }
+
+            // 3) Trash table bookkeeping
+            let wasTrash = (oldType == Int32(TripType.trash.dbValue))
+            let willTrash = (newType == TripType.trash.dbValue)
+            if !wasTrash && willTrash {
+                // moved into trash → record timestamp
+                let ins = "INSERT OR REPLACE INTO trash (trip_id, deleted_at) VALUES (?,?);"
+                var t: OpaquePointer?
+                defer { sqlite3_finalize(t) }
+                guard sqlite3_prepare_v2(db, ins, -1, &t, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                bindText(t, 1, id)
+                sqlite3_bind_int64(t, 2, currentUnixTime())
+                guard sqlite3_step(t) == SQLITE_DONE else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+            } else if wasTrash && !willTrash {
+                // restored from trash → remove marker
+                let del = "DELETE FROM trash WHERE trip_id=?;"
+                var t: OpaquePointer?
+                defer { sqlite3_finalize(t) }
+                guard sqlite3_prepare_v2(db, del, -1, &t, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                bindText(t, 1, id)
+                guard sqlite3_step(t) == SQLITE_DONE else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
             }
         }
     }
@@ -192,6 +243,66 @@ enum TripsDAO {
         }
     }
 
+    static func fetchMilesData(for type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> (typeMeters: Double, totalMeters: Double) {
+        return try Database.shared.inRead { db in
+            var datePredicate = ""
+            if from != nil {
+                datePredicate += " AND start_ts >= ?"
+            }
+            if to != nil {
+                datePredicate += " AND start_ts <= ?"
+            }
+
+            let bindDateParams: (OpaquePointer?, inout Int32) -> Void = { stmt, index in
+                if let from = from {
+                    sqlite3_bind_int64(stmt, index, from)
+                    index += 1
+                }
+                if let to = to {
+                    sqlite3_bind_int64(stmt, index, to)
+                    index += 1
+                }
+            }
+
+            // Query 1: Sum of distance_m for the given type
+            let sqlType = "SELECT COALESCE(SUM(distance_m),0) FROM trips WHERE type=?" + datePredicate + ";"
+            var stmtType: OpaquePointer?
+            defer { sqlite3_finalize(stmtType) }
+            guard sqlite3_prepare_v2(db, sqlType, -1, &stmtType, nil) == SQLITE_OK else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            var bindIndex: Int32 = 1
+            sqlite3_bind_int(stmtType, bindIndex, Int32(type.dbValue))
+            bindIndex += 1
+            bindDateParams(stmtType, &bindIndex)
+            guard sqlite3_step(stmtType) == SQLITE_ROW else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            let tripTypeMeters = sqlite3_column_double(stmtType, 0)
+            Log("Trip Type Meters: \(tripTypeMeters)")
+            // Query 2: Sum of distance_m for trips where type != unclassified and type != trash
+            let sqlTotal = "SELECT COALESCE(SUM(distance_m),0) FROM trips WHERE type!=? AND type!=?" + datePredicate + ";"
+            var stmtTotal: OpaquePointer?
+            defer { sqlite3_finalize(stmtTotal) }
+            guard sqlite3_prepare_v2(db, sqlTotal, -1, &stmtTotal, nil) == SQLITE_OK else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            bindIndex = 1
+            sqlite3_bind_int(stmtTotal, bindIndex, Int32(TripType.unsorted.dbValue))
+            bindIndex += 1
+            sqlite3_bind_int(stmtTotal, bindIndex, Int32(TripType.trash.dbValue))
+            bindIndex += 1
+            bindDateParams(stmtTotal, &bindIndex)
+            guard sqlite3_step(stmtTotal) == SQLITE_ROW else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            let allMeters = sqlite3_column_double(stmtTotal, 0)
+            Log("All Meters: \(allMeters)")
+
+            return (typeMeters: tripTypeMeters, totalMeters: allMeters)
+        }
+    }
+
     /// Count trips for a given type.
     static func count(for type: Int) throws -> Int {
         return try Database.shared.inRead { db in
@@ -240,3 +351,4 @@ enum TripsDAO {
 
 // Required by sqlite3_bind_text when passing Swift-managed strings
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+

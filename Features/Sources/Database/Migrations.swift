@@ -60,6 +60,15 @@ enum Migrations {
         """
         try exec(db, sql: tripsSQL)
 
+        let trashSQL = """
+        CREATE TABLE IF NOT EXISTS trash (
+          trip_id     TEXT PRIMARY KEY REFERENCES trips(id) ON DELETE CASCADE,
+          deleted_at  INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS trash_deleted_at ON trash(deleted_at);
+        """
+        try exec(db, sql: trashSQL)
+
         let blobsSQL = """
         CREATE TABLE IF NOT EXISTS trip_blobs (
           trip_id          TEXT    NOT NULL REFERENCES trips(id) ON DELETE CASCADE,

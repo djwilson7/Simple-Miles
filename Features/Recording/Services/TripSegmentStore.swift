@@ -35,12 +35,17 @@ final class TripSegmentStore {
     func fetchTotals(type: TripType) throws -> Totals {
         try store.fetchTotals(type: type)
     }
+
+    /// Fetch summed distance for a type (and overall totals) within an optional date range.
+    /// NOTE: Values are raw meters (DAO keeps raw meters despite the "Miles" naming).
+    func fetchMilesData(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> (typeMeters: Double, totalMeters: Double) {
+        try store.fetchMilesData(type: type, from: from, to: to)
+    }
     
     // MARK: - Persistence (SQLite)
     
     func write(_ segment: TripSegment) {
         let end = segment.endTimestamp ?? segment.startTimestamp
-        let display = segment.pathCoordinates.map { $0.coordinate }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
             do {
@@ -51,8 +56,7 @@ final class TripSegmentStore {
                     end: end,
                     distanceMeters: segment.distance,
                     durationSeconds: segment.duration,
-                    rawPoints: segment.pathCoordinates,
-                    displayCoordinates: display
+                    rawPoints: segment.pathCoordinates
                 )
                 DispatchQueue.main.async { self.tripTotalsUpdated.send() }
             } catch {
@@ -86,17 +90,11 @@ final class TripSegmentStore {
             }
         }
     }
-
-    /// Convenience overload for TripMeta
-    func reclassify(_ meta: TripMeta, to newType: TripType) {
-        reclassify(tripID: meta.id, to: newType)
-    }
     
     /// Update an existing trip row using the segment's own dbID.
     /// Mirrors the reclassify threading pattern: background do, main post.
     func update(_ segment: TripSegment) {
         let end = segment.endTimestamp ?? segment.startTimestamp
-        let display = segment.pathCoordinates.map { $0.coordinate }
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
@@ -109,7 +107,6 @@ final class TripSegmentStore {
                     distanceMeters: segment.distance,
                     durationSeconds: segment.duration,
                     rawPoints: segment.pathCoordinates,
-                    displayCoordinates: display
                 )
                 DispatchQueue.main.async {
                     self.tripTotalsUpdated.send()

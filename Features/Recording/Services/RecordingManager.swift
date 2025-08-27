@@ -351,15 +351,18 @@ final class RecordingManager {
     private func finalizeInMemory(_ segment: TripSegment?) {
         guard var segment = segment else { return }
         segment.finalize(at: Date())
-        TripOptimizer.optimizeTrip(segment: segment) { result in
-            switch result {
-            case .success(let optimizedCoordinates):
-                segment.pathCoordinates = optimizedCoordinates
-                self.tripSegmentStore.update(segment)
-            case .failure(let error):
-                print("Trip optimization failed with error: \(error)")
-                self.tripSegmentStore.update(segment)
-            }
-        }
+        self.tripSegmentStore.update(segment)
+        
+        //This process needs updated to ensure that we better capture data points.
+//        TripOptimizer.optimizeTrip(segment: segment) { result in
+//            switch result {
+//            case .success(let optimizedCoordinates):
+//                segment.pathCoordinates = optimizedCoordinates
+//                self.tripSegmentStore.update(segment)
+//            case .failure(let error):
+//                print("Trip optimization failed with error: \(error)")
+//                self.tripSegmentStore.update(segment)
+//            }
+//        }
     }
 }

@@ -31,7 +31,7 @@ final class TripStatusViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let travelStateManager = TravelStateManager.shared
     private let recordingManager = RecordingManager.shared
-
+    
     @Published var tripStateText: String = ""
     @Published var tripStateColor: Color = .gray
     @Published var tripDistanceCommittedMiles: Double = 0
@@ -40,15 +40,16 @@ final class TripStatusViewModel: ObservableObject {
     @Published var tripDurationCommitted: TimeInterval = 0
     @Published var tripDurationLive: TimeInterval = 0
     @Published var remainingPauseTime: TimeInterval? = nil
-
+    
     @Published var currentPageIndex: Int = 0
-
-    var reviewTripType: TripType? = nil
-
+        
+    @Published var selectedTripType: TripType? = nil
+    
     @Published var personalTrips = SortedTripTotalsModel(tripType: .personal)
     @Published var businessTrips = SortedTripTotalsModel(tripType: .business)
     @Published var customTrips = SortedTripTotalsModel(tripType: .custom)
     @Published var unclassifiedTrips = SortedTripTotalsModel(tripType: .unsorted)
+    @Published var trashTrips = SortedTripTotalsModel(tripType: .trash)
     
     private init() {
         travelStateManager.$state
@@ -70,25 +71,25 @@ final class TripStatusViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
-
+        
         recordingManager.$tripDistanceCommitted
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .assign(to: \.tripDistanceCommittedMiles, on: self)
             .store(in: &cancellables)
-
+        
         recordingManager.$tripDistanceLive
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .assign(to: \.tripDistanceLiveMiles, on: self)
             .store(in: &cancellables)
-
+        
         recordingManager.$tripDurationCommitted
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .assign(to: \.tripDurationCommitted, on: self)
             .store(in: &cancellables)
-
+        
         recordingManager.$tripDurationLive
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
@@ -103,12 +104,10 @@ final class TripStatusViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    @MainActor func beginReview(for type: TripType) {
-        reviewTripType = type
-        MainStateDriver.shared.mainState = .review
+    @MainActor func longPress(for type: TripType) {
+        Log("\(type)")
+        selectedTripType = type
     }
-
-    func clearReviewRequest() { reviewTripType = nil }
     
     // MARK: - Swipeable pages for TripStatusView
     var pages: [StatusPage] { makeStatusPages() }
@@ -165,6 +164,7 @@ final class TripStatusViewModel: ObservableObject {
         result.append(totalsPage(model: businessTrips))
         result.append(totalsPage(model: customTrips))
         result.append(totalsPage(model: unclassifiedTrips))
+        result.append(totalsPage(model: trashTrips))
 
         return result
     }

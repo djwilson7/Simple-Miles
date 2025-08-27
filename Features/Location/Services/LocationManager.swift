@@ -204,7 +204,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("[LocationManager] Error: \(error.localizedDescription)")
+        Log("Error: \(error.localizedDescription)")
     }
     
     @objc private func onDidBecomeActive(_ notification: Notification) {

@@ -18,13 +18,17 @@ struct PathCameraModel {
 
 // Extension example: create a CameraModel that fits a path
 extension CameraModel {
-    static func forPath(_ path: [CLLocationCoordinate2D], pitch: CGFloat = 0) -> CameraModel {
-        let fittedCamera = CameraUtility.cameraToFitPath(path)
-        return CameraModel( 
-            center: fittedCamera.centerCoordinate,
-            altitude: fittedCamera.distance,
-            heading: fittedCamera.heading,
-            pitch: pitch
-        )
+    static func forPath(_ path: [CLLocationCoordinate2D], pitch: CGFloat = 0) -> CameraModel? {
+        if let fittedCamera = CameraUtility.cameraToFitPath(path) {
+            return CameraModel(
+                center: fittedCamera.centerCoordinate,
+                altitude: fittedCamera.distance,
+                heading: fittedCamera.heading,
+                pitch: pitch
+            )
+        } else {
+            return nil
+        }
+        
     }
 }

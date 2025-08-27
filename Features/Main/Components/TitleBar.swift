@@ -97,5 +97,8 @@ struct TitleBarView: View {
         .frame(width: layout.elementWidth, height: layout.titleHeight)
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         .glassEffect()
+        .onTapGesture {
+            TripSubMenuViewModel.shared.isVisible = false
+        }
     }
 }
