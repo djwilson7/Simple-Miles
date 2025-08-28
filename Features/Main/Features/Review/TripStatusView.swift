@@ -62,41 +62,40 @@ struct TripStatusView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .padding(.bottom, 8)
 
-            PageIndicators(
-                pages: viewModel.pages,
-                current: viewModel.currentPageIndex,
-                onSelect: { index in
-                    withAnimation(.easeInOut) { viewModel.currentPageIndex = index }
-                }
-            )
-            .background(
-                GeometryReader { g in
-                    Color.clear
-                        .onAppear { indicatorHeight = g.size.height; indicatorWidth = g.size.width }
-                        .onChange(of: g.size.height) { _, h in indicatorHeight = h }
-                        .onChange(of: g.size.width) { _, w in indicatorWidth = w }
-                }
-            )
-            .onTapGesture {
-                TripSubMenuViewModel.shared.isVisible = false
-            }
+            pageIndicators
         }
         .frame(width: layout.width.pct(0.8))
-        .onPreferenceChange(PageIntrinsicRowHeightKey.self) { intrinsicRowHeights = $0; emitDesiredHeight() }
+        .onPreferenceChange(PageIntrinsicRowHeightKey.self) { intrinsicRowHeights = $0 }
         .onPreferenceChange(PageWidthKey.self) { pageWidths = $0 }
         .onChange(of: viewModel.currentPageIndex) { _, _ in
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             TripSubMenuViewModel.shared.isVisible = false
-            emitDesiredHeight()
-            emitDesiredWidth()
         }
-        .onChange(of: indicatorHeight) { _, _ in emitDesiredHeight() }
-        .onChange(of: pageWidths) { _, _ in emitDesiredWidth() }
-        .onChange(of: indicatorWidth) { _, _ in emitDesiredWidth() }
         .preference(key: DynamicContextBarDesiredHeightKey.self, value: computedDesiredHeight())
         .preference(key: DynamicContextBarDesiredWidthKey.self, value: computedDesiredWidth())
     }
-
+    
+    private var pageIndicators: some View {
+        PageIndicators(
+            pages: viewModel.pages,
+            current: viewModel.currentPageIndex,
+            onSelect: { index in
+                viewModel.currentPageIndex = index
+            }
+        )
+        .background(
+            GeometryReader { g in
+                Color.clear
+                    .onAppear { indicatorHeight = g.size.height; indicatorWidth = g.size.width }
+                    .onChange(of: g.size.height) { _, h in indicatorHeight = h }
+                    .onChange(of: g.size.width) { _, w in indicatorWidth = w }
+            }
+        )
+        .onTapGesture {
+            TripSubMenuViewModel.shared.isVisible = false
+        }
+    }
+    
     private func currentPageHeight() -> CGFloat {
         let row = intrinsicRowHeights[viewModel.currentPageIndex] ?? layout.height.pct(0.10)
         let internalPadding: CGFloat = 12 // account for VStack spacing, top/bottom breathing room
@@ -108,10 +107,6 @@ struct TripStatusView: View {
         currentPageHeight() + indicatorHeight + 8
     }
 
-    private func emitDesiredHeight() {
-        // Intentionally empty; the `.preference` uses computedDesiredHeight()
-    }
-
     private func currentPageWidth() -> CGFloat {
         pageWidths[viewModel.currentPageIndex] ?? layout.width.pct(0.8)
     }
@@ -120,9 +115,7 @@ struct TripStatusView: View {
         max(currentPageWidth(), indicatorWidth)
     }
 
-    private func emitDesiredWidth() {
-        // Intentionally empty; the `.preference` uses computedDesiredWidth()
-    }
+   
 }
 
 // MARK: - PageIndicators View
@@ -211,15 +204,11 @@ private struct PageIndicators: View {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
                     let isCurrent = index == current
                     Image(systemName: iconName(for: page.tripType))
+                        .font(.title3.weight(.semibold))
                         .symbolVariant(isCurrent ? .fill : .none)
                         .foregroundColor(iconColor(for: page.tripType, isCurrent: isCurrent))
-                        .scaleEffect(isCurrent ? 1.2 : 1.0)
+                        .scaleEffect(isCurrent ? 1.5 : 1.0)
                         .padding(6)
-                        .background(
-                            Capsule()
-                                .fill(isCurrent ? AppTheme.Colors.primaryText.opacity(0.2) : Color.clear)
-                        )
-                        .animation(.easeInOut(duration: 0.25), value: current)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             if index == current, let statusIdx = liveStatusIndex, statusIdx != current {
@@ -233,6 +222,7 @@ private struct PageIndicators: View {
                         .accessibilityLabel(accessibilityLabel(for: page.tripType))
                 }
             }
+            .padding(16)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
             .onTapGesture {
@@ -261,7 +251,7 @@ private struct PageIndicators: View {
                     }
             )
         }
-        .frame(height: 28) // keeps overlay compact while allowing full-width drag hit area
+        .frame(height: 50) // keeps overlay compact while allowing full-width drag hit area
         .onAppear {
             refreshUnsortedCount()
             totalsCancellable = TripSegmentStore.shared.tripTotalsUpdated
@@ -281,21 +271,36 @@ private struct StatusRowBuilder: View {
     var body: some View {
         HStack(spacing: 0) {
             // Left column
-            StatusColumn(primary: page.left.primary, secondary: page.left.secondary, isStatus: page.left.role == .status, isLiveStatusPage: page.tripType == nil)
+            StatusColumn(
+                primary: page.left.primary,
+                secondary: page.left.secondary,
+                isStatus: page.left.role == .status,
+                isLiveStatusPage: page.tripType == nil
+            )
                 .frame(maxWidth: .infinity)
                 .background(GeometryReader { g in Color.clear.preference(key: RowHeightKey.self, value: g.size.height) })
 
             Divider().frame(width: 1, height: rowHeight).background(AppTheme.Colors.primaryText50)
 
             // Center column
-            StatusColumn(primary: page.center.primary, secondary: page.center.secondary, isStatus: page.center.role == .status, isLiveStatusPage: page.tripType == nil)
+            StatusColumn(
+                primary: page.center.primary,
+                secondary: page.center.secondary,
+                isStatus: page.center.role == .status,
+                isLiveStatusPage: page.tripType == nil
+            )
                 .frame(maxWidth: .infinity)
                 .background(GeometryReader { g in Color.clear.preference(key: RowHeightKey.self, value: g.size.height) })
 
             Divider().frame(width: 1, height: rowHeight).background(AppTheme.Colors.primaryText50)
 
             // Right column
-            StatusColumn(primary: page.right.primary, secondary: page.right.secondary, isStatus: page.right.role == .status, isLiveStatusPage: page.tripType == nil)
+            StatusColumn(
+                primary: page.right.primary,
+                secondary: page.right.secondary,
+                isStatus: page.right.role == .status,
+                isLiveStatusPage: page.tripType == nil
+            )
                 .frame(maxWidth: .infinity)
                 .background(GeometryReader { g in Color.clear.preference(key: RowHeightKey.self, value: g.size.height) })
         }
@@ -407,6 +412,7 @@ private struct StatusColumn: View {
             }
             if isStatus { Spacer(minLength: 0) }
         }
+        .padding(.vertical, 8)
         // Drive pulse animation only in traveling state
         .onAppear {
             if isStatus && isLiveStatusPage && travel.state == .traveling {

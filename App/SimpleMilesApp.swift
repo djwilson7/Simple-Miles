@@ -1,5 +1,4 @@
 import SwiftUI
-import FirebaseCore
 
 @main
 struct SimpleMilesApp: App {
@@ -9,8 +8,6 @@ struct SimpleMilesApp: App {
     private let mainViewModel: MainViewModel
 
     init() {
-        FirebaseApp.configure()
-
         mapViewModel = MapViewModel()
         mainViewModel = MainViewModel()
     }

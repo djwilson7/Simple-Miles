@@ -6,12 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		6AC2F4F32E218E3C00F4064A /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6AC2F4F22E218E3C00F4064A /* FirebaseAuth */; };
-		6AC2F4F52E218E3C00F4064A /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6AC2F4F42E218E3C00F4064A /* FirebaseCore */; };
-		6ACE7CCC2E25F76D00D6F470 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 6ACE7CCB2E25F76D00D6F470 /* ZIPFoundation */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		6AC2F4BA2E2161CC00F4064A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -123,9 +117,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6AC2F4F52E218E3C00F4064A /* FirebaseCore in Frameworks */,
-				6AC2F4F32E218E3C00F4064A /* FirebaseAuth in Frameworks */,
-				6ACE7CCC2E25F76D00D6F470 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -208,9 +199,6 @@
 			);
 			name = SimpleMiles;
 			packageProductDependencies = (
-				6AC2F4F22E218E3C00F4064A /* FirebaseAuth */,
-				6AC2F4F42E218E3C00F4064A /* FirebaseCore */,
-				6ACE7CCB2E25F76D00D6F470 /* ZIPFoundation */,
 			);
 			productName = "Simple Miles";
 			productReference = 6AC2F4AC2E2161CA00F4064A /* SimpleMiles.app */;
@@ -289,8 +277,6 @@
 			mainGroup = 6AC2F4A32E2161CA00F4064A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				6AC2F4F12E21845F00F4064A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-				6ACE7CCA2E25F76D00D6F470 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6AC2F4AD2E2161CA00F4064A /* Products */;
@@ -510,8 +496,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKSupportsLiveActivityLaunchAttributeTypes = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -548,8 +534,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKSupportsLiveActivityLaunchAttributeTypes = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -679,43 +665,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		6AC2F4F12E21845F00F4064A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 11.15.0;
-			};
-		};
-		6ACE7CCA2E25F76D00D6F470 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.19;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		6AC2F4F22E218E3C00F4064A /* FirebaseAuth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6AC2F4F12E21845F00F4064A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAuth;
-		};
-		6AC2F4F42E218E3C00F4064A /* FirebaseCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6AC2F4F12E21845F00F4064A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCore;
-		};
-		6ACE7CCB2E25F76D00D6F470 /* ZIPFoundation */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6ACE7CCA2E25F76D00D6F470 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
-			productName = ZIPFoundation;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 6AC2F4A42E2161CA00F4064A /* Project object */;
 }

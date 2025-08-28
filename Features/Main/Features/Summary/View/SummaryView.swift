@@ -83,10 +83,10 @@ enum SummaryPage: CaseIterable, Identifiable {
     }
     var iconName: String {
         switch self {
-        case .theSplit: return "gauge"
-        case .weeklyRitual: return "chart.bar.xaxis"
-        case .dailyRhythm:  return "clock"
-        case .weekInsights:   return "ruler"
+        case .theSplit: return "chart.pie"
+        case .weeklyRitual: return "chart.bar"
+        case .dailyRhythm:  return "sun.horizon"
+        case .weekInsights:   return "bubbles.and.sparkles"
         }
     }
 }
@@ -486,27 +486,21 @@ struct SummaryPageIndicators: View {
     @Environment(\.layout) private var layout
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 16) {
             ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
                 let isCurrent = (idx == currentIndex)
 
                 Image(systemName: page.iconName)
                     .symbolVariant(isCurrent ? .fill : .none)
-                    .font(.footnote.weight(.semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(isCurrent ? .primary : .secondary)
-                    .scaleEffect(isCurrent ? 1.15 : 1.0)
+                    .scaleEffect(isCurrent ? 1.5 : 1.0)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(isCurrent ? Color.primary.opacity(0.12) : .clear)
-                    )
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard currentIndex != idx else { return }
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                            currentIndex = idx
-                        }
+                        currentIndex = idx
                     }
                     .accessibilityLabel(Text(page.title))
                     .accessibilityAddTraits(isCurrent ? .isSelected : [])
