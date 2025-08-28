@@ -110,14 +110,20 @@ struct SummaryCard: View {
         }
     }
     
+    private var TabHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: page.iconName)
+            Text(page.title)
+                .font(.headline)
+            Spacer()
+        }
+        .padding(8)
+    }
+    
     private var WeekInsights: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: page.iconName)
-                Text(page.title)
-                    .font(.headline)
-                Spacer()
-            }
+            TabHeader
+
             Group {
                 if let d = SummaryViewModel.shared.weeklyInsights {
                     VStack(alignment: .leading, spacing: 12) {
@@ -221,9 +227,10 @@ struct SummaryCard: View {
                             }
                         }
                     }
-                    .padding(16)
+                    
                 }
             }
+            .padding(.top, 8)
         }
         .padding(16)
         .background(
@@ -235,13 +242,8 @@ struct SummaryCard: View {
     
     private var DailyRhythm: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: page.iconName)
-                Text(page.title)
-                    .font(.headline)
-                Spacer()
-            }
-            Spacer(minLength: 8)
+            TabHeader
+
             Group {
                 if let hourData = SummaryViewModel.shared.hourData {
                     Chart {
@@ -304,9 +306,10 @@ struct SummaryCard: View {
                         plot.padding(.bottom, 14)
                     }
                     .frame(height: 160)
-                    .padding(16)
                 }
             }
+            .padding(.top, 8)
+            .padding(.bottom, 8)
         }
         .padding(16)
         .background(
@@ -328,13 +331,8 @@ struct SummaryCard: View {
     
     private var WeeklyRitual: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: page.iconName)
-                Text(page.title)
-                    .font(.headline)
-                Spacer()
-            }
-            Spacer(minLength: 8)
+            TabHeader
+            
             Group {
                 if let dowData = SummaryViewModel.shared.dowData {
                     Chart {
@@ -362,7 +360,7 @@ struct SummaryCard: View {
                                     Text(dowData.valueTexts[idx])
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
-                                        .padding(.bottom, 4)   // 🔹 pushes it upward, away from bar
+                                        .padding(.bottom, 4)
                                 }
                             }
                         }
@@ -380,9 +378,9 @@ struct SummaryCard: View {
                     }
                     .chartYScale(domain: 0...(max(dowData.maxMeters, 1)))
                     .frame(height: 140)
-                    .padding(16)
                 }
             }
+            .padding(.top, 24)
         }
         .padding(16)
         .background(
@@ -400,30 +398,26 @@ struct SummaryCard: View {
     
     private var TheSplit: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: page.iconName)
-                Text(page.title)
-                    .font(.headline)
-                Spacer()
-            }
+            TabHeader
+            
             Group {
                 if let breakdownData = SummaryViewModel.shared.breakdownData {
                     VStack(spacing: 20) {
-                        ShareRow(
+                        PercentRow(
                             percent: breakdownData.milesPercent,
                             percentLabel: breakdownData.milesPercentLabel,
                             rowLabel: breakdownData.milesLabel,
                             rowDescription: breakdownData.milesDescription,
                             color: .green
                         )
-                        ShareRow(
+                        PercentRow(
                             percent: breakdownData.durationPercent,
                             percentLabel: breakdownData.durationPercentLabel,
                             rowLabel: breakdownData.durationLabel,
                             rowDescription: breakdownData.durationDescription,
                             color: .blue
                         )
-                        ShareRow(
+                        PercentRow(
                             percent: breakdownData.tripCountPercent,
                             percentLabel: breakdownData.tripCountPercentLabel,
                             rowLabel: breakdownData.tripCountLabel,
@@ -431,7 +425,6 @@ struct SummaryCard: View {
                             color: .orange
                         )
                     }
-                    .padding(16)
                 } else {
                     Text("Unable to pull data for \(TripStatusViewModel.shared.selectedTripType?.name ?? "")")
                         .font(.system(size: 20, weight: .semibold))
@@ -447,7 +440,7 @@ struct SummaryCard: View {
         )
     }
     
-    struct ShareRow: View {
+    struct PercentRow: View {
         let percent: Double   // 0…1 ratio
         let percentLabel: String
         let rowLabel: String     // e.g. "Distance"
@@ -455,24 +448,29 @@ struct SummaryCard: View {
         let color: Color
 
         var body: some View {
-            HStack(spacing: 16) {
+            HStack(spacing: 24) {
                 ZStack {
                     Circle()
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 6)
                     Circle()
                         .trim(from: 0, to: percent)
                         .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     Text(percentLabel)
-                        .font(.subheadline.bold())
+                        .font(.subheadline)
+                        .lineLimit(1)
+
                 }
                 .frame(width: 60, height: 60)
+                .padding(.vertical, 8)
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(rowLabel)
-                        .font(.headline)
+                        .font(.subheadline)
+                        .lineLimit(1)
                     Text(rowDescription)
-                        .font(.footnote)
+                        .font(.caption)
+                        .lineLimit(1)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -514,8 +512,7 @@ struct SummaryPageIndicators: View {
                     .accessibilityAddTraits(isCurrent ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 3)
-        .padding(.vertical, 3)
+        .padding(8)
     }
 }
 
