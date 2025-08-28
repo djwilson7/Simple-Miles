@@ -46,6 +46,7 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
         }
         .id(colorScheme)
         .frame(width: animatedWidth, height: animatedHeight, alignment: .center)
+        .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         .onChange(of: viewModel.mainState) { _, _ in
             runContentTransitionAnimation()
         }

@@ -8,9 +8,14 @@ class MainStateDriver: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
-    private init() {}
-    
-    func initialize() {
-        print("Main State Driver: Initialized")
+    private init() {
+        $mainState
+            .sink { newState in
+                Log("Main State Changed to: \(newState)")
+                if newState == .main {
+                    TripStatusViewModel.shared.clearSelected()
+                }
+            }
+            .store(in: &cancellables)
     }
 }

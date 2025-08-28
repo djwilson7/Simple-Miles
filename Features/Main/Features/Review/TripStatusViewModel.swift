@@ -104,9 +104,14 @@ final class TripStatusViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    @MainActor func longPress(for type: TripType) {
+    @MainActor func tapped(for type: TripType) {
         Log("\(type)")
         selectedTripType = type
+    }
+    
+    @MainActor func clearSelected() {
+        Log("Selected Trip Type Cleared")
+        selectedTripType = nil
     }
     
     // MARK: - Swipeable pages for TripStatusView

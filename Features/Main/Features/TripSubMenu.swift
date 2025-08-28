@@ -32,14 +32,8 @@ struct TripSubMenu: View {
     var body: some View {
         let hasTripType = viewModel.currentTripType != nil
         let isVisible = viewModel.isVisible
-        
-        var reviewText: String {
-            hasTripType ? "\(tripTypeName!.capitalized) Trips" : ""
-        }
-
-        var summaryText: String {
-            hasTripType ? "\(tripTypeName!.capitalized) Summary" : ""
-        }
+        var reviewText: String { hasTripType ? "\(tripTypeName!.capitalized) Trips" : "" }
+        var summaryText: String { hasTripType ? "\(tripTypeName!.capitalized) Summary" : "" }
         
         // Card-like container
         VStack(spacing: 12) {
@@ -53,7 +47,6 @@ struct TripSubMenu: View {
                             .scaleEffect(isVisible ? 1 : 0.01)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.footnote)
                             .foregroundStyle(.secondary)
                             .scaleEffect(isVisible ? 1 : 0.01)
 
@@ -75,6 +68,7 @@ struct TripSubMenu: View {
                         Image(systemName: "chart.bar")
                             .scaleEffect(isVisible ? 1 : 0.01)
                         Text(summaryText)
+                            .font(.body)
                             .scaleEffect(isVisible ? 1 : 0.01)
                         Spacer()
                         Image(systemName: "chevron.right")

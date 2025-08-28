@@ -37,31 +37,7 @@ struct TripStatusView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TabView(selection: $viewModel.currentPageIndex) {
-                ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { index, page in
-                    StatusRowBuilder(page: page, index: index)
-                        .tag(index)
-                        .frame(width: layout.width.pct(0.8))
-                        .background(
-                            GeometryReader { g in
-                                Color.clear
-                                    .preference(key: PageWidthKey.self, value: [index: g.size.width])
-                            }
-                        )
-                        .onLongPressGesture(minimumDuration: 0.4) {
-                            if let type = page.tripType {
-                                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                viewModel.longPress(for: type)
-                            }
-                        }
-                        .onTapGesture {
-                            TripSubMenuViewModel.shared.isVisible = false
-                        }
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .padding(.bottom, 8)
-
+            pages
             pageIndicators
         }
         .frame(width: layout.width.pct(0.8))
@@ -73,6 +49,35 @@ struct TripStatusView: View {
         }
         .preference(key: DynamicContextBarDesiredHeightKey.self, value: computedDesiredHeight())
         .preference(key: DynamicContextBarDesiredWidthKey.self, value: computedDesiredWidth())
+    }
+    
+    private var pages: some View {
+        TabView(selection: $viewModel.currentPageIndex) {
+            ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { index, page in
+                StatusRowBuilder(page: page, index: index)
+                    .tag(index)
+                    .frame(width: layout.width.pct(0.8))
+                    .background(
+                        GeometryReader { g in
+                            Color.clear
+                                .preference(key: PageWidthKey.self, value: [index: g.size.width])
+                        }
+                    )
+                    .onTapGesture {
+                        if viewModel.selectedTripType == nil {
+                            if let type = page.tripType {
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                viewModel.tapped(for: type)
+                            }
+                        } else {
+                            viewModel.clearSelected()
+                        }
+                        
+                    }
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .padding(.bottom, 8)
     }
     
     private var pageIndicators: some View {
