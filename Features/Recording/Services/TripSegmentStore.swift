@@ -38,8 +38,18 @@ final class TripSegmentStore {
 
     /// Fetch summed distance for a type (and overall totals) within an optional date range.
     /// NOTE: Values are raw meters (DAO keeps raw meters despite the "Miles" naming).
-    func fetchMilesData(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> (typeMeters: Double, totalMeters: Double) {
-        try store.fetchMilesData(type: type, from: from, to: to)
+    func fetchBreakdownData(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawBreakdownData {
+        try store.fetchBreakdownData(type: type, from: from, to: to)
+    }
+    
+    /// Fetch summed distance for a type (and overall totals) within an optional date range.
+    /// NOTE: Values are raw meters (DAO keeps raw meters despite the "Miles" naming).
+    func fetchDOWMeters(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawDOWData {
+        try store.fetchDOWMeters(type: type, from: from, to: to)
+    }
+
+    func fetchStartHourHistogram(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawHourData {
+        try store.fetchStartHourHistogram(type: type, from: from, to: to)
     }
     
     // MARK: - Persistence (SQLite)

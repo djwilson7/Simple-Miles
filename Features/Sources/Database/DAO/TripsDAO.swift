@@ -243,64 +243,209 @@ enum TripsDAO {
         }
     }
 
-    static func fetchMilesData(for type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> (typeMeters: Double, totalMeters: Double) {
+    static func fetchBreakdownData(
+        for type: TripType,
+        from: Int64? = nil,
+        to: Int64? = nil
+    ) throws -> RawBreakdownData {
         return try Database.shared.inRead { db in
-            var datePredicate = ""
-            if from != nil {
-                datePredicate += " AND start_ts >= ?"
-            }
-            if to != nil {
-                datePredicate += " AND start_ts <= ?"
-            }
-
-            let bindDateParams: (OpaquePointer?, inout Int32) -> Void = { stmt, index in
-                if let from = from {
-                    sqlite3_bind_int64(stmt, index, from)
-                    index += 1
-                }
-                if let to = to {
-                    sqlite3_bind_int64(stmt, index, to)
-                    index += 1
-                }
-            }
-
-            // Query 1: Sum of distance_m for the given type
-            let sqlType = "SELECT COALESCE(SUM(distance_m),0) FROM trips WHERE type=?" + datePredicate + ";"
-            var stmtType: OpaquePointer?
-            defer { sqlite3_finalize(stmtType) }
-            guard sqlite3_prepare_v2(db, sqlType, -1, &stmtType, nil) == SQLITE_OK else {
-                throw DBError.sqlite(message: lastError(db))
-            }
-            var bindIndex: Int32 = 1
-            sqlite3_bind_int(stmtType, bindIndex, Int32(type.dbValue))
-            bindIndex += 1
-            bindDateParams(stmtType, &bindIndex)
-            guard sqlite3_step(stmtType) == SQLITE_ROW else {
-                throw DBError.sqlite(message: lastError(db))
-            }
-            let tripTypeMeters = sqlite3_column_double(stmtType, 0)
-            Log("Trip Type Meters: \(tripTypeMeters)")
-            // Query 2: Sum of distance_m for trips where type != unclassified and type != trash
-            let sqlTotal = "SELECT COALESCE(SUM(distance_m),0) FROM trips WHERE type!=? AND type!=?" + datePredicate + ";"
-            var stmtTotal: OpaquePointer?
-            defer { sqlite3_finalize(stmtTotal) }
-            guard sqlite3_prepare_v2(db, sqlTotal, -1, &stmtTotal, nil) == SQLITE_OK else {
-                throw DBError.sqlite(message: lastError(db))
-            }
-            bindIndex = 1
-            sqlite3_bind_int(stmtTotal, bindIndex, Int32(TripType.unsorted.dbValue))
-            bindIndex += 1
-            sqlite3_bind_int(stmtTotal, bindIndex, Int32(TripType.trash.dbValue))
-            bindIndex += 1
-            bindDateParams(stmtTotal, &bindIndex)
-            guard sqlite3_step(stmtTotal) == SQLITE_ROW else {
-                throw DBError.sqlite(message: lastError(db))
-            }
-            let allMeters = sqlite3_column_double(stmtTotal, 0)
-            Log("All Meters: \(allMeters)")
-
-            return (typeMeters: tripTypeMeters, totalMeters: allMeters)
+            let typeMeters = try sumDistanceMeters(for: type, from: from, to: to, in: db)
+            let totalMeters = try sumDistanceMetersAllExcludingUnsortedTrash(from: from, to: to, in: db)
+            let typeCount = try countTrips(for: type, from: from, to: to, in: db)
+            let totalCount = try countTripsAllExcludingUnsortedTrash(from: from, to: to, in: db)
+            let typeDuration = try sumDurationSeconds(for: type, from: from, to: to, in: db)
+            let totalDuration = try sumDurationSecondsAllExcludingUnsortedTrash(from: from, to: to, in: db)
+            return RawBreakdownData(
+                typeMeters: typeMeters,
+                totalMeters: totalMeters,
+                typeCount: typeCount,
+                totalCount: totalCount,
+                typeDurationSecs: typeDuration,
+                totalDurationSecs: totalDuration
+            )
         }
+    }
+    
+    /// Returns raw meters per weekday (Sun=0 … Sat=6) for the given trip type.
+    /// - Parameters:
+    ///   - type: TripType to filter rows
+    ///   - from: Optional epoch seconds lower bound (inclusive)
+    ///   - to:   Optional epoch seconds upper bound (inclusive)
+    /// - Note: Uses local time for weekday bucketing to match user expectations.
+    static func fetchDOWMeters(
+        for type: TripType,
+        from: Int64? = nil,
+        to: Int64? = nil
+    ) throws -> RawDOWData {
+        return try Database.shared.inRead { db in
+            var buckets = Array(repeating: 0.0, count: 7)
+
+            // SQLite: 0=Sun … 6=Sat; localtime so user sees familiar weekdays
+            let sql = """
+            SELECT
+              CAST(strftime('%w', datetime(start_ts / 1000, 'unixepoch', 'localtime')) AS INTEGER) AS dow,
+              COALESCE(SUM(distance_m), 0.0) AS meters
+            FROM trips
+            WHERE type = ?
+            \(buildDatePredicate(from: from, to: to))
+            GROUP BY dow;
+            """
+
+            var s: OpaquePointer?
+            defer { sqlite3_finalize(s) }
+            guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+
+            var i: Int32 = 1
+            sqlite3_bind_int(s, i, Int32(type.dbValue)); i += 1
+            bindDateParams(s, &i, from: from, to: to)
+
+            while sqlite3_step(s) == SQLITE_ROW {
+                let dow = Int(sqlite3_column_int(s, 0))          // 0...6
+                let meters = sqlite3_column_double(s, 1)
+                if (0...6).contains(dow) { buckets[dow] = meters }
+            }
+
+            return RawDOWData(meters: buckets)
+        }
+    }
+    
+    static func fetchStartHourHistogram(
+        for type: TripType,
+        metric: HistogramMetric = .count,      // .count, .distanceMeters, .durationSecs
+        from: Int64? = nil,
+        to: Int64? = nil
+    ) throws -> RawHourData {
+        return try Database.shared.inRead { db in
+            var buckets = Array(repeating: 0.0, count: 24)
+
+            let selectAgg: String
+            switch metric {
+            case .count:          selectAgg = "COUNT(*)"
+            case .distanceMeters: selectAgg = "COALESCE(SUM(distance_m), 0.0)"
+            case .durationSecs:   selectAgg = "COALESCE(SUM(duration_s), 0.0)"
+            }
+
+            // NOTE: start_ts is ms → divide by 1000
+            let sql = """
+            SELECT
+              CAST(strftime('%H', datetime(start_ts/1000, 'unixepoch', 'localtime')) AS INTEGER) AS hr,
+              \(selectAgg) AS v
+            FROM trips
+            WHERE type = ?
+            \(buildDatePredicate(from: from, to: to))
+            GROUP BY hr;
+            """
+
+            var s: OpaquePointer?
+            defer { sqlite3_finalize(s) }
+            guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+
+            var i: Int32 = 1
+            sqlite3_bind_int(s, i, Int32(type.dbValue)); i += 1
+            bindDateParams(s, &i, from: from, to: to)
+
+            while sqlite3_step(s) == SQLITE_ROW {
+                guard sqlite3_column_type(s, 0) != SQLITE_NULL else { continue }
+                let hr = Int(sqlite3_column_int(s, 0))   // 0…23
+                let v  = sqlite3_column_double(s, 1)
+                if (0..<24).contains(hr) { buckets[hr] = v }
+            }
+
+            return RawHourData(values: buckets)
+        }
+    }
+
+    enum HistogramMetric { case count, distanceMeters, durationSecs }
+    // MARK: - Compact aggregate helpers
+    private static func buildDatePredicate(from: Int64?, to: Int64?) -> String {
+        var p = ""
+        if from != nil { p += " AND start_ts >= ?" }
+        if to != nil { p += " AND start_ts <= ?" }
+        return p
+    }
+
+    private static func bindDateParams(_ stmt: OpaquePointer?, _ index: inout Int32, from: Int64?, to: Int64?) {
+        if let from { sqlite3_bind_int64(stmt, index, from); index += 1 }
+        if let to { sqlite3_bind_int64(stmt, index, to); index += 1 }
+    }
+
+    private static func sumDistanceMeters(for type: TripType, from: Int64?, to: Int64?, in db: OpaquePointer) throws -> Double {
+        let sql = "SELECT COALESCE(SUM(distance_m),0) FROM trips WHERE type=?" + buildDatePredicate(from: from, to: to) + ";"
+        var s: OpaquePointer?
+        defer { sqlite3_finalize(s) }
+        guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else { throw DBError.sqlite(message: lastError(db)) }
+        var i: Int32 = 1
+        sqlite3_bind_int(s, i, Int32(type.dbValue)); i += 1
+        bindDateParams(s, &i, from: from, to: to)
+        guard sqlite3_step(s) == SQLITE_ROW else { throw DBError.sqlite(message: lastError(db)) }
+        return sqlite3_column_double(s, 0)
+    }
+
+    private static func sumDistanceMetersAllExcludingUnsortedTrash(from: Int64?, to: Int64?, in db: OpaquePointer) throws -> Double {
+        let sql = "SELECT COALESCE(SUM(distance_m),0) FROM trips WHERE type!=? AND type!=?" + buildDatePredicate(from: from, to: to) + ";"
+        var s: OpaquePointer?
+        defer { sqlite3_finalize(s) }
+        guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else { throw DBError.sqlite(message: lastError(db)) }
+        var i: Int32 = 1
+        sqlite3_bind_int(s, i, Int32(TripType.unsorted.dbValue)); i += 1
+        sqlite3_bind_int(s, i, Int32(TripType.trash.dbValue)); i += 1
+        bindDateParams(s, &i, from: from, to: to)
+        guard sqlite3_step(s) == SQLITE_ROW else { throw DBError.sqlite(message: lastError(db)) }
+        return sqlite3_column_double(s, 0)
+    }
+
+    private static func countTrips(for type: TripType, from: Int64?, to: Int64?, in db: OpaquePointer) throws -> Int {
+        let sql = "SELECT COUNT(*) FROM trips WHERE type=?" + buildDatePredicate(from: from, to: to) + ";"
+        var s: OpaquePointer?
+        defer { sqlite3_finalize(s) }
+        guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else { throw DBError.sqlite(message: lastError(db)) }
+        var i: Int32 = 1
+        sqlite3_bind_int(s, i, Int32(type.dbValue)); i += 1
+        bindDateParams(s, &i, from: from, to: to)
+        guard sqlite3_step(s) == SQLITE_ROW else { throw DBError.sqlite(message: lastError(db)) }
+        return Int(sqlite3_column_int64(s, 0))
+    }
+
+    private static func countTripsAllExcludingUnsortedTrash(from: Int64?, to: Int64?, in db: OpaquePointer) throws -> Int {
+        let sql = "SELECT COUNT(*) FROM trips WHERE type!=? AND type!=?" + buildDatePredicate(from: from, to: to) + ";"
+        var s: OpaquePointer?
+        defer { sqlite3_finalize(s) }
+        guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else { throw DBError.sqlite(message: lastError(db)) }
+        var i: Int32 = 1
+        sqlite3_bind_int(s, i, Int32(TripType.unsorted.dbValue)); i += 1
+        sqlite3_bind_int(s, i, Int32(TripType.trash.dbValue)); i += 1
+        bindDateParams(s, &i, from: from, to: to)
+        guard sqlite3_step(s) == SQLITE_ROW else { throw DBError.sqlite(message: lastError(db)) }
+        return Int(sqlite3_column_int64(s, 0))
+    }
+
+    private static func sumDurationSeconds(for type: TripType, from: Int64?, to: Int64?, in db: OpaquePointer) throws -> Double {
+        let sql = "SELECT COALESCE(SUM(duration_s),0) FROM trips WHERE type=?" + buildDatePredicate(from: from, to: to) + ";"
+        var s: OpaquePointer?
+        defer { sqlite3_finalize(s) }
+        guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else { throw DBError.sqlite(message: lastError(db)) }
+        var i: Int32 = 1
+        sqlite3_bind_int(s, i, Int32(type.dbValue)); i += 1
+        bindDateParams(s, &i, from: from, to: to)
+        guard sqlite3_step(s) == SQLITE_ROW else { throw DBError.sqlite(message: lastError(db)) }
+        return sqlite3_column_double(s, 0)
+    }
+
+    private static func sumDurationSecondsAllExcludingUnsortedTrash(from: Int64?, to: Int64?, in db: OpaquePointer) throws -> Double {
+        let sql = "SELECT COALESCE(SUM(duration_s),0) FROM trips WHERE type!=? AND type!=?" + buildDatePredicate(from: from, to: to) + ";"
+        var s: OpaquePointer?
+        defer { sqlite3_finalize(s) }
+        guard sqlite3_prepare_v2(db, sql, -1, &s, nil) == SQLITE_OK else { throw DBError.sqlite(message: lastError(db)) }
+        var i: Int32 = 1
+        sqlite3_bind_int(s, i, Int32(TripType.unsorted.dbValue)); i += 1
+        sqlite3_bind_int(s, i, Int32(TripType.trash.dbValue)); i += 1
+        bindDateParams(s, &i, from: from, to: to)
+        guard sqlite3_step(s) == SQLITE_ROW else { throw DBError.sqlite(message: lastError(db)) }
+        return sqlite3_column_double(s, 0)
     }
 
     /// Count trips for a given type.

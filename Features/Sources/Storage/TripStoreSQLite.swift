@@ -143,16 +143,31 @@ final class TripStoreSQLite {
     ///   - type: TripType to filter for the type-specific total
     ///   - from: Optional epoch millis lower bound (inclusive)
     ///   - to:   Optional epoch millis upper bound (inclusive)
-    /// - Returns: Tuple of (typeMiles, totalMiles). NOTE: values are raw meters even though labels say "Miles".
-    func fetchMilesData(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> (typeMeters: Double, totalMeters: Double) {
-        try TripsDAO.fetchMilesData(for: type, from: from, to: to)
+    func fetchBreakdownData(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawBreakdownData {
+        try TripsDAO.fetchBreakdownData(for: type, from: from, to: to)
     }
-
+    
+    /// Fetch summed distance for a type (and overall totals) within an optional date range.
+    /// - Parameters:
+    ///   - type: TripType to filter for the type-specific total
+    ///   - from: Optional epoch millis lower bound (inclusive)
+    ///   - to:   Optional epoch millis upper bound (inclusive)
+    func fetchDOWMeters(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawDOWData {
+        try TripsDAO.fetchDOWMeters(for: type, from: from, to: to)
+    }
+    
+    func fetchStartHourHistogram(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawHourData {
+        try TripsDAO.fetchStartHourHistogram(for: type, from: from, to: to)
+    }
+    
     /// Fetch a metadata page for a given type, newest first. Keyset pagination via `afterTs`.
     func fetchPage(type: TripType, afterTs: Int64? = nil, limit: Int = 50) throws -> [TripMeta] {
         try TripsDAO.fetchPage(type: type.dbValue, afterTs: afterTs, limit: limit)
     }
-
+    
+   
+    
+    
     /// Fetch aggregate totals for a type using pure SQL.
     func fetchTotals(type: TripType) throws -> Totals {
         try TripsDAO.fetchTotals(for: type.dbValue)

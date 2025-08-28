@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 private struct SummaryContentHeightKey: PreferenceKey {
     static var defaultValue: [Int: CGFloat] = [:]
@@ -69,22 +70,22 @@ struct SummaryView: View {
 
 // MARK: - Pages
 enum SummaryPage: CaseIterable, Identifiable {
-    case miles, trips, time, avg
+    case theSplit, weeklyRitual, dailyRhythm, avg
     var id: Self { self }
 
     var title: String {
         switch self {
-        case .miles: return "Miles"
-        case .trips: return "Trip Count"
-        case .time:  return "Active Time"
+        case .theSplit: return "The Split"
+        case .weeklyRitual: return "Weekly Ritual"
+        case .dailyRhythm:  return "Daily Rhythm"
         case .avg:   return "Avg Miles/Trip"
         }
     }
     var iconName: String {
         switch self {
-        case .miles: return "gauge"
-        case .trips: return "list.number"
-        case .time:  return "clock"
+        case .theSplit: return "gauge"
+        case .weeklyRitual: return "chart.bar.xaxis"
+        case .dailyRhythm:  return "clock"
         case .avg:   return "ruler"
         }
     }
@@ -98,46 +99,12 @@ struct SummaryCard: View {
 
     var body: some View {
         switch page {
-        case .miles:
-            // Miles-specific skeleton
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Image(systemName: page.iconName)
-                    Text(page.title)
-                        .font(.headline)
-                    Spacer()
-                }
-                Group {
-                    if let milesData = SummaryViewModel.shared.milesData {
-                        let ratio = milesData.totalMiles > 0 ? milesData.typeMiles / milesData.totalMiles : 0
-                        HStack {
-                            //Ring Gauge: Pct of trip type miles compared to all miles (not trash/unsorted miles)
-                            Spacer()
-                            ZStack {
-                                Circle()
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 20)
-                                Circle()
-                                    .trim(from: 0, to: ratio)
-                                    .stroke(Color.green, style: StrokeStyle(lineWidth: 20, lineCap: .round))
-                                    .rotationEffect(.degrees(180))
-                            }
-                            .frame(width: 100, height: 100)
-                            Spacer()
-                        }
-                        .padding(16)
-                    } else {
-                        Text("Unable to pull data for personal")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(16)
-            .background(
-                GeometryReader { g in
-                    Color.clear.preference(key: SummaryContentHeightKey.self, value: [index: g.size.height])
-                }
-            )
+        case .theSplit:
+            TheSplit
+        case .weeklyRitual:
+            WeeklyRitual
+        case .dailyRhythm:
+            DailyRhythm
         default:
             // Generic placeholder for other pages
             VStack(alignment: .leading, spacing: 6) {
@@ -166,6 +133,253 @@ struct SummaryCard: View {
             )
         }
     }
+    
+    private var DailyRhythm: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: page.iconName)
+                Text(page.title)
+                    .font(.headline)
+                Spacer()
+            }
+            Spacer(minLength: 8)
+            Group {
+                if let hourData = SummaryViewModel.shared.hourData {
+                    Chart {
+                        ForEach(Array(hourData.values.enumerated()), id: \.0) { idx, v in
+                            let norm = v / max(hourData.maxValue, 1)
+                            let bottom = Color.green
+                            let top    = Color(hue: 0.33 * (1 - norm), saturation: 0.95, brightness: 0.95)
+
+                            BarMark(
+                                x: .value("Hour", idx),
+                                y: .value("Value", v)
+                            )
+                            .foregroundStyle(
+                                LinearGradient(gradient: Gradient(stops: [
+                                    .init(color: bottom, location: 0),
+                                    .init(color: top,    location: 1),
+                                ]), startPoint: .bottom, endPoint: .top)
+                            )
+                            .cornerRadius(3)
+                        }
+                        
+                        // 6 AM
+                        RuleMark(x: .value("6a", 6.0))
+                            .lineStyle(.init(lineWidth: 1))
+                            .foregroundStyle(.secondary.opacity(0.25))
+                            .annotation(position: .bottom, alignment: .center) {
+                                Text("6a")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .padding(4)
+                            }
+
+                        // 12 PM
+                        RuleMark(x: .value("12p", 12.0))
+                            .lineStyle(.init(lineWidth: 1))
+                            .foregroundStyle(.secondary.opacity(0.55))
+                            .annotation(position: .bottom, alignment: .center) {
+                                Text("12p")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.primary)
+                                    .padding(4)
+                            }
+
+                        // 6 PM
+                        RuleMark(x: .value("6p", 18.0))
+                            .lineStyle(.init(lineWidth: 1))
+                            .foregroundStyle(.secondary.opacity(0.25))
+                            .annotation(position: .bottom, alignment: .center) {
+                                Text("6p")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .padding(4)
+                            }
+                    }
+                    .chartYScale(domain: 0...(max(hourData.maxValue, 1)))
+                    .chartXScale(domain: -0.5...23.5)
+                    .chartYAxis(.hidden)
+                    .chartXAxis(.hidden)
+                    .chartPlotStyle { plot in
+                        plot.padding(.bottom, 14)
+                    }
+                    .frame(height: 160)
+                    .padding(16)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            GeometryReader { g in
+                Color.clear.preference(key: SummaryContentHeightKey.self, value: [index: g.size.height])
+            }
+        )
+    }
+    
+    func hourLabel(_ h: Int) -> String {
+        switch h {
+        case 0: return "12a"
+        case 12: return "12p"
+        case 1...11: return "\(h)a"
+        case 13...23: return "\(h - 12)p"
+        default: return "" // empty = no label
+        }
+    }
+    
+    private var WeeklyRitual: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: page.iconName)
+                Text(page.title)
+                    .font(.headline)
+                Spacer()
+            }
+            Spacer(minLength: 8)
+            Group {
+                if let dowData = SummaryViewModel.shared.dowData {
+                    Chart {
+                        ForEach(Array(dowData.meters.enumerated()), id: \.0) { idx, meters in
+                            let norm = meters / max(dowData.maxMeters, 1) // 0…1
+                            let bottom = Color.green
+                            let top    = hueGreenToRed(norm)
+
+                            BarMark(
+                                x: .value("Day", dowData.labels[idx]),
+                                y: .value("Meters", meters)
+                            )
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(stops: [
+                                        .init(color: bottom, location: 0.0),
+                                        .init(color: top,    location: 1.0)
+                                    ]),
+                                    startPoint: .bottom, endPoint: .top
+                                )
+                            )
+                            .cornerRadius(3)
+                            .annotation(position: .top, alignment: .center) {
+                                if meters > 0 {
+                                    Text(dowData.valueTexts[idx])
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.bottom, 4)   // 🔹 pushes it upward, away from bar
+                                }
+                            }
+                        }
+
+                        // “Shelf” baseline
+                        RuleMark(y: .value("Baseline", 0))
+                            .lineStyle(StrokeStyle(lineWidth: 1))
+                            .foregroundStyle(Color.secondary.opacity(0.4))
+                    }
+                    .chartYAxis(.hidden)
+                    .chartXAxis {
+                        AxisMarks(values: dowData.labels) { _ in
+                            AxisValueLabel()   // labels only; no ticks/grid
+                        }
+                    }
+                    .chartYScale(domain: 0...(max(dowData.maxMeters, 1)))
+                    .frame(height: 140)
+                    .padding(16)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            GeometryReader { g in
+                Color.clear.preference(key: SummaryContentHeightKey.self, value: [index: g.size.height])
+            }
+        )
+    }
+    
+    func hueGreenToRed(_ t: Double) -> Color {
+        let clamped = max(0, min(1, t))
+        // Hue from ~0.33 (green) down to 0.0 (red)
+        return Color(hue: 0.33 * (1 - clamped), saturation: 0.95, brightness: 0.65)
+    }
+    
+    private var TheSplit: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: page.iconName)
+                Text(page.title)
+                    .font(.headline)
+                Spacer()
+            }
+            Group {
+                if let breakdownData = SummaryViewModel.shared.breakdownData {
+                    VStack(spacing: 20) {
+                        ShareRow(
+                            percent: breakdownData.milesPercent,
+                            percentLabel: breakdownData.milesPercentLabel,
+                            rowLabel: breakdownData.milesLabel,
+                            rowDescription: breakdownData.milesDescription,
+                            color: .green
+                        )
+                        ShareRow(
+                            percent: breakdownData.durationPercent,
+                            percentLabel: breakdownData.durationPercentLabel,
+                            rowLabel: breakdownData.durationLabel,
+                            rowDescription: breakdownData.durationDescription,
+                            color: .blue
+                        )
+                        ShareRow(
+                            percent: breakdownData.tripCountPercent,
+                            percentLabel: breakdownData.tripCountPercentLabel,
+                            rowLabel: breakdownData.tripCountLabel,
+                            rowDescription: breakdownData.tripCountDescription,
+                            color: .orange
+                        )
+                    }
+                    .padding(16)
+                } else {
+                    Text("Unable to pull data for \(TripStatusViewModel.shared.selectedTripType?.name ?? "")")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            GeometryReader { g in
+                Color.clear.preference(key: SummaryContentHeightKey.self, value: [index: g.size.height])
+            }
+        )
+    }
+    
+    struct ShareRow: View {
+        let percent: Double   // 0…1 ratio
+        let percentLabel: String
+        let rowLabel: String     // e.g. "Distance"
+        let rowDescription: String // e.g. "150 mi / 300 mi"
+        let color: Color
+
+        var body: some View {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 8)
+                    Circle()
+                        .trim(from: 0, to: percent)
+                        .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Text(percentLabel)
+                        .font(.subheadline.bold())
+                }
+                .frame(width: 60, height: 60)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(rowLabel)
+                        .font(.headline)
+                    Text(rowDescription)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+        }
+    }
 }
 
 // MARK: - Indicators (tap to jump)
@@ -175,37 +389,34 @@ struct SummaryPageIndicators: View {
     @Environment(\.layout) private var layout
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 8) {
             ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
                 let isCurrent = (idx == currentIndex)
-                VStack(spacing: 4) {
-                    Image(systemName: page.iconName)
-                        .font(.footnote)
-                        .foregroundStyle(isCurrent ? .primary : .secondary)
-                    Circle()
-                        .frame(width: 6, height: 6)
-                        .foregroundStyle(isCurrent ? .primary : .secondary)
-                        .opacity(isCurrent ? 1 : 0.3)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard currentIndex != idx else { return }
-                    currentIndex = idx
-                }
+
+                Image(systemName: page.iconName)
+                    .symbolVariant(isCurrent ? .fill : .none)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(isCurrent ? .primary : .secondary)
+                    .scaleEffect(isCurrent ? 1.15 : 1.0)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isCurrent ? Color.primary.opacity(0.12) : .clear)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard currentIndex != idx else { return }
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                            currentIndex = idx
+                        }
+                    }
+                    .accessibilityLabel(Text(page.title))
+                    .accessibilityAddTraits(isCurrent ? .isSelected : [])
             }
         }
         .padding(.horizontal, 3)
         .padding(.vertical, 3)
-        .background(
-            Capsule(style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .strokeBorder(.quaternary, lineWidth: 1)
-        )
     }
 }
 
