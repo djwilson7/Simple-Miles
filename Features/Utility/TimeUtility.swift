@@ -7,8 +7,8 @@
 import Foundation
 
 struct TimeUtility {
-    static func formatter(_ interval: TimeInterval) -> String {
-        let totalSeconds = Int(interval)
+    static func formatter(_ seconds: TimeInterval) -> String {
+        let totalSeconds = Int(seconds)
         let seconds = totalSeconds % 60
         let minutes = (totalSeconds / 60) % 60
         let hours = totalSeconds / 3600
@@ -22,6 +22,19 @@ struct TimeUtility {
         } else {
             // Under a minute
             return "\(seconds)s"
+        }
+    }
+    
+    static func formatter(_ dow: Int) -> String {
+        switch dow {
+        case 0: return "Sun"
+        case 1: return "Mon"
+        case 2: return "Tue"
+        case 3: return "Wed"
+        case 4: return "Thu"
+        case 5: return "Fri"
+        case 6: return "Sat"
+        default: return "?"
         }
     }
     

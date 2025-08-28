@@ -160,6 +160,10 @@ final class TripStoreSQLite {
         try TripsDAO.fetchStartHourHistogram(for: type, from: from, to: to)
     }
     
+    func fetchWeeklyInsights(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawWeekInsights {
+        try TripsDAO.fetchWeeklyInsights(for: type, from: from, to: to)
+    }
+    
     /// Fetch a metadata page for a given type, newest first. Keyset pagination via `afterTs`.
     func fetchPage(type: TripType, afterTs: Int64? = nil, limit: Int = 50) throws -> [TripMeta] {
         try TripsDAO.fetchPage(type: type.dbValue, afterTs: afterTs, limit: limit)

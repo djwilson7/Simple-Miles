@@ -70,7 +70,7 @@ struct SummaryView: View {
 
 // MARK: - Pages
 enum SummaryPage: CaseIterable, Identifiable {
-    case theSplit, weeklyRitual, dailyRhythm, avg
+    case theSplit, weeklyRitual, dailyRhythm, weekInsights
     var id: Self { self }
 
     var title: String {
@@ -78,7 +78,7 @@ enum SummaryPage: CaseIterable, Identifiable {
         case .theSplit: return "The Split"
         case .weeklyRitual: return "Weekly Ritual"
         case .dailyRhythm:  return "Daily Rhythm"
-        case .avg:   return "Avg Miles/Trip"
+        case .weekInsights:   return "Week Insights"
         }
     }
     var iconName: String {
@@ -86,7 +86,7 @@ enum SummaryPage: CaseIterable, Identifiable {
         case .theSplit: return "gauge"
         case .weeklyRitual: return "chart.bar.xaxis"
         case .dailyRhythm:  return "clock"
-        case .avg:   return "ruler"
+        case .weekInsights:   return "ruler"
         }
     }
 }
@@ -105,33 +105,132 @@ struct SummaryCard: View {
             WeeklyRitual
         case .dailyRhythm:
             DailyRhythm
-        default:
-            // Generic placeholder for other pages
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Image(systemName: page.iconName)
-                    Text(page.title)
-                        .font(.headline)
-                    Spacer()
-                }
-                Group {
-                    Text("—")
-                        .font(.system(size: 34, weight: .semibold))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .opacity(0.3)
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.quaternary)
-                        .frame(height: 22)
-                        .opacity(0.35)
+        case .weekInsights:
+            WeekInsights
+        }
+    }
+    
+    private var WeekInsights: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: page.iconName)
+                Text(page.title)
+                    .font(.headline)
+                Spacer()
+            }
+            Group {
+                if let d = SummaryViewModel.shared.weeklyInsights {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Avg Distance
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Avg Distance")
+                                    .font(.footnote.weight(.medium))
+                                Spacer()
+                                Text(d.currentAvgMeters!)
+                                    .font(.headline.bold())
+                            }
+                            HStack {
+                                Text("Prev Avg")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(d.priorAvgMeters!)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Avg Duration
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Avg Duration")
+                                    .font(.footnote.weight(.medium))
+                                Spacer()
+                                Text(d.currentAvgDuration!)
+                                    .font(.headline.bold())
+                            }
+                            HStack {
+                                Text("Prev Avg")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(d.priorAvgDuration!)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Longest Trip (Distance)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Longest Trip")
+                                    .font(.footnote.weight(.medium))
+                                Spacer()
+                                Text(d.currentLongestTrip!)
+                                    .font(.headline.bold())
+                            }
+                            HStack {
+                                Text("Prev Longest")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(d.priorLongestTrip!)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Longest Duration
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Longest Duration")
+                                    .font(.footnote.weight(.medium))
+                                Spacer()
+                                Text(d.currentLongestDuration!)
+                                    .font(.headline.bold())
+                            }
+                            HStack {
+                                Text("Prev Longest")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(d.priorLongestDuration!)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Busiest Day (by count)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Busiest Day")
+                                    .font(.footnote.weight(.medium))
+                                Spacer()
+                                Text(d.currentBusiestDOW!)
+                                    .font(.headline.bold())
+                            }
+                            HStack {
+                                Text("Prev Busiest")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(d.priorBusiestDOW!)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding(16)
                 }
             }
-            .padding(16)
-            .background(
-                GeometryReader { g in
-                    Color.clear.preference(key: SummaryContentHeightKey.self, value: [index: g.size.height])
-                }
-            )
         }
+        .padding(16)
+        .background(
+            GeometryReader { g in
+                Color.clear.preference(key: SummaryContentHeightKey.self, value: [index: g.size.height])
+            }
+        )
     }
     
     private var DailyRhythm: some View {

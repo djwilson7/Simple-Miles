@@ -52,6 +52,9 @@ final class TripSegmentStore {
         try store.fetchStartHourHistogram(type: type, from: from, to: to)
     }
     
+    func fetchWeeklyInsights(type: TripType, from: Int64? = nil, to: Int64? = nil) throws -> RawWeekInsights {
+        try store.fetchWeeklyInsights(type: type, from: from, to: to)
+    }
     // MARK: - Persistence (SQLite)
     
     func write(_ segment: TripSegment) {

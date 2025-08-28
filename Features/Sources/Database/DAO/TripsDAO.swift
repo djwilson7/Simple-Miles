@@ -359,6 +359,118 @@ enum TripsDAO {
         }
     }
 
+    static func fetchWeeklyInsights(
+        for type: TripType,
+        from: Int64? = nil,
+        to: Int64? = nil
+    ) throws -> RawWeekInsights {
+        return try Database.shared.inRead { db in
+            // --- Common WHERE and binds ---
+            let datePred = buildDatePredicate(from: from, to: to) // " AND start_ts >= ?" / " AND start_ts <= ?"
+
+            // Totals for distance/duration/count
+            do {
+                // SUM distance, SUM duration, COUNT
+                let sqlTotals = """
+                SELECT
+                  COALESCE(SUM(distance_m), 0.0) AS total_meters,
+                  COALESCE(SUM(duration_s), 0.0) AS total_secs,
+                  COUNT(*) AS trip_count
+                FROM trips
+                WHERE type = ?\(datePred);
+                """
+                var s: OpaquePointer?
+                defer { sqlite3_finalize(s) }
+                guard sqlite3_prepare_v2(db, sqlTotals, -1, &s, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                var i: Int32 = 1
+                sqlite3_bind_int(s, i, Int32(type.dbValue)); i += 1
+                bindDateParams(s, &i, from: from, to: to)
+
+                var totalMeters = 0.0
+                var totalSecs   = 0.0
+                var tripCount   = 0
+                if sqlite3_step(s) == SQLITE_ROW {
+                    totalMeters = sqlite3_column_double(s, 0)
+                    totalSecs   = sqlite3_column_double(s, 1)
+                    tripCount   = Int(sqlite3_column_int64(s, 2))
+                }
+
+                // Averages per trip over the window (used for prior/baseline windows typically)
+                let avgMeters = tripCount > 0 ? (totalMeters / Double(tripCount)) : 0.0
+                let avgSecs   = tripCount > 0 ? (totalSecs   / Double(tripCount)) : 0.0
+
+                // Longest trip by distance
+                let sqlMaxDist = """
+                SELECT COALESCE(MAX(distance_m), 0.0) FROM trips
+                WHERE type = ?\(datePred);
+                """
+                var sMaxD: OpaquePointer?
+                defer { sqlite3_finalize(sMaxD) }
+                guard sqlite3_prepare_v2(db, sqlMaxDist, -1, &sMaxD, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                i = 1
+                sqlite3_bind_int(sMaxD, i, Int32(type.dbValue)); i += 1
+                bindDateParams(sMaxD, &i, from: from, to: to)
+                let longestMeters = (sqlite3_step(sMaxD) == SQLITE_ROW) ? sqlite3_column_double(sMaxD, 0) : 0.0
+
+                // Longest trip by duration
+                let sqlMaxSecs = """
+                SELECT COALESCE(MAX(duration_s), 0.0) FROM trips
+                WHERE type = ?\(datePred);
+                """
+                var sMaxS: OpaquePointer?
+                defer { sqlite3_finalize(sMaxS) }
+                guard sqlite3_prepare_v2(db, sqlMaxSecs, -1, &sMaxS, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                i = 1
+                sqlite3_bind_int(sMaxS, i, Int32(type.dbValue)); i += 1
+                bindDateParams(sMaxS, &i, from: from, to: to)
+                let longestSecs = (sqlite3_step(sMaxS) == SQLITE_ROW) ? sqlite3_column_double(sMaxS, 0) : 0.0
+
+                // Busiest weekday by TRIP COUNT (Sun=0 … Sat=6) over the window
+                let sqlBusiest = """
+                SELECT
+                  CAST(strftime('%w', datetime(start_ts/1000, 'unixepoch', 'localtime')) AS INTEGER) AS dow,
+                  COUNT(*) AS c
+                FROM trips
+                WHERE type = ?\(datePred)
+                GROUP BY dow
+                ORDER BY c DESC, dow ASC
+                LIMIT 1;
+                """
+                var sBusy: OpaquePointer?
+                defer { sqlite3_finalize(sBusy) }
+                guard sqlite3_prepare_v2(db, sqlBusiest, -1, &sBusy, nil) == SQLITE_OK else {
+                    throw DBError.sqlite(message: lastError(db))
+                }
+                i = 1
+                sqlite3_bind_int(sBusy, i, Int32(type.dbValue)); i += 1
+                bindDateParams(sBusy, &i, from: from, to: to)
+                var busiestDOW: Int32 = -1
+                if sqlite3_step(sBusy) == SQLITE_ROW {
+                    busiestDOW = sqlite3_column_int(sBusy, 0) // 0..6 or -1 if none
+                }
+
+                // Construct raw model. This model should carry both averages and extremes so the UI can
+                // interpret it differently depending on how you call this API (prior vs current).
+                // Map these names to your RawWeekInsights initializer.
+                return RawWeekInsights(
+                    totalMeters: totalMeters,
+                    totalDurationSecs: totalSecs,
+                    tripCount: tripCount,
+                    avgTripMeters: avgMeters,
+                    avgTripDurationSecs: avgSecs,
+                    longestTripMeters: longestMeters,
+                    longestTripDurationSecs: longestSecs,
+                    busiestDowByCount: Int(busiestDOW)
+                )
+            }
+        }
+    }
     enum HistogramMetric { case count, distanceMeters, durationSecs }
     // MARK: - Compact aggregate helpers
     private static func buildDatePredicate(from: Int64?, to: Int64?) -> String {
