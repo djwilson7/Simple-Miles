@@ -8,20 +8,22 @@ import Foundation
 
 struct TimeUtility {
     static func formatter(_ seconds: TimeInterval) -> String {
-        let totalSeconds = Int(seconds)
-        let seconds = totalSeconds % 60
-        let minutes = (totalSeconds / 60) % 60
-        let hours = totalSeconds / 3600
-        
-        if hours > 0 {
+        let prefix = seconds < 0 ? "-" : "" //if negative add prefix else dont
+
+        let totalSeconds = Int(abs(seconds))
+        let s = totalSeconds % 60
+        let m = (totalSeconds / 60) % 60
+        let h = totalSeconds / 3600
+
+        if h > 0 {
             // Over an hour
-            return "\(hours)h \(minutes)min"
-        } else if minutes > 0 {
+            return "\(prefix)\(h)h \(m)min"
+        } else if m > 0 {
             // Over a minute but under an hour
-            return "\(minutes)min"
+            return "\(prefix)\(m)min"
         } else {
             // Under a minute
-            return "\(seconds)s"
+            return "\(prefix)\(s)s"
         }
     }
     

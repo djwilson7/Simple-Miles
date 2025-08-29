@@ -2,10 +2,11 @@ import Foundation
 
 struct DistanceUtility {
     static func formatter(meters: Double) -> String {
-        let miles = meters / 1609.34
-        if miles < 0.01 {
-            return "0 mi"
-        }
-        return String(format: "%.1f mi", miles)
+        let prefix = meters < 0 ? "-" : ""
+        
+        let convertedMeters = abs(meters) / 1609.34 //get the positive conversion of meters //to miles here
+        let fmt = convertedMeters == 0 ? "%.f" : "%.1f"
+        
+        return "\(prefix)\(String(format: fmt , convertedMeters))mi"
     }
 }
