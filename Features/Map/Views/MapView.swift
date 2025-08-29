@@ -71,7 +71,7 @@ struct MapView: View {
                     Annotation("", coordinate: coordinate, anchor: .center) {
                         Image(systemName: viewModel.locationIconName)
                             .resizable()
-                            .frame(width: 28, height: 28)
+                            .font(.title)
                             .rotationEffect(Angle(degrees: viewModel.displayedArrowRotation), anchor: .center)
                             .animation(.easeInOut(duration: 0.3), value: viewModel.displayedArrowRotation)
                             .symbolRenderingMode(.monochrome)

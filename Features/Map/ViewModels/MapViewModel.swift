@@ -33,8 +33,8 @@ final class MapViewModel: NSObject, ObservableObject {
 
     var locationIconName: String {
         switch cameraManager.orientationMode {
-        case .northUp, .freeRoam: "location.north.line"
-        case .headingUp: "location.north.line.fill"
+        case .northUp, .freeRoam: "location.north"
+        case .headingUp: "location.north.fill"
         case .reviewing: ""
         }
     }

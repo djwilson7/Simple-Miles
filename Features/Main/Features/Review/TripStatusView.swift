@@ -152,7 +152,7 @@ private struct PageIndicators: View {
         case .trash:
             return "trash"
         case .none:
-            return "record.circle"
+            return "waveform.circle"
         }
     }
 
