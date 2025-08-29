@@ -22,17 +22,15 @@ struct WeekInsightsData {
     var currentLongestTrip: String?
     var currentLongestDuration: String?
     
-    /*
-     Raw Data Vars pulled from RawWeekInsights
-     totalMeters: 0,
-     totalDurationSecs: 0,
-     tripCount: 0,
-     avgTripMeters: 0,
-     avgTripDurationSecs: 0,
-     longestTripMeters: 0,
-     longestTripDurationSecs: 0,
-     busiestDowByCount: -1
-     */
+    var diffDistance : Double?
+    var diffDuration: Double?
+    var diffLongestTrip: Double?
+    var diffLongestDur: Double?
+    
+    var avgMetersChange: String?
+    var avgDurationChange: String?
+    var longestTripChange: String?
+    var longestDurationChange: String?
 
     init(tripType: TripType, now: Date = Date()) throws {
         self.tripType = tripType
@@ -64,6 +62,16 @@ struct WeekInsightsData {
         self.currentBusiestDOW      = TimeUtility.formatter( currentRaw.busiestDowByCount )
         self.currentLongestTrip     = DistanceUtility.formatter(meters: currentRaw.longestTripMeters )
         self.currentLongestDuration = TimeUtility.formatter( currentRaw.longestTripDurationSecs )
+        
+        self.diffDistance = currentRaw.avgTripMeters - priorRaw.avgTripMeters
+        self.diffDuration = currentRaw.avgTripDurationSecs - priorRaw.avgTripDurationSecs
+        self.diffLongestTrip = currentRaw.longestTripMeters - priorRaw.longestTripMeters
+        self.diffLongestDur = currentRaw.longestTripDurationSecs - priorRaw.longestTripDurationSecs
+        
+        self.avgMetersChange = DistanceUtility.formatter(meters: diffDistance!)
+        self.avgDurationChange = TimeUtility.formatter(diffDuration!)
+        self.longestTripChange = DistanceUtility.formatter(meters: diffLongestTrip!)
+        self.longestDurationChange = TimeUtility.formatter(diffLongestDur!)
         
         Log("WeekInsights init -> weekStart=\(weekStartMs), type=\(tripType), fetched prior+current")
     }

@@ -81,6 +81,7 @@ enum SummaryPage: CaseIterable, Identifiable {
         case .weekInsights:   return "Week Insights"
         }
     }
+    
     var iconName: String {
         switch self {
         case .theSplit: return "chart.pie"
@@ -123,114 +124,118 @@ struct SummaryCard: View {
     private var WeekInsights: some View {
         VStack(alignment: .leading, spacing: 6) {
             TabHeader
-
-            Group {
-                if let d = SummaryViewModel.shared.weeklyInsights {
-                    VStack(alignment: .leading, spacing: 12) {
-                        // Avg Distance
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text("Avg Distance")
-                                    .font(.footnote.weight(.medium))
-                                Spacer()
-                                Text(d.currentAvgMeters!)
-                                    .font(.headline.bold())
+            
+            ScrollView {
+                Group {
+                    if let d = SummaryViewModel.shared.weeklyInsights {
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Avg Distance
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("This week's average distance")
+                                        .font(.footnote.weight(.medium))
+                                    Spacer()
+                                    Text(d.currentAvgMeters!)
+                                        .font(.headline.bold())
+                                }
+                                HStack {
+                                    changeIndicator(d.diffDistance!)
+                                    Text(DistanceUtility.formatter(meters: d.diffDistance!))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(d.priorAvgMeters!)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
-                            HStack {
-                                Text("Prev Avg")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(d.priorAvgMeters!)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            
+                            // Avg Duration
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("This week's average duration")
+                                        .font(.footnote.weight(.medium))
+                                    Spacer()
+                                    Text(d.currentAvgDuration!)
+                                        .font(.headline.bold())
+                                }
+                                HStack {
+                                    changeIndicator(d.diffDuration!)
+                                    Text(TimeUtility.formatter(d.diffDuration!))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(d.priorAvgDuration!)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            
+                            // Longest Trip (Distance)
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("This weeks longest trip")
+                                        .font(.footnote.weight(.medium))
+                                    Spacer()
+                                    Text(d.currentLongestTrip!)
+                                        .font(.headline.bold())
+                                }
+                                HStack {
+                                    changeIndicator(d.diffLongestTrip!)
+                                    Text(DistanceUtility.formatter(meters: d.diffLongestTrip!))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(d.priorLongestTrip!)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            
+                            // Longest Duration
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("This weeks longest trip time")
+                                        .font(.footnote.weight(.medium))
+                                    Spacer()
+                                    Text(d.currentLongestDuration!)
+                                        .font(.headline.bold())
+                                }
+                                HStack {
+                                    changeIndicator(d.diffLongestDur!)
+                                    Text(TimeUtility.formatter(d.diffLongestDur!))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(d.priorLongestDuration!)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            
+                            // Busiest Day (by count)
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("Your busiest day this week")
+                                        .font(.footnote.weight(.medium))
+                                    Spacer()
+                                    Text(d.currentBusiestDOW!)
+                                        .font(.headline.bold())
+                                }
+                                HStack {
+                                    Spacer()
+                                    Text(d.priorBusiestDOW!)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
-
-                        // Avg Duration
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text("Avg Duration")
-                                    .font(.footnote.weight(.medium))
-                                Spacer()
-                                Text(d.currentAvgDuration!)
-                                    .font(.headline.bold())
-                            }
-                            HStack {
-                                Text("Prev Avg")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(d.priorAvgDuration!)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        // Longest Trip (Distance)
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text("Longest Trip")
-                                    .font(.footnote.weight(.medium))
-                                Spacer()
-                                Text(d.currentLongestTrip!)
-                                    .font(.headline.bold())
-                            }
-                            HStack {
-                                Text("Prev Longest")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(d.priorLongestTrip!)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        // Longest Duration
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text("Longest Duration")
-                                    .font(.footnote.weight(.medium))
-                                Spacer()
-                                Text(d.currentLongestDuration!)
-                                    .font(.headline.bold())
-                            }
-                            HStack {
-                                Text("Prev Longest")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(d.priorLongestDuration!)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        // Busiest Day (by count)
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text("Busiest Day")
-                                    .font(.footnote.weight(.medium))
-                                Spacer()
-                                Text(d.currentBusiestDOW!)
-                                    .font(.headline.bold())
-                            }
-                            HStack {
-                                Text("Prev Busiest")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(d.priorBusiestDOW!)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        
                     }
-                    
                 }
+                .padding(.trailing, 10)
             }
-            .padding(.top, 8)
+            .frame(height: layout.height.pct(0.25))
         }
         .padding(16)
         .background(
@@ -238,6 +243,25 @@ struct SummaryCard: View {
                 Color.clear.preference(key: SummaryContentHeightKey.self, value: [index: g.size.height])
             }
         )
+    }
+    
+    @ViewBuilder
+    private func changeIndicator(_ value: Double) -> some View {
+        let size: Font = .system(size:8)
+        if value == 0 {
+            Image(systemName: "minus")
+                .font(size)
+                .foregroundStyle(.gray)
+        } else if value > 0 {
+            Image(systemName: "triangle.fill")
+                .font(size)
+                .foregroundStyle(.green)
+        } else {
+            Image(systemName: "triangle.fill")
+                .font(size)
+                .rotationEffect(.degrees(180))
+                .foregroundStyle(.red)
+        }
     }
     
     private var DailyRhythm: some View {
