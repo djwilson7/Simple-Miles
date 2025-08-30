@@ -36,7 +36,7 @@ struct TripStatusView: View {
     @State private var pageWidths: [Int: CGFloat] = [:]
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack {
             pages
             pageIndicators
         }
@@ -205,15 +205,16 @@ private struct PageIndicators: View {
     var body: some View {
         GeometryReader { geo in
             let totalWidth = max(geo.size.width, 1)
-            HStack(spacing: 16) {
+            HStack {
+                Spacer()
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
                     let isCurrent = index == current
+                    Spacer()
                     Image(systemName: iconName(for: page.tripType))
-                        .font(.title3.weight(.semibold))
+                        .uiText(.title)
                         .symbolVariant(isCurrent ? .fill : .none)
                         .foregroundColor(iconColor(for: page.tripType, isCurrent: isCurrent))
                         .scaleEffect(isCurrent ? 1.5 : 1.0)
-                        .padding(6)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             if index == current, let statusIdx = liveStatusIndex, statusIdx != current {
@@ -225,11 +226,12 @@ private struct PageIndicators: View {
                         }
                         .accessibilityAddTraits(isCurrent ? .isSelected : [])
                         .accessibilityLabel(accessibilityLabel(for: page.tripType))
+                    Spacer()
                 }
+                Spacer()
             }
-            .padding(16)
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            .uiBlock(.title)
             .onTapGesture {
                 TripSubMenuViewModel.shared.isVisible = false
             }

@@ -42,9 +42,7 @@ struct MainView: View {
                 GeometryReader { safeGeo in
                     VStack {
                         VStack {
-                            Spacer()
                             TitleBarView()
-                            Spacer()
                         }
                         .frame(maxWidth: .infinity, maxHeight: geo.size.height * 0.1)
                         
@@ -81,9 +79,7 @@ struct MainView: View {
         }
         
         .overlay(alignment: .trailing) {
-            if MainStateDriver.shared.mainState == .main {
-                controlButtons
-            }
+            controlButtons
         }
         .overlayPreferenceValue(OptionFramesKey.self) { optionAnchors in
             GeometryReader { proxy in
@@ -127,10 +123,10 @@ struct MainView: View {
         let followY = isDragging ? barDrag.height : 0
         let visibleX = -layout.contextButtonOffset
         return SystemControlButton( //Left Button
-            opacity: !leftVisible || isDragging ? 0 : 1,
+            isVisible: leftVisible || !isDragging,
             color: AppTheme.Colors.primaryText,
             action: { TripViewModel.shared.selectPreviousSegment() },
-            label: { AnimatedChevronButtonLabel(isLeftFacing: true) }
+            label: { AnimatedChevronButtonLabel(isLeftFacing: true).opacity(leftVisible ? 1 : 0) }
         )
         .offset(x: isDragging ? followX : (leftVisible ? visibleX : 0), y: isDragging ? followY : 0)
         .allowsHitTesting(leftVisible)
@@ -145,10 +141,10 @@ struct MainView: View {
         let followY = isDragging ? barDrag.height : 0
         let visibleX = layout.contextButtonOffset
         return SystemControlButton(
-            opacity: !rightVisible || isDragging ? 0 : 1,
+            isVisible: rightVisible || !isDragging,
             color: AppTheme.Colors.primaryText,
             action: { TripViewModel.shared.selectNextSegment() },
-            label: { AnimatedChevronButtonLabel(isLeftFacing: false) }
+            label: { AnimatedChevronButtonLabel(isLeftFacing: false).opacity(rightVisible ? 1 : 0) }
         )
         .offset(x: isDragging ? followX : (rightVisible ? visibleX : 0), y: isDragging ? followY : 0)
         .allowsHitTesting(rightVisible)
@@ -173,7 +169,7 @@ struct MainView: View {
                 SummaryView()
             }
         )
-        .glassEffect(in: RoundedRectangle(cornerRadius: layout.radii.pill))
+        .glassEffect(.clear, in: RoundedRectangle(cornerRadius: layout.radii.pill))
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         .offset(isReview ? barDrag : .zero)
         .anchorPreference(key: BarFrameKey.self, value: .bounds) { $0 }
@@ -243,6 +239,7 @@ struct MainView: View {
     
     private var recenterButton: some View {
         SystemControlButton(
+            isVisible: MainStateDriver.shared.mainState == .main,
             color: AppTheme.Colors.primaryText,
             action: { mapViewModel.recenter() },
             label: { Image(systemName: mapViewModel.locationIconName) }
@@ -251,6 +248,7 @@ struct MainView: View {
     
     private var shareButton: some View {
         SystemControlButton(
+            isVisible: MainStateDriver.shared.mainState == .main,
             color: AppTheme.Colors.primaryText,
             action: { /* TODO */ },
             label: { Image(systemName: "square.and.arrow.up") }
@@ -259,9 +257,10 @@ struct MainView: View {
     
     private var settingsButton: some View {
         SystemControlButton(
+            isVisible: MainStateDriver.shared.mainState == .main,
             color: AppTheme.Colors.primaryText,
             action: { mainviewModel.settingsTapped() },
-            label: { Image(systemName: "gearshape") }
+            label: { Image(systemName: "gearshape").uiText(.title) }
         )
     }
 }

@@ -15,7 +15,7 @@ struct SummaryView: View {
     @State private var indicatorHeight: CGFloat = 0
     @State private var indicatorWidth: CGFloat = 0
     @State private var contentHeights: [Int: CGFloat] = [:]
-
+    
     var body: some View {
         VStack {
             // Pager
@@ -28,7 +28,7 @@ struct SummaryView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .padding(.bottom, 3)
-
+            
             // Page Indicators (tap to switch, matches Status pager UX)
             SummaryPageIndicators(currentIndex: $viewModel.currentIndex, pages: viewModel.pages)
                 .padding(.bottom, 3)
@@ -51,7 +51,7 @@ struct SummaryView: View {
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         }
     }
-
+    
     private func currentPageHeight() -> CGFloat {
         let idx = viewModel.currentIndex
         let content = contentHeights[idx] ?? 200 // safe fallback
@@ -72,7 +72,7 @@ struct SummaryView: View {
 enum SummaryPage: CaseIterable, Identifiable {
     case theSplit, weeklyRitual, dailyRhythm, weekInsights
     var id: Self { self }
-
+    
     var title: String {
         switch self {
         case .theSplit: return "The Split"
@@ -97,7 +97,7 @@ struct SummaryCard: View {
     let page: SummaryPage
     let index: Int
     @Environment(\.layout) private var layout
-
+    
     var body: some View {
         switch page {
         case .theSplit:
@@ -115,125 +115,113 @@ struct SummaryCard: View {
         HStack(spacing: 8) {
             Image(systemName: page.iconName)
             Text(page.title)
-                .font(.headline)
+                .uiText(.title)
             Spacer()
         }
-        .padding(8)
+        .uiBlock(.title)
+    }
+    
+    private func SectionHeader(_ text: String, _ rawValue: Double, _ isDist: Bool) -> some View {
+        HStack {
+            Text(text)
+                .uiText(.section)
+            Spacer()
+            changeIndicator(rawValue)
+            Text(isDist ? DistanceUtility.formatter(meters: rawValue) : TimeUtility.formatter(rawValue))
+                .uiText(.section)
+        }
+    }
+    
+    private func SectionHeader(_ text: String, _ displayValue: String) -> some View {
+        HStack {
+            Text(text)
+                .uiText(.section)
+            Spacer()
+            Text(displayValue)
+                .uiText(.section)
+        }
+    }
+    
+    private func CurrentTrendsRow(_ value: String) -> some View {
+        HStack {
+            Text("This Week")
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+        }
+        .uiText(.row)
+    }
+    
+    private func HistoricalTrendsRow(_ label: String, _ value: String) -> some View {
+        HStack{
+            Text(label)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+        }
+        .uiText(.row)
     }
     
     private var WeekInsights: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack {
             TabHeader
-            
             ScrollView {
                 Group {
                     if let d = SummaryViewModel.shared.weeklyInsights {
-                        VStack(alignment: .leading, spacing: 12) {
-                            // Avg Distance
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("This week's average distance")
-                                        .font(.footnote.weight(.medium))
-                                    Spacer()
-                                    Text(d.currentAvgMeters!)
-                                        .font(.headline.bold())
-                                }
-                                HStack {
-                                    changeIndicator(d.diffDistance!)
-                                    Text(DistanceUtility.formatter(meters: d.diffDistance!))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(d.priorAvgMeters!)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                        VStack(alignment: .leading) {
+                            VStack(alignment: .leading) {
+                                SectionHeader("Your Busiest Day", d.currentBusiestDOW!)
+                                VStack {
+                                    HistoricalTrendsRow("Typically", d.priorBusiestDOW!)
                                 }
                             }
+                            .uiBlock(.section)
                             
-                            // Avg Duration
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("This week's average duration")
-                                        .font(.footnote.weight(.medium))
-                                    Spacer()
-                                    Text(d.currentAvgDuration!)
-                                        .font(.headline.bold())
-                                }
-                                HStack {
-                                    changeIndicator(d.diffDuration!)
-                                    Text(TimeUtility.formatter(d.diffDuration!))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(d.priorAvgDuration!)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                            VStack(alignment: .leading) {
+                                SectionHeader("Average Trip Distance", d.diffDistance!, true)
+                                VStack {
+                                    CurrentTrendsRow(d.currentAvgMeters!)
+                                    HistoricalTrendsRow("Typically", d.priorAvgMeters!)
                                 }
                             }
+                            .uiBlock(.section)
+
                             
-                            // Longest Trip (Distance)
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("This weeks longest trip")
-                                        .font(.footnote.weight(.medium))
-                                    Spacer()
-                                    Text(d.currentLongestTrip!)
-                                        .font(.headline.bold())
-                                }
-                                HStack {
-                                    changeIndicator(d.diffLongestTrip!)
-                                    Text(DistanceUtility.formatter(meters: d.diffLongestTrip!))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(d.priorLongestTrip!)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                            VStack(alignment: .leading) {
+                                SectionHeader("Average Trip Time", d.diffDuration!, false)
+                                VStack {
+                                    CurrentTrendsRow(d.currentAvgDuration!)
+                                    HistoricalTrendsRow("Typically", d.priorAvgDuration!)
                                 }
                             }
+                            .uiBlock(.section)
+
                             
-                            // Longest Duration
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("This weeks longest trip time")
-                                        .font(.footnote.weight(.medium))
-                                    Spacer()
-                                    Text(d.currentLongestDuration!)
-                                        .font(.headline.bold())
-                                }
-                                HStack {
-                                    changeIndicator(d.diffLongestDur!)
-                                    Text(TimeUtility.formatter(d.diffLongestDur!))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(d.priorLongestDuration!)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                            VStack(alignment: .leading) {
+                                SectionHeader("Longest Trip Distance", d.diffLongestTrip!, true)
+                                VStack {
+                                    CurrentTrendsRow(d.currentLongestTrip!)
+                                    HistoricalTrendsRow("Longest", d.priorLongestTrip!)
                                 }
                             }
+                            .uiBlock(.section)
+
                             
-                            // Busiest Day (by count)
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("Your busiest day this week")
-                                        .font(.footnote.weight(.medium))
-                                    Spacer()
-                                    Text(d.currentBusiestDOW!)
-                                        .font(.headline.bold())
-                                }
-                                HStack {
-                                    Spacer()
-                                    Text(d.priorBusiestDOW!)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                            VStack(alignment: .leading) {
+                                SectionHeader("Longest Trip Time", d.diffLongestDur!, false)
+                                VStack {
+                                    CurrentTrendsRow(d.currentLongestDuration!)
+                                    HistoricalTrendsRow("Longest", d.priorLongestDuration!)
                                 }
                             }
+                            .uiBlock(.section)
+
                         }
                         
                     }
                 }
-                .padding(.trailing, 10)
             }
             .frame(height: layout.height.pct(0.25))
         }
@@ -265,9 +253,9 @@ struct SummaryCard: View {
     }
     
     private var DailyRhythm: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(spacing: 6) {
             TabHeader
-
+            
             Group {
                 if let hourData = SummaryViewModel.shared.hourData {
                     Chart {
@@ -275,7 +263,7 @@ struct SummaryCard: View {
                             let norm = v / max(hourData.maxValue, 1)
                             let bottom = Color.green
                             let top    = Color(hue: 0.33 * (1 - norm), saturation: 0.95, brightness: 0.95)
-
+                            
                             BarMark(
                                 x: .value("Hour", idx),
                                 y: .value("Value", v)
@@ -299,7 +287,7 @@ struct SummaryCard: View {
                                     .foregroundStyle(.secondary)
                                     .padding(4)
                             }
-
+                        
                         // 12 PM
                         RuleMark(x: .value("12p", 12.0))
                             .lineStyle(.init(lineWidth: 1))
@@ -310,7 +298,7 @@ struct SummaryCard: View {
                                     .foregroundStyle(.primary)
                                     .padding(4)
                             }
-
+                        
                         // 6 PM
                         RuleMark(x: .value("6p", 18.0))
                             .lineStyle(.init(lineWidth: 1))
@@ -354,7 +342,7 @@ struct SummaryCard: View {
     }
     
     private var WeeklyRitual: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(spacing: 6) {
             TabHeader
             
             Group {
@@ -364,7 +352,7 @@ struct SummaryCard: View {
                             let norm = meters / max(dowData.maxMeters, 1) // 0…1
                             let bottom = Color.green
                             let top    = hueGreenToRed(norm)
-
+                            
                             BarMark(
                                 x: .value("Day", dowData.labels[idx]),
                                 y: .value("Meters", meters)
@@ -388,7 +376,7 @@ struct SummaryCard: View {
                                 }
                             }
                         }
-
+                        
                         // “Shelf” baseline
                         RuleMark(y: .value("Baseline", 0))
                             .lineStyle(StrokeStyle(lineWidth: 1))
@@ -421,12 +409,12 @@ struct SummaryCard: View {
     }
     
     private var TheSplit: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(spacing: 6) {
             TabHeader
             
             Group {
                 if let breakdownData = SummaryViewModel.shared.breakdownData {
-                    VStack(spacing: 20) {
+                    VStack {
                         PercentRow(
                             percent: breakdownData.milesPercent,
                             percentLabel: breakdownData.milesPercentLabel,
@@ -470,7 +458,7 @@ struct SummaryCard: View {
         let rowLabel: String     // e.g. "Distance"
         let rowDescription: String // e.g. "150 mi / 300 mi"
         let color: Color
-
+        
         var body: some View {
             HStack(spacing: 24) {
                 ZStack {
@@ -481,24 +469,22 @@ struct SummaryCard: View {
                         .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     Text(percentLabel)
-                        .font(.subheadline)
+                        .uiStyle(.info)
                         .lineLimit(1)
-
+                    
                 }
                 .frame(width: 60, height: 60)
-                .padding(.vertical, 8)
-
+                
                 VStack(alignment: .leading, spacing: 8) {
                     Text(rowLabel)
-                        .font(.subheadline)
-                        .lineLimit(1)
+                        .uiText(.section)
                     Text(rowDescription)
-                        .font(.caption)
-                        .lineLimit(1)
+                        .uiText(.row)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
             }
+            .uiBlock(.section)
         }
     }
 }
@@ -508,19 +494,18 @@ struct SummaryPageIndicators: View {
     @Binding var currentIndex: Int
     let pages: [SummaryPage]
     @Environment(\.layout) private var layout
-
+    
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 30) {
+            Spacer()
             ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
                 let isCurrent = (idx == currentIndex)
-
+                
                 Image(systemName: page.iconName)
                     .symbolVariant(isCurrent ? .fill : .none)
-                    .font(.title3.weight(.semibold))
+                    .uiText(.title)
                     .foregroundStyle(isCurrent ? .primary : .secondary)
                     .scaleEffect(isCurrent ? 1.5 : 1.0)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard currentIndex != idx else { return }
@@ -529,8 +514,9 @@ struct SummaryPageIndicators: View {
                     .accessibilityLabel(Text(page.title))
                     .accessibilityAddTraits(isCurrent ? .isSelected : [])
             }
+            Spacer()
         }
-        .padding(8)
+        .uiBlock(.section)
     }
 }
 

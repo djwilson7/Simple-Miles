@@ -18,7 +18,7 @@ struct TitleBarView: View {
     
     private var backButton: some View {
         SystemControlButton(
-            opacity: viewModel.isInMainState ? 0 : 1,
+            isVisible: !viewModel.isInMainState,
             color: AppTheme.Colors.primaryText,
             action: {
                 viewModel.backButtonPressed()
@@ -33,7 +33,7 @@ struct TitleBarView: View {
     
     private var extendPauseButton: some View {
         SystemControlButton(
-            opacity: viewModel.travelState == .paused ? 1 : 0,
+            isVisible: viewModel.travelState == .paused,
             color: .orange,
             action: { viewModel.extendPauseButtonPressed() },
             label: { Image(systemName: "plus") }
@@ -83,20 +83,21 @@ struct TitleBarView: View {
                         let remaining = max(0, snap.end.timeIntervalSinceNow)
                         Text(TimeUtility.formatter(remaining))
                             .foregroundColor(AppTheme.Colors.primaryText)
-                            .font(.headline).bold().monospaced()
-                            .id(snap.id) // reset if snapshot changes
+                            .uiText(.title)
+                            .id(snap.id)
                     } else {
                         Text(viewModel.title)
                             .foregroundColor(AppTheme.Colors.primaryText)
-                            .font(.headline).bold().monospaced()
+                            .uiText(.title)
                     }
                     Spacer()
                 }
+                .uiBlock(.title)
             }
         }
         .frame(width: layout.elementWidth, height: layout.titleHeight)
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-        .glassEffect()
+        .glassEffect(.clear)
         .onTapGesture {
             TripSubMenuViewModel.shared.isVisible = false
         }

@@ -92,7 +92,7 @@ struct TripSubMenu: View {
         }
         .frame(maxWidth: isVisible ? layout.width.pct(0.7) : 0, maxHeight: isVisible ? layout.height.pct(0.15) : 0)
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-        .glassEffect(in: RoundedRectangle(cornerRadius: layout.radii.pill))
+        .glassEffect(.clear, in: RoundedRectangle(cornerRadius: layout.radii.pill))
         .shadow(radius: 8, y: 3)
         .padding(.horizontal, 50)
         .allowsHitTesting(isVisible)
