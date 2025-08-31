@@ -48,14 +48,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6AB55A2E2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMilesTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Validation/EmailValidation.swift,
-				Validation/PasswordValidation.swift,
-			);
-			target = 6AC2F4B82E2161CC00F4064A /* SimpleMilesTests */;
-		};
 		6AB55A482E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -85,9 +77,6 @@
 		};
 		6AB55A252E22F90500DCEF27 /* Utilities */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6AB55A2E2E22F90F00DCEF27 /* Exceptions for "Utilities" folder in "SimpleMilesTests" target */,
-			);
 			path = Utilities;
 			sourceTree = "<group>";
 		};
