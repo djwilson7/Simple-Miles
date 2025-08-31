@@ -2,8 +2,6 @@ import SwiftUI
 
 @main
 struct SimpleMilesApp: App {
-    @AppStorage("isLoggedIn") private var isLoggedIn = false
-
     private let mapViewModel: MapViewModel
     private let mainViewModel: MainViewModel
 

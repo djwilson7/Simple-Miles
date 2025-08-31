@@ -160,19 +160,6 @@ final class TravelStateManager: ObservableObject {
                 }
             }
         }
-        
-        if extendPauseFlagTimer == nil {
-            extendPauseFlagTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                guard let self = self else { return }
-                if getSharedDefaults()?.bool(forKey: SharedKeys.extendPauseRequested) == true {
-                    print("App Group flag triggered: extending pause timer.")
-                    Task { @MainActor in
-                        self.extendPauseTimer()
-                    }
-                    getSharedDefaults()?.set(false, forKey: SharedKeys.extendPauseRequested)
-                }
-            }
-        }
     }
 
     /// Cleans up any observers and invalidates timers upon deallocation.

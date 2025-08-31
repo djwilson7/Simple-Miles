@@ -47,29 +47,7 @@
 		6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SimpleMiles-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6AB55A482E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"GoogleService-Info.plist",
-			);
-			target = 6AC2F4B82E2161CC00F4064A /* SimpleMilesTests */;
-		};
-		6AB55A492E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesUITests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"GoogleService-Info.plist",
-			);
-			target = 6AC2F4C22E2161CC00F4064A /* SimpleMilesUITests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6A2C07FF2E3E6379005B8149 /* AppGroup */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = AppGroup;
-			sourceTree = "<group>";
-		};
 		6AB55A122E22F84F00DCEF27 /* Features */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Features;
@@ -87,10 +65,6 @@
 		};
 		6AB55A462E22FA2100DCEF27 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6AB55A482E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesTests" target */,
-				6AB55A492E22FA2800DCEF27 /* Exceptions for "App" folder in "SimpleMilesUITests" target */,
-			);
 			path = App;
 			sourceTree = "<group>";
 		};
@@ -139,7 +113,6 @@
 			isa = PBXGroup;
 			children = (
 				6AFEC42B2E4B808E0031837F /* Design */,
-				6A2C07FF2E3E6379005B8149 /* AppGroup */,
 				6A2C07FE2E3E62A1005B8149 /* SimpleMiles.entitlements */,
 				6A2C07FD2E3E6249005B8149 /* LiveTripTrackingExtension.entitlements */,
 				6AB55A462E22FA2100DCEF27 /* App */,
@@ -179,7 +152,6 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				6A2C07FF2E3E6379005B8149 /* AppGroup */,
 				6AB55A122E22F84F00DCEF27 /* Features */,
 				6AB55A252E22F90500DCEF27 /* Utilities */,
 				6AB55A442E22F9FC00DCEF27 /* Resources */,
