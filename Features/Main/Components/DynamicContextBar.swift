@@ -29,18 +29,16 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
                 switch viewModel.mainState {
                 case .main:
                     tripStatusContent()
-                        .appPadding(.all, layout.spacing.m)
+                        .uiBlock(.title)
                 case .settings:
-                    ScrollView {
-                        settingsContent()
-                            .appPadding(.all, layout.spacing.m)
-                    }
+                    settingsContent()
+                        .uiBlock(.title)
                 case .review:
                     reviewContent()
-                        .appPadding(.all, layout.spacing.m)
+                        .uiBlock(.title)
                 case .summary:
                     summaryContent()
-                        .appPadding(.all, layout.spacing.m)
+                        .uiBlock(.title)
                 }
             }
         }

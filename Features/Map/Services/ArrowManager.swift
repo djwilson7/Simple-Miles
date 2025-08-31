@@ -5,6 +5,7 @@ import MapKit
 
 /// Manages the arrow rotation based on camera heading, travel heading, map heading, and device orientation mode.
 /// Uses a unified CombineLatest stream to respond to all relevant heading and mode updates.
+@MainActor
 final class ArrowHeadingManager: ObservableObject {
 
     // MARK: - Singleton

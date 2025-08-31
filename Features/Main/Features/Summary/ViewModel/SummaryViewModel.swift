@@ -2,6 +2,7 @@
 import Foundation
 import Combine
 
+@MainActor
 final class SummaryViewModel: ObservableObject {
     static let shared = SummaryViewModel()
     

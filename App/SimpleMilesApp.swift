@@ -16,7 +16,7 @@ struct SimpleMilesApp: App {
         WindowGroup {
             GeometryReader { geo in
                 MainView(
-                    mainviewModel: mainViewModel,
+                    mainViewModel: mainViewModel,
                     mapViewModel: mapViewModel
                 )
                 .layoutGuide(size: geo.size)

@@ -366,13 +366,11 @@ struct SummaryCard: View {
                                     startPoint: .bottom, endPoint: .top
                                 )
                             )
-                            .cornerRadius(3)
+                            .cornerRadius(100)
                             .annotation(position: .top, alignment: .center) {
                                 if meters > 0 {
                                     Text(dowData.valueTexts[idx])
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.bottom, 4)
+                                        .uiText(.row)
                                 }
                             }
                         }

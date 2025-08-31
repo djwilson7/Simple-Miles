@@ -1,9 +1,3 @@
-//
-//  TimeUtility.swift
-//  SimpleMiles
-//
-//  Created by Invictus Maneo on 8/13/25.
-//
 import Foundation
 
 struct TimeUtility {
@@ -14,15 +8,16 @@ struct TimeUtility {
         let s = totalSeconds % 60
         let m = (totalSeconds / 60) % 60
         let h = totalSeconds / 3600
-
-        if h > 0 {
-            // Over an hour
+        
+        if h > 0 && m != 0 { // hour and minutes
             return "\(prefix)\(h)h \(m)min"
-        } else if m > 0 {
-            // Over a minute but under an hour
+        } else if h > 0 { // just hours
+            return "\(prefix)\(h)h"
+        } else if m > 0 && s != 0 { //minutes and seconds
+            return "\(prefix)\(m)min \(s)s"
+        } else if m > 0 { //just minutes
             return "\(prefix)\(m)min"
-        } else {
-            // Under a minute
+        } else { //just seconds
             return "\(prefix)\(s)s"
         }
     }

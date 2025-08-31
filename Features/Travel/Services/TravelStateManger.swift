@@ -17,6 +17,7 @@ import NotificationCenter
 /// This singleton class tracks whether the user is traveling, paused, or idle, manages
 /// pause durations, and responds to external pause extension triggers.
 /// It facilitates the coordination between driving detection and travel state transitions.
+@MainActor
 final class TravelStateManager: ObservableObject {
     static let shared = TravelStateManager()
     
@@ -53,7 +54,8 @@ final class TravelStateManager: ObservableObject {
     
     /// Shared driving state manager which provides driving state changes.
     private let drivingStateManager = DrivingStateManager.shared
-
+    
+    private let settings = SettingsCenter.shared
     // MARK: - Init
     /// Private initializer to enforce singleton usage pattern.
     /// Ensures only one instance of TravelStateManager exists during app lifecycle.
@@ -68,7 +70,7 @@ final class TravelStateManager: ObservableObject {
     /// Updates both remaining and total pause durations accordingly.
     /// If no pause timer exists, initializes it with the default interval.
     func extendPauseTimer() {
-        let interval = AppSettings.shared.pauseTimerModel.value() as! Double //always pulled from settings.
+        let interval = settings.pauseTimer //always pulled from settings.
         if let current = pauseRemainingTime {
             pauseRemainingTime = current + interval
         } else {
@@ -112,8 +114,8 @@ final class TravelStateManager: ObservableObject {
     /// and initializes pause timers from app settings.
     private func handleDrivingStarted() {
         guard state != .traveling else { return }
-        pauseRemainingTime = AppSettings.shared.pauseTimerModel.value()
-        pauseTotalDuration = AppSettings.shared.pauseTimerModel.value()
+        pauseRemainingTime = settings.pauseTimer
+        pauseTotalDuration = settings.pauseTimer
         pauseTimer?.invalidate()
         pauseTimer = nil
         
@@ -135,25 +137,27 @@ final class TravelStateManager: ObservableObject {
         state = .paused
         print("TravelState Transitioned: .paused")
         pauseTimer?.invalidate()
-        pauseRemainingTime = AppSettings.shared.pauseTimerModel.value()
-        pauseTotalDuration = AppSettings.shared.pauseTimerModel.value()
+        pauseRemainingTime = settings.pauseTimer
+        pauseTotalDuration = settings.pauseTimer
 
         pauseTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self else { return }
-            guard let remaining = self.pauseRemainingTime else { return }
+            Task { @MainActor in
+                guard let self else { return }
+                guard let remaining = self.pauseRemainingTime else { return }
 
-            if remaining <= 1 {
-                timer.invalidate()
-                self.pauseRemainingTime = nil
-                self.pauseTotalDuration = nil
-                
-                self.extendPauseFlagTimer?.invalidate()
-                self.extendPauseFlagTimer = nil
-                
-                self.state = .idle
-                print("TravelState Transitioned: .idle (pause timer expired)")
-            } else {
-                self.pauseRemainingTime = remaining - 1
+                if remaining <= 1 {
+                    timer.invalidate()
+                    self.pauseRemainingTime = nil
+                    self.pauseTotalDuration = nil
+                    
+                    self.extendPauseFlagTimer?.invalidate()
+                    self.extendPauseFlagTimer = nil
+                    
+                    self.state = .idle
+                    print("TravelState Transitioned: .idle (pause timer expired)")
+                } else {
+                    self.pauseRemainingTime = remaining - 1
+                }
             }
         }
         
@@ -162,7 +166,9 @@ final class TravelStateManager: ObservableObject {
                 guard let self = self else { return }
                 if getSharedDefaults()?.bool(forKey: SharedKeys.extendPauseRequested) == true {
                     print("App Group flag triggered: extending pause timer.")
-                    self.extendPauseTimer()
+                    Task { @MainActor in
+                        self.extendPauseTimer()
+                    }
                     getSharedDefaults()?.set(false, forKey: SharedKeys.extendPauseRequested)
                 }
             }

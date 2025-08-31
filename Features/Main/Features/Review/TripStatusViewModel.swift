@@ -25,6 +25,7 @@ struct StatusPage: Identifiable, Equatable {
     let tripType: TripType?
 }
 
+@MainActor
 final class TripStatusViewModel: ObservableObject {
     static let shared = TripStatusViewModel()
     

@@ -14,6 +14,7 @@ import SwiftUI
 /// 2. Call `initialize()` once to bind publishers and load existing segments.
 /// 3. Observe published properties to reflect recording status and trip data.
 /// 4. TravelState changes (traveling, paused, idle) drive the recording lifecycle internally.
+@MainActor
 final class RecordingManager {
     // MARK: Singleton & Initialization
     /// Singleton instance for centralized recording management.
@@ -48,7 +49,7 @@ final class RecordingManager {
     private let tripSegmentStore = TripSegmentStore.shared
     
     /// Shared application settings, including minimum trip distance threshold.
-    private let settings = AppSettings.shared
+    private let settings = SettingsCenter.shared
     
     // MARK: Published Properties
     /// Publicly observable properties representing trip recording state and aggregated data.
@@ -262,7 +263,7 @@ final class RecordingManager {
             tripSegmentStore.update(previousSegment!)
             commitedPath = previousSegment!.pathCoordinates
         } else {
-            let minimumMeters = settings.minimumTripDistanceModel.value()! * 1609.34
+            let minimumMeters = settings.minimumTripDistance * 1609.34
             if previousSegment!.distance >= minimumMeters {
                 finalizeInMemory(previousSegment!) //finalize previous segement
                 previousSegment = pausedSegment //replace old previous
@@ -332,7 +333,7 @@ final class RecordingManager {
             }
         }
         
-        let minimumMeters = settings.minimumTripDistanceModel.value()! * 1609.34
+        let minimumMeters = settings.minimumTripDistance * 1609.34
         if previousSegment!.distance >= minimumMeters {
             finalizeInMemory(previousSegment!)
         } else {

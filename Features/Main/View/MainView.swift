@@ -5,7 +5,7 @@ import UIKit
 struct MainView: View {
     @Environment(\.layout) private var layout
     
-    @ObservedObject var mainviewModel: MainViewModel
+    @ObservedObject var mainViewModel: MainViewModel
     @ObservedObject var mapViewModel: MapViewModel
     
     @State private var barDrag: CGSize = .zero
@@ -24,63 +24,70 @@ struct MainView: View {
     
     private let tripViewModel = TripViewModel.shared
     
-    private var tripSubMenu: some View {
-        return TripSubMenu()
-            .frame(maxWidth: .infinity)
-            .offset( y: subMenuVM.isVisible ? -layout.height.pct(0.2) : 0)
-            .opacity(subMenuVM.isVisible ? 1 : 0)
-            .animation(.spring(response: 0.55, dampingFraction: 0.85), value: subMenuVM.isVisible)
-            
-    }
-    
     var body: some View {
         GeometryReader { geo in
-            
             ZStack {
                 MapView(viewModel: mapViewModel)
                 
-                GeometryReader { safeGeo in
-                    VStack {
-                        VStack {
-                            TitleBarView()
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: geo.size.height * 0.1)
-                        
-                        ZStack(alignment: .center) {
-                            GlassEffectContainer {
-                                ZStack(alignment: .center) {
-                                    TripSortingBackgroundView(highlighted: highlighted)
-                                        .opacity(isReview && isDragging ? 1 : 0)
-                                        .animation(.easeInOut(duration: 0.3), value: isDragging)
-                                    
-                                    ZStack(alignment: .center) {
-                                        tripSubMenu
-                                        previousButton
-                                        nextButton
-                                        contextBar(geo: geo)
-                                    }
-                                    .frame(maxWidth: .infinity, maxHeight: geo.size.height * 0.9, alignment: .bottom)
-                                }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .bottom)
-                            .frame(height: geo.size.height * 0.9)
-                            
-                            TripSortingTextView(highlighted: highlighted)
-                                .opacity(isReview && isDragging ? 1 : 0)
-                                .animation(.easeInOut(duration: 0.3), value: isDragging)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                    .frame(maxHeight: .infinity)
+                TripSortingBackgroundView(highlighted: highlighted)
+                    .opacity(isReview && isDragging ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.3), value: isDragging)
+                
+                TripSortingTextView(highlighted: highlighted)
+                    .opacity(isReview && isDragging ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.3), value: isDragging)
+                
+                ZStack {
+                    contextBar(geo: geo)
                 }
-                .frame(maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
+        }
+        
+        .overlay(alignment: .top) {
+            titleBar
+                .uiBlock(.title)
         }
         
         .overlay(alignment: .trailing) {
             controlButtons
+                .uiBlock(.row)
         }
+        
+        .overlay(alignment: .bottomLeading) {
+            previousButton
+                .uiBlock(.title)
+        }
+        
+        .overlay(alignment: .bottomTrailing) {
+            nextButton
+                .uiBlock(.title)
+        }
+        
+        .overlay {
+            VStack {
+                Spacer(minLength: layout.height.pct(0.75))
+                HStack {
+                    Spacer()
+                    reviewButton
+                    Spacer()
+                    summaryButton
+                    Spacer()
+                }
+                Spacer()
+            }
+        }
+        
+        .overlay(alignment: .topLeading) {
+            backButton
+                .uiBlock(.title)
+        }
+        
+        .overlay(alignment: .topTrailing) {
+            extendPauseButton
+                .uiBlock(.title)
+        }
+        
         .overlayPreferenceValue(OptionFramesKey.self) { optionAnchors in
             GeometryReader { proxy in
                 Color.clear
@@ -96,6 +103,7 @@ struct MainView: View {
                     }
             }
         }
+        
         .overlayPreferenceValue(BarFrameKey.self) { barAnchor in
             GeometryReader { proxy in
                 Color.clear
@@ -116,42 +124,64 @@ struct MainView: View {
         }
     }
     
-    private var previousButton: some View {
-        let leftVisible = isReview && canGoPrev
-        let isDragging = isReview && (barDrag != .zero)
-        let followX = isDragging ? barDrag.width : 0
-        let followY = isDragging ? barDrag.height : 0
-        let visibleX = -layout.contextButtonOffset
-        return SystemControlButton( //Left Button
-            isVisible: leftVisible || !isDragging,
-            color: AppTheme.Colors.primaryText,
-            action: { TripViewModel.shared.selectPreviousSegment() },
-            label: { AnimatedChevronButtonLabel(isLeftFacing: true).opacity(leftVisible ? 1 : 0) }
-        )
-        .offset(x: isDragging ? followX : (leftVisible ? visibleX : 0), y: isDragging ? followY : 0)
-        .allowsHitTesting(leftVisible)
-        .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
-        .animation(.spring(duration: layout.animationDurations.slow), value: leftVisible)
+    private var titleBar: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: layout.radii.pill)
+                .fill(Color.clear)
+
+            TimelineView(.animation) { _ in
+                let start: CGFloat = 0.75
+                let isPaused = TravelStateManager.shared.state == .paused
+                if isPaused, let snap = mainViewModel.pauseSnapshot {
+                    let remaining = max(0, snap.end.timeIntervalSinceNow)
+                    let total = max(0.001, snap.total) // avoid divide-by-zero
+                    let progress = max(0, min(1, 1 - (remaining / total)))
+                    let rawEnd = start + CGFloat(progress)
+
+                    ZStack {
+                        if rawEnd <= 1.0 {
+                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                                .trim(from: start, to: rawEnd)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+                        } else {
+                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                                .trim(from: start, to: 1.0)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+
+                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                                .trim(from: 0.0, to: rawEnd - 1.0)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+                        }
+                    }
+                }
+            }
+
+            TimelineView(.animation) { _ in
+                HStack {
+                    Spacer()
+                    if mainViewModel.travelState == .paused && mainViewModel.state == .main, let snap = mainViewModel.pauseSnapshot {
+                        let remaining = max(0, snap.end.timeIntervalSinceNow)
+                        Text(TimeUtility.formatter(remaining))
+                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .uiText(.title)
+                            .id(snap.id)
+                    } else {
+                        Text(mainViewModel.title)
+                            .foregroundColor(AppTheme.Colors.primaryText)
+                            .uiText(.title)
+                    }
+                    Spacer()
+                }
+                .uiBlock(.title)
+            }
+        }
+        .frame(width: layout.elementWidth, height: layout.titleHeight)
+        .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+        .glassEffect(.clear)
+        .onTapGesture {
+            TripSubMenuViewModel.shared.isVisible = false
+        }
     }
-    
-    private var nextButton: some View {
-        let rightVisible = isReview && canGoNext
-        let isDragging = isReview && (barDrag != .zero)
-        let followX = isDragging ? barDrag.width : 0
-        let followY = isDragging ? barDrag.height : 0
-        let visibleX = layout.contextButtonOffset
-        return SystemControlButton(
-            isVisible: rightVisible || !isDragging,
-            color: AppTheme.Colors.primaryText,
-            action: { TripViewModel.shared.selectNextSegment() },
-            label: { AnimatedChevronButtonLabel(isLeftFacing: false).opacity(rightVisible ? 1 : 0) }
-        )
-        .offset(x: isDragging ? followX : (rightVisible ? visibleX : 0), y: isDragging ? followY : 0)
-        .allowsHitTesting(rightVisible)
-        .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
-        .animation(.spring(duration: layout.animationDurations.slow), value: rightVisible)
-    }
-    
   
     
     private func contextBar(geo: GeometryProxy) -> some View {
@@ -216,51 +246,117 @@ struct MainView: View {
         .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
     }
     
+    
+    private var previousButton: some View {
+        let leftVisible = isReview && canGoPrev
+        let isDragging = isReview && (barDrag != .zero)
+        let visible = leftVisible && !isDragging
+        
+        return CustomButton( //Left Button
+            isVisible: visible,
+            color: AppTheme.Colors.primaryText,
+            action: { TripViewModel.shared.selectPreviousSegment() },
+            icon: "chevron.left"
+        )
+    }
+    
+    private var nextButton: some View {
+        let rightVisible = isReview && canGoNext
+        let isDragging = isReview && (barDrag != .zero)
+        let visible = rightVisible && !isDragging
+        
+        return CustomButton(
+            isVisible: visible,
+            color: AppTheme.Colors.primaryText,
+            action: { TripViewModel.shared.selectNextSegment() },
+            icon: "chevron.right"
+        )
+    }
     private var controlButtons: some View {
         VStack(spacing: 10) {
             settingsButton
             shareButton
             recenterButton
         }
-        .padding(.trailing, layout.controlButtonsPadding - islandOffset)
-        .onAppear {
-            NotificationCenter.default.addObserver(forName: UIDevice.orientationDidChangeNotification, object: nil, queue: .main) { _ in
-                switch UIDevice.current.orientation {
-                case .landscapeLeft:
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene, let window = windowScene.windows.first(where: { $0.isKeyWindow }) {
-                        islandOffset = window.safeAreaInsets.right
-                    }
-                default:
-                    islandOffset = 0
-                }
-            }
-        }
     }
     
     private var recenterButton: some View {
-        SystemControlButton(
+        CustomButton(
             isVisible: MainStateDriver.shared.mainState == .main,
             color: AppTheme.Colors.primaryText,
             action: { mapViewModel.recenter() },
-            label: { Image(systemName: mapViewModel.locationIconName) }
+            icon: mapViewModel.locationIconName
         )
     }
     
     private var shareButton: some View {
-        SystemControlButton(
+        CustomButton(
             isVisible: MainStateDriver.shared.mainState == .main,
             color: AppTheme.Colors.primaryText,
             action: { /* TODO */ },
-            label: { Image(systemName: "square.and.arrow.up") }
+            icon: "square.and.arrow.up"
         )
     }
     
     private var settingsButton: some View {
-        SystemControlButton(
+        CustomButton(
             isVisible: MainStateDriver.shared.mainState == .main,
             color: AppTheme.Colors.primaryText,
-            action: { mainviewModel.settingsTapped() },
-            label: { Image(systemName: "gearshape").uiText(.title) }
+            action: { mainViewModel.settingsTapped() },
+            icon: "gearshape"
+        )
+    }
+    
+    private var reviewButton: some View {
+        CustomButton(
+            isVisible: subMenuVM.isVisible,
+            color: AppTheme.Colors.primaryText,
+            action: {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                TripSubMenuViewModel.shared.hide()
+                MainStateDriver.shared.mainState = .review
+                Log("Entering Review State for \(String(describing: TripStatusViewModel.shared.selectedTripType))")
+            },
+            icon: "rectangle.and.text.magnifyingglass",
+            text: TripStatusViewModel.shared.selectedTripType.map { "\($0) Review"}?.capitalized
+            
+        )
+        .opacity(subMenuVM.isVisible ? 1 : 0)
+        .animation(.spring(response: 0.55, dampingFraction: 0.85), value: subMenuVM.isVisible)
+    }
+    
+    private var summaryButton: some View {
+        CustomButton(
+            isVisible: subMenuVM.isVisible,
+            color: AppTheme.Colors.primaryText,
+            action: {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                TripSubMenuViewModel.shared.hide()
+                MainStateDriver.shared.mainState = .summary
+                Log("Entering Review State for \(String(describing: TripStatusViewModel.shared.selectedTripType))")
+            },
+            icon: "chart.bar",
+            text: TripStatusViewModel.shared.selectedTripType.map { "\($0) Summary"}?.capitalized
+
+        )
+        .animation(.spring(response: 0.55, dampingFraction: 0.85), value: subMenuVM.isVisible)
+    }
+    
+    private var backButton: some View {
+        CustomButton(
+            isVisible: MainStateDriver.shared.mainState != .main,
+            color: AppTheme.Colors.primaryText,
+            action: { MainStateDriver.shared.mainState = .main },
+            icon: "chevron.left"
+        )
+    }
+    
+    private var extendPauseButton: some View {
+        CustomButton(
+            isVisible: TravelStateManager.shared.state == .paused,
+            color: .orange,
+            action: { TravelStateManager.shared.extendPauseTimer() },
+            icon: "plus"
         )
     }
 }
@@ -323,7 +419,7 @@ struct MainView: View {
 
 #Preview {
     MainView(
-        mainviewModel: MainViewModel(),
+        mainViewModel: MainViewModel(),
         mapViewModel: MapViewModel()
     )
 }

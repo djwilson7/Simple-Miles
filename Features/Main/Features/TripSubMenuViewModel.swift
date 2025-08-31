@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class TripSubMenuViewModel: ObservableObject {
     static let shared = TripSubMenuViewModel()
 

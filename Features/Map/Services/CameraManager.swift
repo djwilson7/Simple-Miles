@@ -4,6 +4,7 @@ import CoreLocation
 import Combine
 import SwiftUI
 
+@MainActor
 final class CameraManager: NSObject, ObservableObject {
 
     // MARK: - Singleton Instance

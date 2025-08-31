@@ -7,6 +7,7 @@ import MapKit
 
 /// Predicts and updates the user's likely location and heading during travel.
 /// - Singleton: Use `shared`. Call `initialize()` once at startup.
+@MainActor
 final class TravelLocationPredictor: ObservableObject {
     /// Shared singleton instance.
     static let shared = TravelLocationPredictor()
