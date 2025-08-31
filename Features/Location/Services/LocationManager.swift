@@ -169,12 +169,11 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         if suppressStreamingUntilForeground && UIApplication.shared.applicationState == .background {
             if pendingSLCLaunch {
                 pendingSLCLaunch = false
-                // Persist last known for map centering when user eventually opens the app
                 lastKnownStore.update(latest)
-                // Throttled nudge
+ 
                 let minInterval: TimeInterval = 2 * 60 * 60
                 if shouldNotifyUser(minInterval: minInterval) {
-                    UserNotifier.shared.showMovementReminder()
+//                    UserNotifier.shared.showMovementReminder()
                     markUserNotifiedNow()
                 }
             }

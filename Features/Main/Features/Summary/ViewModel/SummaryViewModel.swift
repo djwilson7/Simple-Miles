@@ -5,7 +5,6 @@ import Combine
 @MainActor
 final class SummaryViewModel: ObservableObject {
     static let shared = SummaryViewModel()
-    
     private var cancellables = Set<AnyCancellable>()
     @Published var pages: [SummaryPage] = [.theSplit, .weeklyRitual, .dailyRhythm, .weekInsights]
     @Published var currentIndex: Int = 0
