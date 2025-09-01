@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 
 struct PauseTimerSnapshot: Equatable, Identifiable, Codable {
@@ -20,7 +20,7 @@ final class MainViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var latestPauseTotal: TimeInterval? = nil
-    
+
     init() {
         TravelStateManager.shared.$state
             .receive(on: DispatchQueue.main)
@@ -33,7 +33,12 @@ final class MainViewModel: ObservableObject {
                     // Build a fresh snapshot from now using the latest known total
                     if let total = self.latestPauseTotal, total > 0 {
                         let start = Date()
-                        self.pauseSnapshot = PauseTimerSnapshot(id: UUID(), start: start, end: start.addingTimeInterval(total), total: total)
+                        self.pauseSnapshot = PauseTimerSnapshot(
+                            id: UUID(),
+                            start: start,
+                            end: start.addingTimeInterval(total),
+                            total: total
+                        )
                     } else {
                         self.pauseSnapshot = nil
                     }
@@ -43,15 +48,23 @@ final class MainViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
-        
+
         TravelStateManager.shared.$pauseTotalDuration
             .receive(on: DispatchQueue.main)
             .sink { [weak self] total in
                 guard let self = self else { return }
                 self.latestPauseTotal = total
                 // If we are currently paused and have a snapshot, extend by pushing end forward (keep start constant)
-                if self.travelState == .paused, let start = self.pauseSnapshot?.start, let total = total, total > 0 {
-                    self.pauseSnapshot = PauseTimerSnapshot(id: UUID(), start: start, end: start.addingTimeInterval(total), total: total)
+                if self.travelState == .paused,
+                    let start = self.pauseSnapshot?.start, let total = total,
+                    total > 0
+                {
+                    self.pauseSnapshot = PauseTimerSnapshot(
+                        id: UUID(),
+                        start: start,
+                        end: start.addingTimeInterval(total),
+                        total: total
+                    )
                 }
                 self.updateTitle()
             }
@@ -74,7 +87,7 @@ final class MainViewModel: ObservableObject {
     func extendPauseTapped() {
         TravelStateManager.shared.extendPauseTimer()
     }
-    
+
     private func updateTitle() {
         switch state {
         case .main:
@@ -95,6 +108,6 @@ final class MainViewModel: ObservableObject {
                 title = "\(type.name.capitalized) Summary"
             }
         }
-        
+
     }
 }

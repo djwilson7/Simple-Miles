@@ -121,7 +121,7 @@ struct TripSortingBackgroundView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.clear.opacity(0.001))
-                    .glassEffect()
+                    .applyMaterial()
             }
             .frame(width: isHighlighted ? 150 : 0, height: isHighlighted ? 50 : 0)
             .animation(.easeInOut(duration: 0.3), value: isHighlighted)

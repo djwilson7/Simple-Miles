@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import SwiftUI
-import Combine
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
@@ -8,5 +8,5 @@ final class SettingsViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     @Published var pages: [SettingsPage] = [.account, .display, .tracking]
     @Published var currentIndex: Int = 0
-    
+
 }

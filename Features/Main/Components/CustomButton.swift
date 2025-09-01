@@ -27,18 +27,20 @@ struct CustomButton: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: layout.radii.pill)
 
-        Button(action: {
-            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-            TripSubMenuViewModel.shared.isVisible = false
-            action()
-        }) {
+        Button(
+            action: {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                TripSubMenuViewModel.shared.isVisible = false
+                action()
+            }
+        ) {
             content
                 .uiBlock(.row)
                 .frame(minWidth: layout.buttonWidth, minHeight: layout.buttonHeight, alignment: .center)
         }
         .buttonStyle(.plain)
         .uiText(.title)
-        .glassEffect(.clear, in: shape)
+        .applyMaterial()
         .clipShape(shape)
         .contentShape(shape)
         .scaleEffect(isVisible ? 1.0 : 0.01, anchor: .center) // avoid 0.001 jitters

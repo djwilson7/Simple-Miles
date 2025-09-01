@@ -1,21 +1,27 @@
 import SwiftUI
 
-/// Collect measured heights per page so we can forward the current page's height to the dynamic context bar
+//MARK: Dimension Keys
 private struct SettingsPageHeightKey: PreferenceKey {
     static var defaultValue: [Int: CGFloat] = [:]
-    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+    static func reduce(
+        value: inout [Int: CGFloat],
+        nextValue: () -> [Int: CGFloat]
+    ) {
         value.merge(nextValue(), uniquingKeysWith: { $1 })
     }
 }
 
 private struct SettingsPageWidthKey: PreferenceKey {
     static var defaultValue: [Int: CGFloat] = [:]
-    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+    static func reduce(
+        value: inout [Int: CGFloat],
+        nextValue: () -> [Int: CGFloat]
+    ) {
         value.merge(nextValue(), uniquingKeysWith: { $1 })
     }
 }
 
-
+//MARK: Settings View
 struct SettingsView: View {
     @Environment(\.layout) private var layout
     @StateObject private var viewModel = SettingsViewModel.shared
@@ -23,13 +29,14 @@ struct SettingsView: View {
     @State private var indicatorWidth: CGFloat = 0
     @State private var contentHeights: [Int: CGFloat] = [:]
     @State private var contentWidths: [Int: CGFloat] = [:]
-    
 
+    //MARK: Main Body
     var body: some View {
         VStack {
-            // Pager
             TabView(selection: $viewModel.currentIndex) {
-                ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { idx, page in
+                ForEach(Array(viewModel.pages.enumerated()), id: \.offset) {
+                    idx,
+                    page in
                     SettingCard(page: page, index: idx)
                         .tag(idx)
                         .contentShape(Rectangle())
@@ -37,65 +44,79 @@ struct SettingsView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .padding(.bottom, 3)
-            
-            // Page Indicators (tap to switch, matches Status pager UX)
-            SettingPageIndicators(currentIndex: $viewModel.currentIndex, pages: viewModel.pages)
-                .padding(.bottom, 3)
-                .background(
-                    GeometryReader { g in
-                        Color.clear
-                            .onAppear {
-                                indicatorHeight = g.size.height
-                                indicatorWidth = g.size.width
-                            }
-                            .onChange(of: g.size.height) { _, h in indicatorHeight = h }
-                            .onChange(of: g.size.width) { _, w in indicatorWidth = w }
-                    }
-                )
+
+            SettingPageIndicators(
+                currentIndex: $viewModel.currentIndex,
+                pages: viewModel.pages
+            )
+            .padding(.bottom, 3)
+            .background(
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear {
+                            indicatorHeight = g.size.height
+                            indicatorWidth = g.size.width
+                        }
+                        .onChange(of: g.size.height) { _, h in
+                            indicatorHeight = h
+                        }
+                        .onChange(of: g.size.width) { _, w in indicatorWidth = w
+                        }
+                }
+            )
         }
         .onPreferenceChange(SettingsPageHeightKey.self) { contentHeights = $0 }
         .onPreferenceChange(SettingsPageWidthKey.self) { contentWidths = $0 }
-        .preference(key: DynamicContextBarDesiredHeightKey.self, value: computedDesiredHeight())
-        .preference(key: DynamicContextBarDesiredWidthKey.self,  value: computedDesiredWidth())
+        .preference(
+            key: DynamicContextBarDesiredHeightKey.self,
+            value: computedDesiredHeight()
+        )
+        .preference(
+            key: DynamicContextBarDesiredWidthKey.self,
+            value: computedDesiredWidth()
+        )
         .onChange(of: viewModel.currentIndex) { _, _ in
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         }
     }
     
+    //MARK: Dimension Methods
     private func currentPageHeight() -> CGFloat {
         let idx = viewModel.currentIndex
-        let content = contentHeights[idx] ?? 200 // safe fallback
+        let content = contentHeights[idx] ?? 200  // safe fallback
         return content + indicatorHeight + 3
     }
-    
+
     private func currentPageWidth() -> CGFloat {
         let idx = viewModel.currentIndex
-        return contentWidths[idx] ?? layout.width.pct(0.8) // safe fallback
+        return contentWidths[idx] ?? layout.width.pct(0.8)  // safe fallback
     }
-    
+
     private func computedDesiredHeight() -> CGFloat { currentPageHeight() }
-    private func computedDesiredWidth()  -> CGFloat { currentPageWidth() }
+    private func computedDesiredWidth() -> CGFloat { currentPageWidth() }
 }
 
+//MARK: Settings Page
 enum SettingsPage: CaseIterable, Identifiable {
     case account, display, tracking
     var id: Self { self }
     var title: String {
         switch self {
-        case .account:  return "Account"
-        case .display:  return "Display"
+        case .account: return "Account"
+        case .display: return "Display"
         case .tracking: return "Tracking"
         }
     }
     var iconName: String {
         switch self {
-        case .account:  return "person.crop.circle"
-        case .display:  return "paintpalette"
+        case .account: return "person.crop.circle"
+        case .display: return "paintpalette"
         case .tracking: return "dot.radiowaves.left.and.right"
         }
     }
 }
 
+//MARK: Settings Card
 struct SettingCard: View {
     let page: SettingsPage
     let index: Int
@@ -112,7 +133,8 @@ struct SettingCard: View {
             TrackingPage
         }
     }
-    
+
+    //MARK: Headers
     private var TabHeader: some View {
         HStack(spacing: 8) {
             Image(systemName: page.iconName)
@@ -122,7 +144,16 @@ struct SettingCard: View {
         }
         .uiBlock(.title)
     }
+
+    private func SectionHeader(_ label: String) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+        }
+        .uiStyle(.title)
+    }
     
+    //MARK: Account Page
     private var AccountPage: some View {
         VStack {
             TabHeader
@@ -134,7 +165,7 @@ struct SettingCard: View {
                         Text("Right")
                     }
                     .uiBlock(.row)
-                    
+
                 }
             }
             .frame(height: layout.height.pct(0.25))
@@ -143,49 +174,95 @@ struct SettingCard: View {
         .frame(width: layout.width.pct(0.95))
         .background(
             GeometryReader { g in
-                Color.clear.preference(key: SettingsPageHeightKey.self, value: [index: g.size.height])
-                Color.clear.preference(key: SettingsPageWidthKey.self, value: [index: g.size.width])
+                Color.clear.preference(
+                    key: SettingsPageHeightKey.self,
+                    value: [index: g.size.height]
+                )
+                Color.clear.preference(
+                    key: SettingsPageWidthKey.self,
+                    value: [index: g.size.width]
+                )
             }
         )
     }
-    
+
+    //MARK: Display Page
     private var DisplayPage: some View {
         VStack {
             TabHeader
-            ScrollView {
-                Group {
-                    HStack {
-                        distanceSetting
-                    }
-                    .uiBlock(.row)
-                    
-                }
-            }
-            .frame(height: layout.height.pct(0.25))
+            HStack { themeOverrideSetting }.uiBlock(.row)
+            HStack { materialOverrideSetting }.uiBlock(.row)
+            HStack { accentColorSetting }.uiBlock(.row)
+            HStack { distanceSetting }.uiBlock(.row)
         }
         .padding(16)
         .frame(width: layout.width.pct(0.95))
         .background(
             GeometryReader { g in
-                Color.clear.preference(key: SettingsPageHeightKey.self, value: [index: g.size.height])
-                Color.clear.preference(key: SettingsPageWidthKey.self, value: [index: g.size.width])
+                Color.clear.preference(
+                    key: SettingsPageHeightKey.self,
+                    value: [index: g.size.height]
+                )
+                Color.clear.preference(
+                    key: SettingsPageWidthKey.self,
+                    value: [index: g.size.width]
+                )
             }
         )
     }
-    
+
     private var distanceSetting: some View {
         VStack {
-            HStack {
-                Text("Distance Unit")
-                Spacer()
-                Picker("", selection: $settings.distanceUnit) {
-                    ForEach(DistanceUnit.allCases) { Text($0.rawValue.capitalized).tag($0) }
-                }
-                .pickerStyle(.segmented)
-            }
+            SectionHeader("Distance Unit")
+            SegmentedPicker(selection: $settings.distanceUnit)
         }
     }
-    
+
+    private var themeOverrideSetting: some View {
+        VStack {
+            SectionHeader("Theme Override")
+            SegmentedPicker(selection: $settings.themeOverride)
+        }
+    }
+
+    private var materialOverrideSetting: some View {
+        VStack {
+            SectionHeader("Material Override")
+            SegmentedPicker(selection: $settings.materialOverride)
+        }
+    }
+
+    private var accentColorSetting: some View {
+        VStack {
+            SectionHeader("Accent Color")
+            GradientTrackSlider(
+                value: $settings.primaryHue,
+                range: 0...1,
+                gradient: hueGradient()
+            )
+
+            GradientTrackSlider(
+                value: $settings.saturation,
+                range: 0...1,
+                gradient: saturationGradient(
+                    h: settings.primaryHue,
+                    b: settings.brightness
+                )
+            )
+
+            GradientTrackSlider(
+                value: $settings.brightness,
+                range: 0...1,
+                gradient: brightnessGradient(
+                    h: settings.primaryHue,
+                    s: settings.saturation
+                )
+            )
+
+        }
+    }
+
+    //MARK: Tracking Page
     private var TrackingPage: some View {
         VStack {
             TabHeader
@@ -195,7 +272,7 @@ struct SettingCard: View {
                         minimumTripDistance
                     }
                     .uiBlock(.row)
-                    
+
                 }
             }
             .frame(height: layout.height.pct(0.25))
@@ -204,19 +281,30 @@ struct SettingCard: View {
         .frame(width: layout.width.pct(0.95))
         .background(
             GeometryReader { g in
-                Color.clear.preference(key: SettingsPageHeightKey.self, value: [index: g.size.height])
-                Color.clear.preference(key: SettingsPageWidthKey.self, value: [index: g.size.width])
+                Color.clear.preference(
+                    key: SettingsPageHeightKey.self,
+                    value: [index: g.size.height]
+                )
+                Color.clear.preference(
+                    key: SettingsPageWidthKey.self,
+                    value: [index: g.size.width]
+                )
             }
         )
     }
-    
+
     private var minimumTripDistance: some View {
         VStack {
             HStack {
                 Text("Minimum Trip Distance:")
                     .lineLimit(1)
                 Spacer()
-                Text(String(format: "%.1f\(settings.distanceUnit.abb)", settings.minimumTripDistance))
+                Text(
+                    String(
+                        format: "%.1f\(settings.distanceUnit.abb)",
+                        settings.minimumTripDistance
+                    )
+                )
                 Stepper(
                     "",
                     value: $settings.minimumTripDistance,
@@ -226,7 +314,7 @@ struct SettingCard: View {
                 .labelsHidden()
                 .frame(alignment: .trailing)
             }
-            
+
             HStack {
                 Text("Paused Timer:")
                     .lineLimit(1)
@@ -245,18 +333,18 @@ struct SettingCard: View {
     }
 }
 
-// MARK: - Indicators (tap to jump)
+// MARK:  Page Indicators
 struct SettingPageIndicators: View {
     @Binding var currentIndex: Int
     let pages: [SettingsPage]
     @Environment(\.layout) private var layout
-    
+
     var body: some View {
         HStack(spacing: 30) {
             Spacer()
             ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
                 let isCurrent = (idx == currentIndex)
-                
+
                 Image(systemName: page.iconName)
                     .symbolVariant(isCurrent ? .fill : .none)
                     .uiText(.title)

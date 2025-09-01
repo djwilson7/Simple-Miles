@@ -2,7 +2,7 @@ import SwiftUI
 
 struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewContent: View, SummaryContent: View>: View {
     @Environment(\.layout) private var layout
-    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var settings: SettingsCenter
     @ObservedObject var viewModel = DynamicContextBarViewModel.shared
     @State private var animatedHeight: CGFloat = 200
     @State private var animatedWidth: CGFloat = 200
@@ -21,6 +21,7 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
     let summaryContent: () -> SummaryContent
     
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: layout.radii.pill)
         ZStack {
             if !showContent {
                 ProgressView()
@@ -42,16 +43,13 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
                 }
             }
         }
-        .id(colorScheme)
         .frame(width: animatedWidth, height: animatedHeight, alignment: .center)
-        .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-        .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+        .clipShape(shape)
+        .contentShape(shape)
         .onChange(of: viewModel.mainState) { _, _ in
             runContentTransitionAnimation()
         }
-        .onChange(of: colorScheme) { _, _ in
-            runContentTransitionAnimation()
-        }
+        
         .onPreferenceChange(DynamicContextBarDesiredHeightKey.self) { newValue in
             desiredHeight = max(minHeight, newValue)
             if showContent {
