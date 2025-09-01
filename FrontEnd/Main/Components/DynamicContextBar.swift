@@ -1,0 +1,112 @@
+import SwiftUI
+
+struct DynamicContextBarDesiredHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+struct DynamicContextBarDesiredWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewContent: View, SummaryContent: View>: View {
+    @Environment(\.layout) private var layout
+    @ObservedObject private var mainState = MainStateManager.shared
+    @State private var animatedHeight: CGFloat = 200
+    @State private var animatedWidth: CGFloat = 200
+    @State private var animateTask: Task<Void, Never>? = nil
+    @State private var showContent = true
+    @State private var targetSize: CGSize = .zero
+    @State private var desiredHeight: CGFloat = 200
+    @State private var desiredWidth: CGFloat = 200
+    
+    var minWidth: CGFloat { layout.width.pct(0.3) }
+    var minHeight: CGFloat { max(40, layout.height.pct(0.05)) }
+        
+    let tripStatusContent: () -> TripStatusContent
+    let settingsContent: () -> SettingsContent
+    let reviewContent: () -> ReviewContent
+    let summaryContent: () -> SummaryContent
+    
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: layout.radii.pill)
+        ZStack {
+            if !showContent {
+                ProgressView()
+            }
+            if showContent {
+                switch mainState.state {
+                case .main:
+                    tripStatusContent()
+                        .uiBlock(.title)
+                case .settings:
+                    settingsContent()
+                        .uiBlock(.title)
+                case .review:
+                    reviewContent()
+                        .uiBlock(.title)
+                case .summary:
+                    summaryContent()
+                        .uiBlock(.title)
+                }
+            }
+        }
+        .frame(width: animatedWidth, height: animatedHeight, alignment: .center)
+        .clipShape(shape)
+        .contentShape(shape)
+        .onChange(of: mainState.state) { _, _ in
+            runContentTransitionAnimation()
+        }
+        
+        .onPreferenceChange(DynamicContextBarDesiredHeightKey.self) { newValue in
+            desiredHeight = max(minHeight, newValue)
+            if showContent {
+                withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
+                    animatedHeight = desiredHeight
+                }
+            }
+        }
+        .onPreferenceChange(DynamicContextBarDesiredWidthKey.self) { newValue in
+            desiredWidth = max(minWidth, newValue)
+            if showContent {
+                withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
+                    animatedWidth = desiredWidth
+                }
+            }
+        }
+        .onAppear {
+            animatedHeight = desiredHeight
+            animatedWidth = max(minWidth, desiredWidth)
+        }
+        .onDisappear { animateTask?.cancel() }
+    }
+
+    private func runContentTransitionAnimation() {
+        animateTask?.cancel()
+        animateTask = Task {
+            await MainActor.run {
+                showContent = false
+                withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
+                    animatedHeight = minHeight
+                    animatedWidth = minWidth
+                }
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: layout.animationDurations.medium)) {
+                    animatedHeight = desiredHeight
+                    animatedWidth = desiredWidth
+                }
+            }
+            try? await Task.sleep(nanoseconds: UInt64(layout.animationDurations.medium * 1_000_000_000))
+            await MainActor.run {
+                showContent = true
+            }
+        }
+    }
+}

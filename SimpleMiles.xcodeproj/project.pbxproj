@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6A5462BF2E65EF410043EB35 /* SimpleMilesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5462BE2E65EF410043EB35 /* SimpleMilesApp.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		6AC2F4BA2E2161CC00F4064A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -41,36 +45,46 @@
 		6A2C07DE2E3D5FF2005B8149 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		6A2C07FD2E3E6249005B8149 /* LiveTripTrackingExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LiveTripTrackingExtension.entitlements; sourceTree = "<group>"; };
 		6A2C07FE2E3E62A1005B8149 /* SimpleMiles.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SimpleMiles.entitlements; sourceTree = "<group>"; };
+		6A5462BE2E65EF410043EB35 /* SimpleMilesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMilesApp.swift; sourceTree = "<group>"; };
 		6AC2F4AC2E2161CA00F4064A /* SimpleMiles.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleMiles.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AC2F4B92E2161CC00F4064A /* SimpleMilesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleMilesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AC2F4C32E2161CC00F4064A /* SimpleMilesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleMilesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SimpleMiles-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6A5463B62E661F790043EB35 /* Exceptions for "FrontEnd" folder in "SimpleMiles" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/SimpleMilesModel.xcdatamodeld,
+			);
+			target = 6AC2F4AB2E2161CA00F4064A /* SimpleMiles */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		6A5463B72E661F790043EB35 /* Exceptions for "FrontEnd" folder in "Compile Sources" phase from "SimpleMiles" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 6AC2F4A82E2161CA00F4064A /* Sources */;
+			membershipExceptions = (
+				Resources/SimpleMilesModel.xcdatamodeld,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		6AB55A122E22F84F00DCEF27 /* Features */ = {
+		6A5463832E65FF480043EB35 /* FrontEnd */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Features;
+			exceptions = (
+				6A5463B62E661F790043EB35 /* Exceptions for "FrontEnd" folder in "SimpleMiles" target */,
+				6A5463B72E661F790043EB35 /* Exceptions for "FrontEnd" folder in "Compile Sources" phase from "SimpleMiles" target */,
+			);
+			path = FrontEnd;
 			sourceTree = "<group>";
 		};
-		6AB55A252E22F90500DCEF27 /* Utilities */ = {
+		6A5463842E65FF4E0043EB35 /* BackEnd */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Utilities;
-			sourceTree = "<group>";
-		};
-		6AB55A442E22F9FC00DCEF27 /* Resources */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Resources;
-			sourceTree = "<group>";
-		};
-		6AB55A462E22FA2100DCEF27 /* App */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = App;
-			sourceTree = "<group>";
-		};
-		6AFEC42B2E4B808E0031837F /* Design */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Design;
+			path = BackEnd;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -112,16 +126,14 @@
 		6AC2F4A32E2161CA00F4064A = {
 			isa = PBXGroup;
 			children = (
-				6AFEC42B2E4B808E0031837F /* Design */,
+				6A5463842E65FF4E0043EB35 /* BackEnd */,
+				6A5463832E65FF480043EB35 /* FrontEnd */,
 				6A2C07FE2E3E62A1005B8149 /* SimpleMiles.entitlements */,
 				6A2C07FD2E3E6249005B8149 /* LiveTripTrackingExtension.entitlements */,
-				6AB55A462E22FA2100DCEF27 /* App */,
-				6AB55A442E22F9FC00DCEF27 /* Resources */,
-				6AB55A252E22F90500DCEF27 /* Utilities */,
-				6AB55A122E22F84F00DCEF27 /* Features */,
 				6A2C07DB2E3D5FF2005B8149 /* Frameworks */,
 				6AC2F4AD2E2161CA00F4064A /* Products */,
 				6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */,
+				6A5462BE2E65EF410043EB35 /* SimpleMilesApp.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -152,11 +164,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				6AB55A122E22F84F00DCEF27 /* Features */,
-				6AB55A252E22F90500DCEF27 /* Utilities */,
-				6AB55A442E22F9FC00DCEF27 /* Resources */,
-				6AB55A462E22FA2100DCEF27 /* App */,
-				6AFEC42B2E4B808E0031837F /* Design */,
+				6A5463832E65FF480043EB35 /* FrontEnd */,
+				6A5463842E65FF4E0043EB35 /* BackEnd */,
 			);
 			name = SimpleMiles;
 			packageProductDependencies = (
@@ -280,6 +289,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6A5462BF2E65EF410043EB35 /* SimpleMilesApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
