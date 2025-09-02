@@ -2,47 +2,52 @@ import MapKit
 import SwiftUI
 import UIKit
 
-struct BarFrameKey: PreferenceKey {
-    static var defaultValue: Anchor<CGRect>? = nil
-    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
-        if let next = nextValue() {
-            value = next
+/// Hosts the primary map screen and the bottom context bar.
+/// Orchestrates overlays (title, controls, review actions) and drag-to-classify UI.
+struct MainView: View {
+
+    // MARK: - Types (View-only helpers)
+    struct BarFrameKey: PreferenceKey {
+        static var defaultValue: Anchor<CGRect>? = nil
+        static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+            if let next = nextValue() { value = next }
         }
     }
-}
 
-struct MainView: View {
+    // MARK: - Environment / Dependencies
     @Environment(\.layout) private var layout
 
     @ObservedObject var mainViewModel: MainViewModel
     @ObservedObject var mapViewModel: MapViewModel
     @ObservedObject var snapshotViewModel = SnapshotViewModel.shared
-    
+
+    // MARK: - State
     @State private var barDrag: CGSize = .zero
     @State private var islandOffset: CGFloat = 0
-    @State var highlighted: TripType? = nil
-    @State var isDragging: Bool = false
-    @State var currentHighlightedArea: CGFloat = 0
-    @State var optionAnchorsState: [TripType: Anchor<CGRect>] = [:]
-    @State var barAnchorState: Anchor<CGRect>? = nil
+    @State private var highlighted: TripType? = nil
+    @State private var isDragging: Bool = false
+    @State private var currentHighlightedArea: CGFloat = 0
+    @State private var optionAnchorsState: [TripType: Anchor<CGRect>] = [:]
+    @State private var barAnchorState: Anchor<CGRect>? = nil
     @State private var overlayProxy: GeometryProxy? = nil
 
+    // MARK: - Computed
     private var isReview: Bool { MainStateManager.shared.state == .review }
     private var canGoPrev: Bool { SortViewModel.shared.currentTripIndex > 0 }
     private var canGoNext: Bool {
-        SortViewModel.shared.currentTripIndex < SortViewModel.shared.tripCount
-            - 1
+        SortViewModel.shared.currentTripIndex < SortViewModel.shared.tripCount - 1
     }
-
-    private let tripViewModel = SortViewModel.shared
-    private let settings = SettingsManager.shared
-
     // Centralized condition for action buttons visibility
     private var showActionButtons: Bool {
         MainStateManager.shared.state == .main &&
         snapshotViewModel.selectedTripType != nil
     }
 
+    // MARK: - Private Dependencies
+    private let tripViewModel = SortViewModel.shared
+    private let settings = SettingsManager.shared
+
+    // MARK: - Body
     var body: some View {
         GeometryReader { geo in
             ZStack {
@@ -59,34 +64,25 @@ struct MainView: View {
                 ZStack {
                     contextBar(geo: geo)
                 }
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: .bottom
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
         }
-
         .overlay(alignment: .top) {
             titleBar
                 .uiBlock(.title)
         }
-
         .overlay(alignment: .trailing) {
             controlButtons
                 .uiBlock(.row)
         }
-
         .overlay(alignment: .bottomLeading) {
             previousButton
                 .uiBlock(.title)
         }
-
         .overlay(alignment: .bottomTrailing) {
             nextButton
                 .uiBlock(.title)
         }
-
         // Scrim + action buttons overlay
         .overlay {
             ZStack {
@@ -104,18 +100,15 @@ struct MainView: View {
                 }
             }
         }
-
         .overlay(alignment: .topLeading) {
             backButton
                 .uiBlock(.title)
         }
-
         .overlay(alignment: .topTrailing) {
             extendPauseButton
                 .uiBlock(.title)
         }
-
-        .overlayPreferenceValue(OptionFramesKey.self) { optionAnchors in
+        .overlayPreferenceValue(SortOptionsView.Types.OptionFramesKey.self) { optionAnchors in
             GeometryReader { proxy in
                 Color.clear
                     .onAppear {
@@ -144,8 +137,7 @@ struct MainView: View {
                     }
             }
         }
-
-        .overlayPreferenceValue(BarFrameKey.self) { barAnchor in
+        .overlayPreferenceValue(MainView.BarFrameKey.self) { barAnchor in
             GeometryReader { proxy in
                 Color.clear
                     .onAppear {
@@ -160,7 +152,7 @@ struct MainView: View {
                             drag: barDrag
                         )
                     }
-                    .onChange(of: barDrag, initial: true) { _, newValue in
+                    .onChange(of: barDrag, initial: true) { _, _ in
                         updateHighlight(
                             proxy: proxy,
                             optionAnchors: optionAnchorsState,
@@ -186,6 +178,7 @@ struct MainView: View {
         }
     }
 
+    // MARK: - Subviews
     private var titleBar: some View {
         ZStack {
             RoundedRectangle(cornerRadius: layout.radii.pill)
@@ -223,7 +216,7 @@ struct MainView: View {
                     Spacer()
                     if mainViewModel.travelState == .paused
                         && mainViewModel.state == .main,
-                        let snap = mainViewModel.pauseSnapshot
+                       let snap = mainViewModel.pauseSnapshot
                     {
                         let remaining = max(0, snap.end.timeIntervalSinceNow)
                         Text(TimeUtility.formatter(remaining))
@@ -240,41 +233,31 @@ struct MainView: View {
                 .uiBlock(.title)
             }
         }
-        .frame(width: layout.elementWidth, height: layout.titleHeight)
+        .frame(width: layout.width.pct(0.5), height: layout.height.pct(0.2))
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         .applyMaterial()
     }
 
     private func contextBar(geo: GeometryProxy) -> some View {
         DynamicContextBar(
-            tripStatusContent: {
-                SnapshotView()
-            },
-            settingsContent: {
-                SettingsView()
-            },
-            reviewContent: {
-                SortView()
-            },
-            summaryContent: {
-                SummaryView()
-            }
+            tripStatusContent: { SnapshotView() },
+            settingsContent: { SettingsView() },
+            reviewContent: { SortView() },
+            summaryContent: { SummaryView() }
         )
         .applyMaterial()
         .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
         .offset(isReview ? barDrag : .zero)
-        .anchorPreference(key: BarFrameKey.self, value: .bounds) { $0 }
+        .anchorPreference(key: MainView.BarFrameKey.self, value: .bounds) { $0 }
         .simultaneousGesture(
             DragGesture()
                 .onChanged { value in
                     if isReview {
                         barDrag = value.translation
                         if isDragging == false {
-                            UIImpactFeedbackGenerator(style: .light)
-                                .impactOccurred()
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                         isDragging = true
-
                         updateHighlight(
                             proxy: overlayProxy ?? geo,
                             optionAnchors: optionAnchorsState,
@@ -288,15 +271,10 @@ struct MainView: View {
                 .onEnded { _ in
                     if isReview {
                         if let selected = highlighted {
-                            tripViewModel.classifyCurrentSegment(
-                                newType: selected
-                            )
-                            UINotificationFeedbackGenerator()
-                                .notificationOccurred(.success)
+                            tripViewModel.classifyCurrentSegment(newType: selected)
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
                         }
-                        withAnimation(
-                            .spring(response: 0.35, dampingFraction: 0.8)
-                        ) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             barDrag = .zero
                             isDragging = false
                         }
@@ -306,16 +284,13 @@ struct MainView: View {
                     }
                 }
         )
-        .animation(
-            .spring(duration: layout.animationDurations.medium),
-            value: barDrag
-        )
+        .animation(.spring(duration: layout.animationDurations.medium), value: barDrag)
     }
 
     private var previousButton: some View {
         let leftVisible = isReview && canGoPrev
-        let isDragging = isReview && (barDrag != .zero)
-        let visible = leftVisible && !isDragging
+        let dragging = isReview && (barDrag != .zero)
+        let visible = leftVisible && !dragging
 
         return CustomButton(
             isVisible: visible,
@@ -327,8 +302,8 @@ struct MainView: View {
 
     private var nextButton: some View {
         let rightVisible = isReview && canGoNext
-        let isDragging = isReview && (barDrag != .zero)
-        let visible = rightVisible && !isDragging
+        let dragging = isReview && (barDrag != .zero)
+        let visible = rightVisible && !dragging
 
         return CustomButton(
             isVisible: visible,
@@ -337,6 +312,7 @@ struct MainView: View {
             icon: "chevron.right"
         )
     }
+
     private var controlButtons: some View {
         VStack(spacing: 10) {
             settingsButton
@@ -358,7 +334,7 @@ struct MainView: View {
         CustomButton(
             isVisible: MainStateManager.shared.state == .main,
             color: AppTheme.Colors.primaryText,
-            action: { /* TODO */  },
+            action: { /* TODO */ },
             icon: "square.and.arrow.up"
         )
     }
@@ -379,15 +355,10 @@ struct MainView: View {
             action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 MainStateManager.shared.state = .review
-                Log(
-                    "Entering Review State for \(String(describing: snapshotViewModel.selectedTripType))"
-                )
+                Log("Entering Review State for \(String(describing: snapshotViewModel.selectedTripType))")
             },
             icon: "rectangle.and.text.magnifyingglass",
-            text: snapshotViewModel.selectedTripType.map {
-                "\($0) Review"
-            }?.capitalized
-
+            text: snapshotViewModel.selectedTripType.map { "\($0) Review" }?.capitalized
         )
     }
 
@@ -398,15 +369,10 @@ struct MainView: View {
             action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 MainStateManager.shared.state = .summary
-                Log(
-                    "Entering Review State for \(String(describing: snapshotViewModel.selectedTripType))"
-                )
+                Log("Entering Review State for \(String(describing: snapshotViewModel.selectedTripType))")
             },
             icon: "chart.bar",
-            text: snapshotViewModel.selectedTripType.map {
-                "\($0) Summary"
-            }?.capitalized
-
+            text: snapshotViewModel.selectedTripType.map { "\($0) Summary" }?.capitalized
         )
     }
 
@@ -441,7 +407,9 @@ struct MainView: View {
     }
 }
 
-@MainActor func updateHighlight(
+// MARK: - Helpers (free function kept file-private for locality)
+@MainActor
+fileprivate func updateHighlight(
     proxy: GeometryProxy,
     optionAnchors: [TripType: Anchor<CGRect>],
     barAnchor: Anchor<CGRect>?,
@@ -495,11 +463,4 @@ struct MainView: View {
         highlighted = nil
         currentHighlightedArea = 0
     }
-}
-
-#Preview {
-    MainView(
-        mainViewModel: MainViewModel(),
-        mapViewModel: MapViewModel()
-    )
 }
