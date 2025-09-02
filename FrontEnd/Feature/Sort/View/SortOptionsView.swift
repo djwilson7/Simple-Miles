@@ -33,25 +33,25 @@ struct SortOptionsView: View {
             let viewHeight = geo.size.height * 0.5
             let viewWidth = geo.size.width * 0.8
             let rowHeight = viewHeight * 0.25
-
+            let shape = RoundedRectangle(cornerRadius: layout.cornerRadius)
             VStack(spacing: 8) {
                 optionRow(tripType: .personal, isHighlighted: highlighted == .personal, rowHeight: rowHeight)
                     .frame(width: viewWidth)
-                    .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                    .contentShape(shape)
                     .anchorPreference(key: Types.OptionFramesKey.self, value: .bounds) { anchor in
                         [.personal: anchor]
                     }
 
                 optionRow(tripType: .business, isHighlighted: highlighted == .business, rowHeight: rowHeight)
                     .frame(width: viewWidth)
-                    .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                    .contentShape(shape)
                     .anchorPreference(key: Types.OptionFramesKey.self, value: .bounds) { anchor in
                         [.business: anchor]
                     }
 
                 optionRow(tripType: .custom, isHighlighted: highlighted == .custom, rowHeight: rowHeight)
                     .frame(width: viewWidth)
-                    .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                    .contentShape(shape)
                     .anchorPreference(key: Types.OptionFramesKey.self, value: .bounds) { anchor in
                         [.custom: anchor]
                     }
@@ -63,13 +63,13 @@ struct SortOptionsView: View {
                     labelColor: Color.red.opacity(0.8)
                 )
                 .frame(width: viewWidth)
-                .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                .contentShape(shape)
                 .anchorPreference(key: Types.OptionFramesKey.self, value: .bounds) { anchor in
                     [.trash: anchor]
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+            .clipShape(shape)
         }
     }
 
@@ -116,38 +116,39 @@ struct SortOptionsBGView: View {
             let viewHeight = geo.size.height * 0.5
             let viewWidth = geo.size.width * 0.8
             let rowHeight = viewHeight * 0.25
-
+            let shape = RoundedRectangle(cornerRadius: layout.cornerRadius)
+            
             VStack(spacing: 8) {
                 backgroundRow(isHighlighted: highlighted == .personal, rowHeight: rowHeight)
                     .frame(width: viewWidth)
-                    .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                    .contentShape(shape)
                     .anchorPreference(key: SortOptionsView.Types.OptionFramesKey.self, value: .bounds) { anchor in
                         [.personal: anchor]
                     }
 
                 backgroundRow(isHighlighted: highlighted == .business, rowHeight: rowHeight)
                     .frame(width: viewWidth)
-                    .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                    .contentShape(shape)
                     .anchorPreference(key: SortOptionsView.Types.OptionFramesKey.self, value: .bounds) { anchor in
                         [.business: anchor]
                     }
 
                 backgroundRow(isHighlighted: highlighted == .custom, rowHeight: rowHeight)
                     .frame(width: viewWidth)
-                    .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                    .contentShape(shape)
                     .anchorPreference(key: SortOptionsView.Types.OptionFramesKey.self, value: .bounds) { anchor in
                         [.custom: anchor]
                     }
 
                 backgroundRow(isHighlighted: highlighted == .trash, rowHeight: rowHeight)
                     .frame(width: viewWidth)
-                    .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                    .contentShape(shape)
                     .anchorPreference(key: SortOptionsView.Types.OptionFramesKey.self, value: .bounds) { anchor in
                         [.trash: anchor]
                     }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+            .clipShape(shape)
         }
     }
 

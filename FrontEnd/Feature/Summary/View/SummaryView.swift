@@ -20,6 +20,7 @@ struct SummaryView: View {
             pages
             indicators
         }
+        .frame(width: layout.barWidth)
         .onPreferenceChange(Types.SummaryContentHeightKey.self) { contentHeights = $0 }
         .preference(key: DynamicContextBarDesiredHeightKey.self, value: computedDesiredHeight())
         .preference(key: DynamicContextBarDesiredWidthKey.self,  value: computedDesiredWidth())

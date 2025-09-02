@@ -182,7 +182,7 @@ private struct Defaults {
     static let brightness: Double = 0.1
 
     static let minimumTripDistance: Double = 0.2
-    static let pauseTimer: Double = 600.0
+    static let pauseTimer: Double = 150.0
 }
 
 // MARK: - Setting Types

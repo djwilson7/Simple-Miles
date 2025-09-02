@@ -71,6 +71,9 @@ final class SnapshotViewModel: ObservableObject {
     // MARK: - Init
     private init() {
         bind()
+
+        // Initial sync so selection reflects the initial page.
+        syncSelectionToCurrentPage()
     }
 
     // MARK: - Bindings
@@ -124,17 +127,14 @@ final class SnapshotViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .assign(to: \.remainingPauseTime, on: self)
             .store(in: &cancellables)
-    }
 
-    // MARK: - Public API (User Intents)
-    func tapped(for type: TripType) {
-        Log("Selected Type: \(type)")
-        selectedTripType = type
-    }
-
-    func clearSelected() {
-        Log("Selected Trip Type Cleared")
-        selectedTripType = nil
+        $currentPageIndex
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.syncSelectionToCurrentPage()
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Private Helpers
@@ -194,6 +194,18 @@ final class SnapshotViewModel: ObservableObject {
         result.append(totalsPage(model: trashTrips))
 
         return result
+    }
+
+    /// Sync selectedTripType with the page at currentPageIndex.
+    private func syncSelectionToCurrentPage() {
+        let index = currentPageIndex
+        let allPages = pages
+        guard index >= 0, index < allPages.count else {
+            selectedTripType = nil
+            return
+        }
+        let page = allPages[index]
+        selectedTripType = page.tripType // nil for live status page
     }
 
     // MARK: - Deinit

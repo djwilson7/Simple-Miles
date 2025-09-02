@@ -7,16 +7,58 @@ public struct LayoutGuide {
 
     public var width: Dimension { widthDimension }
     public var height: Dimension { heightDimension }
+    
+    public var isIpad: Bool { width.pct(1.0) >= 700 && height.pct(1.0) >= 700 }
+    
+    private var flexibleWidth: CGFloat {
+        isIpad
+        ? min(500, width.pct(0.7))
+        : min(width.pct(0.95), height.pct(0.95))
+    }
+    
+    public var flexibleHeight: CGFloat {
+        isIpad
+        ? min(width.pct(0.07), height.pct(0.07))
+        : min(width.pct(0.1), height.pct(0.1))
+    }
+    
+    // MARK: - Safe Area
+    public let safeArea: EdgeInsets
+    public var topSafeInset: CGFloat { safeArea.top + height.pct(0.02) }
+    public var bottomSafeInset: CGFloat { safeArea.bottom + height.pct(0.05)}
+    public var leadingSafeInset: CGFloat { safeArea.leading }
+    public var trailingSafeInset: CGFloat { safeArea.trailing }
 
     // MARK: - Tokens
-    public let radii: Radii
     public let animationDurations: AnimationDurations
-
+    
+    public var cornerRadius: CGFloat {
+        let rawScale = width.value / 390.0
+        let s = min(max(rawScale, 0.9), 1.3)
+        return s * 24 //scale times desired radius
+    }
     // MARK: - Transitional Control Metrics (used by CustomButton)
     // NOTE: Consider migrating these to your semantic layout (uiBlock/uiStyle) and removing from here.
-    public var buttonWidth: CGFloat { min(100, width.pct(0.15)) }
-    public var buttonHeight: CGFloat { max(40, height.pct(0.05)) }
-
+    public var buttonWidth: CGFloat { isIpad ? 56 : 44 }
+    public var buttonHeight: CGFloat { isIpad ? 56 : 44 }
+    
+    //Dynamic Context Bar Variables
+    public var barWidth: CGFloat {
+        flexibleWidth
+    }
+    
+    //Title Bar Variables
+    public var halfBarWidth: CGFloat {
+        flexibleWidth * 0.5
+    }
+    
+    public var mainButtonInsets: CGFloat {
+        let workingSpace = (width.value - halfBarWidth) / 2
+        let negSpace = workingSpace - buttonWidth
+        return isIpad ? negSpace * 0.9 : negSpace * 0.8
+    }
+    
+    
     // MARK: - Utilities
     @inlinable public func pct(_ fraction: CGFloat) -> CGFloat { widthDimension.value * fraction }
 
@@ -29,7 +71,7 @@ public struct LayoutGuide {
         public let s: CGFloat
         public let m: CGFloat
         public let l: CGFloat
-        public let pill: CGFloat
+        public let corner: CGFloat
     }
 
     public struct AnimationDurations {
@@ -39,22 +81,9 @@ public struct LayoutGuide {
     }
 
     // MARK: - Factory
-    public static func make(for size: CGSize) -> LayoutGuide {
+    public static func make(for size: CGSize, safeArea: EdgeInsets) -> LayoutGuide {
         let w = max(size.width, 1)
         let h = max(size.height, 1)
-
-        // Reference-driven scale:
-        // rawScale normalizes to a 390pt baseline (roughly iPhone portrait width),
-        // then clamped to 0.9...1.3 to keep visuals reasonable on extremes.
-        let rawScale = w / 390.0
-        let s = min(max(rawScale, 0.9), 1.3)
-
-        let radii = Radii(
-            s:  8 * s,
-            m: 12 * s,
-            l: 20 * s,
-            pill: 44 * s
-        )
 
         let animationDurations = AnimationDurations(
             fast: 0.2,
@@ -65,14 +94,14 @@ public struct LayoutGuide {
         return LayoutGuide(
             widthDimension: Dimension(value: w),
             heightDimension: Dimension(value: h),
-            radii: radii,
+            safeArea: safeArea,
             animationDurations: animationDurations
         )
     }
 }
 
 private struct LayoutGuideKey: EnvironmentKey {
-    static let defaultValue = LayoutGuide.make(for: .zero)
+    static let defaultValue = LayoutGuide.make(for: .zero, safeArea: EdgeInsets())
 }
 
 public extension EnvironmentValues {
@@ -83,7 +112,8 @@ public extension EnvironmentValues {
 }
 
 public extension View {
-    @inlinable func layoutGuide(size: CGSize) -> some View {
-        environment(\.layout, LayoutGuide.make(for: size))
+    @inlinable func layoutGuide(size: CGSize, safeArea: EdgeInsets) -> some View {
+        environment(\.layout, LayoutGuide.make(for: size, safeArea: safeArea))
     }
 }
+

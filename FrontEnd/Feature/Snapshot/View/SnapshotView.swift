@@ -23,7 +23,7 @@ struct SnapshotView: View {
             pages
             pageIndicators
         }
-        .frame(width: min(layout.width.pct(0.95), (layout.height.pct(0.95) + layout.width.pct(0.05))))
+        .frame(width: layout.barWidth)
         .onPreferenceChange(Types.PageIntrinsicRowHeightKey.self) { intrinsicRowHeights = $0 }
         .onPreferenceChange(Types.PageWidthKey.self) { pageWidths = $0 }
         .onChange(of: viewModel.currentPageIndex) { _, _ in
@@ -45,14 +45,6 @@ struct SnapshotView: View {
                                 .preference(key: Types.PageWidthKey.self, value: [index: g.size.width])
                         }
                     )
-                    .onTapGesture {
-                        if viewModel.selectedTripType == nil {
-                            if let type = page.tripType {
-                                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                viewModel.tapped(for: type)
-                            }
-                        }
-                    }
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))

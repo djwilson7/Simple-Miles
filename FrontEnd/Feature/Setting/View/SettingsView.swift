@@ -21,7 +21,7 @@ struct SettingsView: View {
             indicators
         }
         .frame(
-            width: min(layout.width.pct(0.95), layout.height.pct(0.95)),
+            width: layout.barWidth,
         )
         .onPreferenceChange(Types.SettingsPageHeightKey.self) { contentHeights = $0 }
         .onPreferenceChange(Types.SettingsPageWidthKey.self) { contentWidths = $0 }

@@ -14,8 +14,10 @@ struct SortView: View {
         Group {
             if viewModel.emptyMessage != nil {
                 emptyState
+                    .frame(width: layout.halfBarWidth)
             } else {
                 content
+                    .frame(width: layout.halfBarWidth)
             }
         }
         .background(sizeReportingBackground)
@@ -30,28 +32,20 @@ struct SortView: View {
                 .foregroundColor(AppTheme.Colors.primaryText60)
             Spacer()
         }
-        .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
-        .frame(width: layout.width.pct(0.5))
+        .contentShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
     }
 
     private var content: some View {
-        HStack(alignment: .center, spacing: 6) {
-            VStack(spacing: 4) {
-                Text(SortViewModel.shared.startDate ?? "")
-                    .font(.headline)
-                    .foregroundColor(AppTheme.Colors.primaryText)
-                    .lineLimit(1)
-
-                Text(SortViewModel.shared.tripDistance ?? "")
-                    .font(.body)
-                    .foregroundColor(AppTheme.Colors.primaryText80)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .layoutPriority(1)
+        VStack(spacing: 4) {
+            Text(SortViewModel.shared.startDate ?? "")
+                .font(.headline)
+                .foregroundColor(AppTheme.Colors.primaryText)
+            
+            Text(SortViewModel.shared.tripDistance ?? "")
+                .font(.body)
+                .foregroundColor(AppTheme.Colors.primaryText80)
         }
-        .frame(width: layout.width.pct(0.5))
-        .contentShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+        .contentShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
         .padding(10)
     }
 

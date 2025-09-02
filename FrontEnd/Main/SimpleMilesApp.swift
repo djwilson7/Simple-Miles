@@ -21,7 +21,7 @@ struct SimpleMilesApp: App {
                 )
                 .environmentObject(settings)
                 .preferredColorScheme(settings.themeOverride.colorScheme)
-                .layoutGuide(size: geo.size)
+                .layoutGuide(size: geo.size, safeArea: geo.safeAreaInsets)
                 .environmentObject(DrivingStateManager.shared)
                 .environmentObject(TravelStateManager.shared)
             }

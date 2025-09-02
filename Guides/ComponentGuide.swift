@@ -97,7 +97,7 @@ struct CustomButton: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+                .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
                 .foregroundStyle(color)
                 .accessibilityLabel(Text(accessibilityText))
             }
@@ -144,7 +144,7 @@ struct CardMaterial: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: layout.radii.card))
+            .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
     }
 }
 

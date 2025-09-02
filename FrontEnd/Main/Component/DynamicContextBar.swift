@@ -40,7 +40,7 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
     @State private var desiredWidth: CGFloat = 200
 
     // MARK: - Configuration
-    private var minWidth: CGFloat { min(layout.width.pct(0.95), layout.height.pct(0.95)) }
+    private var minWidth: CGFloat { layout.halfBarWidth }
     private var minHeight: CGFloat { min(layout.height.pct(0.1), layout.width.pct(0.1)) }
     
     // MARK: - Init
@@ -58,7 +58,7 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
 
     // MARK: - Body
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: layout.radii.pill)
+        let shape = RoundedRectangle(cornerRadius: layout.cornerRadius)
 
         ZStack {
             if !showContent {

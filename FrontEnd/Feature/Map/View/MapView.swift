@@ -192,7 +192,7 @@ struct MapView: View {
             )
         )
         .mapControls {
-            MapPitchToggle()
+            //left empty to hide base controls from apple
         }
         .mapStyle(.standard)
         .ignoresSafeArea(edges: [.top, .trailing, .bottom])

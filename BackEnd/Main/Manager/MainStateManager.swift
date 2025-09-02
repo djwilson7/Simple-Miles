@@ -35,9 +35,6 @@ final class MainStateManager: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { newState in
                 Log("Main State Changed to: \(newState)")
-                if newState == .main {
-                    SnapshotViewModel.shared.clearSelected()
-                }
             }
             .store(in: &cancellables)
     }

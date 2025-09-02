@@ -5,7 +5,6 @@ import UIKit
 /// Hosts the primary map screen and the bottom context bar.
 /// Orchestrates overlays (title, controls, review actions) and drag-to-classify UI.
 struct MainView: View {
-
     // MARK: - Types (View-only helpers)
     struct BarFrameKey: PreferenceKey {
         static var defaultValue: Anchor<CGRect>? = nil
@@ -16,7 +15,6 @@ struct MainView: View {
 
     // MARK: - Environment / Dependencies
     @Environment(\.layout) private var layout
-
     @ObservedObject var mainViewModel: MainViewModel
     @ObservedObject var mapViewModel: MapViewModel
     @ObservedObject var snapshotViewModel = SnapshotViewModel.shared
@@ -30,6 +28,7 @@ struct MainView: View {
     @State private var optionAnchorsState: [TripType: Anchor<CGRect>] = [:]
     @State private var barAnchorState: Anchor<CGRect>? = nil
     @State private var overlayProxy: GeometryProxy? = nil
+    @State private var contextBarDesiredHeight: CGFloat = 0
 
     // MARK: - Computed
     private var isReview: Bool { MainStateManager.shared.state == .review }
@@ -37,6 +36,10 @@ struct MainView: View {
     private var canGoNext: Bool {
         SortViewModel.shared.currentTripIndex < SortViewModel.shared.tripCount - 1
     }
+    private var buttonHeightOffset: CGFloat {
+        (contextBarDesiredHeight - layout.buttonHeight) / 2
+    }
+    
     // Centralized condition for action buttons visibility
     private var showActionButtons: Bool {
         MainStateManager.shared.state == .main &&
@@ -64,50 +67,55 @@ struct MainView: View {
                 ZStack {
                     contextBar(geo: geo)
                 }
+                .padding(.bottom, layout.bottomSafeInset)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .onPreferenceChange(DynamicContextBarDesiredHeightKey.self) { newValue in
+                    if newValue > 0 {
+                        withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
+                            contextBarDesiredHeight = newValue
+                        }
+                    }
+                }
+                
+                .overlay(alignment: .bottomLeading) {
+                    previousButton
+                        .padding(.leading, layout.mainButtonInsets)
+                        .padding(.bottom, layout.bottomSafeInset + buttonHeightOffset)
+                }
+                
+                .overlay(alignment: .bottomTrailing) {
+                    nextButton
+                        .padding(.trailing, layout.mainButtonInsets)
+                        .padding(.bottom, layout.bottomSafeInset + buttonHeightOffset)
+                }
+                
+                .overlay(alignment: .top) {
+                    titleBar
+                        .padding(.top, layout.topSafeInset)
+                }
+                
+                .overlay(alignment: .topLeading) {
+                    backButton
+                        .padding(.leading, layout.mainButtonInsets)
+                        .padding(.top, layout.topSafeInset)
+                    //needs addtional top padding to center with the title bar
+                }
+                
+                .overlay(alignment: .topTrailing) {
+                    extendPauseButton
+                        .padding(.trailing, layout.mainButtonInsets)
+                        .padding(.top, layout.topSafeInset)
+                    //needs addtional top padding to center with the title bar
+                }
             }
+            .ignoresSafeArea(.all)
         }
-        .overlay(alignment: .top) {
-            titleBar
-                .uiBlock(.title)
-        }
+        
         .overlay(alignment: .trailing) {
             controlButtons
                 .uiBlock(.row)
         }
-        .overlay(alignment: .bottomLeading) {
-            previousButton
-                .uiBlock(.title)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            nextButton
-                .uiBlock(.title)
-        }
-        // Scrim + action buttons overlay
-        .overlay {
-            ZStack {
-                actionButtonsScrim
-                VStack {
-                    Spacer(minLength: layout.height.pct(0.75))
-                    HStack {
-                        Spacer()
-                        reviewButton
-                        Spacer()
-                        summaryButton
-                        Spacer()
-                    }
-                    Spacer()
-                }
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            backButton
-                .uiBlock(.title)
-        }
-        .overlay(alignment: .topTrailing) {
-            extendPauseButton
-                .uiBlock(.title)
-        }
+        
         .overlayPreferenceValue(SortOptionsView.Types.OptionFramesKey.self) { optionAnchors in
             GeometryReader { proxy in
                 Color.clear
@@ -181,7 +189,7 @@ struct MainView: View {
     // MARK: - Subviews
     private var titleBar: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: layout.radii.pill)
+            RoundedRectangle(cornerRadius: layout.cornerRadius)
                 .fill(Color.clear)
 
             TimelineView(.animation) { _ in
@@ -195,15 +203,15 @@ struct MainView: View {
 
                     ZStack {
                         if rawEnd <= 1.0 {
-                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                            RoundedRectangle(cornerRadius: layout.cornerRadius)
                                 .trim(from: start, to: rawEnd)
                                 .stroke(Color.orange.opacity(0.9), lineWidth: 3)
                         } else {
-                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                            RoundedRectangle(cornerRadius: layout.cornerRadius)
                                 .trim(from: start, to: 1.0)
                                 .stroke(Color.orange.opacity(0.9), lineWidth: 3)
 
-                            RoundedRectangle(cornerRadius: layout.radii.pill)
+                            RoundedRectangle(cornerRadius: layout.cornerRadius)
                                 .trim(from: 0.0, to: rawEnd - 1.0)
                                 .stroke(Color.orange.opacity(0.9), lineWidth: 3)
                         }
@@ -214,9 +222,7 @@ struct MainView: View {
             TimelineView(.animation) { _ in
                 HStack {
                     Spacer()
-                    if mainViewModel.travelState == .paused
-                        && mainViewModel.state == .main,
-                       let snap = mainViewModel.pauseSnapshot
+                    if mainViewModel.travelState == .paused && mainViewModel.state == .main, let snap = mainViewModel.pauseSnapshot
                     {
                         let remaining = max(0, snap.end.timeIntervalSinceNow)
                         Text(TimeUtility.formatter(remaining))
@@ -233,8 +239,8 @@ struct MainView: View {
                 .uiBlock(.title)
             }
         }
-        .frame(width: layout.width.pct(0.5), height: layout.height.pct(0.2))
-        .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+        .frame(width: layout.halfBarWidth, height: layout.flexibleHeight)
+        .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
         .applyMaterial()
     }
 
@@ -246,7 +252,7 @@ struct MainView: View {
             summaryContent: { SummaryView() }
         )
         .applyMaterial()
-        .clipShape(RoundedRectangle(cornerRadius: layout.radii.pill))
+        .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
         .offset(isReview ? barDrag : .zero)
         .anchorPreference(key: MainView.BarFrameKey.self, value: .bounds) { $0 }
         .simultaneousGesture(
@@ -318,7 +324,10 @@ struct MainView: View {
             settingsButton
             shareButton
             recenterButton
+            summaryButton
+            reviewButton
         }
+        .opacity(MainStateManager.shared.state == .main ? 1 : 0 )
     }
 
     private var recenterButton: some View {
@@ -333,6 +342,7 @@ struct MainView: View {
     private var shareButton: some View {
         CustomButton(
             isVisible: MainStateManager.shared.state == .main,
+            isEnabled: false,
             color: AppTheme.Colors.primaryText,
             action: { /* TODO */ },
             icon: "square.and.arrow.up"
@@ -350,29 +360,29 @@ struct MainView: View {
 
     private var reviewButton: some View {
         CustomButton(
-            isVisible: showActionButtons,
+            isVisible: MainStateManager.shared.state == .main,
+            isEnabled: snapshotViewModel.selectedTripType != nil,
             color: AppTheme.Colors.primaryText,
             action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 MainStateManager.shared.state = .review
                 Log("Entering Review State for \(String(describing: snapshotViewModel.selectedTripType))")
             },
-            icon: "rectangle.and.text.magnifyingglass",
-            text: snapshotViewModel.selectedTripType.map { "\($0) Review" }?.capitalized
+            icon: "rectangle.and.text.magnifyingglass"
         )
     }
 
     private var summaryButton: some View {
         CustomButton(
-            isVisible: showActionButtons,
+            isVisible: MainStateManager.shared.state == .main,
+            isEnabled: snapshotViewModel.selectedTripType != nil,
             color: AppTheme.Colors.primaryText,
             action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 MainStateManager.shared.state = .summary
                 Log("Entering Review State for \(String(describing: snapshotViewModel.selectedTripType))")
             },
-            icon: "chart.bar",
-            text: snapshotViewModel.selectedTripType.map { "\($0) Summary" }?.capitalized
+            icon: "chart.bar"
         )
     }
 
@@ -392,18 +402,6 @@ struct MainView: View {
             action: { TravelStateManager.shared.extendPauseTimer() },
             icon: "plus"
         )
-    }
-
-    private var actionButtonsScrim: some View {
-        Color.black
-            .opacity(0.35)
-            .ignoresSafeArea()
-            .opacity(showActionButtons ? 1 : 0)
-            .animation(.easeInOut(duration: 0.2), value: showActionButtons)
-            .allowsHitTesting(showActionButtons)
-            .onTapGesture {
-                snapshotViewModel.clearSelected()
-            }
     }
 }
 

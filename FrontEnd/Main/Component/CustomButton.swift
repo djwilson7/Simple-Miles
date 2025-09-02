@@ -4,6 +4,7 @@ import UIKit
 /// A reusable button with optional icon and text that adopts app-wide layout metrics and styling.
 /// - Features:
 ///   - Visibility control via `isVisible` (scales and disables hit-testing when hidden)
+///   - Enable/disable control via `isEnabled` (uses SwiftUI `.disabled`, adds subtle grayscale when disabled)
 ///   - Optional icon and/or text
 ///   - Consistent sizing using `LayoutGuide` (buttonWidth/Height)
 ///   - Material background, pill corner radius, and app typography via project modifiers
@@ -18,6 +19,7 @@ struct CustomButton: View {
     let icon: String?
     let text: String?
     let isVisible: Bool
+    let isEnabled: Bool
     let color: Color
     let action: () -> Void
     let haptic: UIImpactFeedbackGenerator.FeedbackStyle?
@@ -25,6 +27,7 @@ struct CustomButton: View {
     // MARK: - Init
     init(
         isVisible: Bool = true,
+        isEnabled: Bool = true,
         color: Color = .primary,
         action: @escaping () -> Void,
         icon: String? = nil,
@@ -34,6 +37,7 @@ struct CustomButton: View {
         self.icon = (icon?.isEmpty == true) ? nil : icon
         self.text = (text?.isEmpty == true) ? nil : text
         self.isVisible = isVisible
+        self.isEnabled = isEnabled
         self.color = color
         self.action = action
         self.haptic = haptic
@@ -41,7 +45,7 @@ struct CustomButton: View {
 
     // MARK: - Body
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: layout.radii.pill)
+        let shape = Circle()
 
         Button(
             action: {
@@ -54,6 +58,7 @@ struct CustomButton: View {
             content
                 .uiBlock(.row)
                 .frame(minWidth: layout.buttonWidth, minHeight: layout.buttonHeight, alignment: .center)
+                .grayscale(isEnabled ? 0.0 : 0.6) // subtle grayscale when disabled
         }
         .buttonStyle(.plain)
         .uiText(.title)
@@ -61,18 +66,19 @@ struct CustomButton: View {
         .clipShape(shape)
         .contentShape(shape)
         .scaleEffect(isVisible ? 1.0 : 0.01, anchor: .center)
-        .allowsHitTesting(isVisible)
+        .allowsHitTesting(isVisible)                        // visibility governs hit-testing
         .accessibilityHidden(!isVisible)
+        .disabled(!isEnabled || !isVisible)                 // SwiftUI disabled state
         .accessibilityLabel(Text(accessibilityText))
-        .accessibilityAddTraits(.isButton)
         .animation(.easeInOut(duration: 0.25), value: isVisible)
+        .animation(.easeInOut(duration: 0.2), value: isEnabled)
     }
 
     // MARK: - Subviews
     @ViewBuilder
     private var content: some View {
         if let icon, let text {
-            HStack(spacing: 8) {
+            VStack(spacing: 8) {
                 Image(systemName: icon)
                     .foregroundStyle(color)
                 Text(text)

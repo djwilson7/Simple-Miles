@@ -21,18 +21,20 @@ private enum Layout {
 }
 
 private enum Typography {
-    static var title: Font   { .headline.weight(.semibold) }
+    static func title(isIpad: Bool) -> Font { isIpad ? .title2 : .headline }
     static var section: Font { .subheadline.weight(.semibold) }
     static var row: Font     { .caption }
     static var info: Font    { .caption.weight(.semibold) }
 }
 
 private struct SemanticText: ViewModifier {
+    @Environment(\.layout) private var layout
     let role: UIStyleRole
+
     func body(content: Content) -> some View {
         switch role {
         case .title:
-            content.font(Typography.title).lineLimit(1)
+            content.font(Typography.title(isIpad: layout.isIpad)).lineLimit(1)
         case .section:
             content.font(Typography.section).lineLimit(1)
         case .row:
