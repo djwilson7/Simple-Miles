@@ -21,6 +21,9 @@ struct SegmentedPicker<T: SegmentedPickerOption>: View where T.AllCases: RandomA
     // MARK: - Binding
     @Binding var selection: T
 
+    // MARK: - Environment
+    @Environment(\.layout) private var layout
+
     // MARK: - Init
     init(selection: Binding<T>) {
         self._selection = selection

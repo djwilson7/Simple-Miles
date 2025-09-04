@@ -10,21 +10,21 @@ enum UIStyleRole {
 private enum Layout {
     static let grid: CGFloat = 4
 
-    static var titleV: CGFloat   { 3 * grid }
-    static var titleH: CGFloat   { 4 * grid }
+    static var titleV: CGFloat { 3 * grid }
+    static var titleH: CGFloat { 4 * grid }
 
     static var sectionV: CGFloat { 2 * grid }
-    static var sectionH: CGFloat { 3 * grid }
+    static var sectionH: CGFloat { 2 * grid }
 
-    static var rowV: CGFloat     { 1 * grid }
-    static var rowH: CGFloat     { 2 * grid }
+    static var rowV: CGFloat { 1 * grid }
+    static var rowH: CGFloat { 2 * grid }
 }
 
 private enum Typography {
-    static func title(isIpad: Bool) -> Font { isIpad ? .title2 : .headline }
+    static var title: Font { .title2 }
     static var section: Font { .subheadline.weight(.semibold) }
-    static var row: Font     { .caption }
-    static var info: Font    { .caption.weight(.semibold) }
+    static var row: Font { .caption }
+    static var info: Font { .caption.weight(.semibold) }
 }
 
 private struct SemanticText: ViewModifier {
@@ -34,7 +34,7 @@ private struct SemanticText: ViewModifier {
     func body(content: Content) -> some View {
         switch role {
         case .title:
-            content.font(Typography.title(isIpad: layout.isIpad)).lineLimit(1)
+            content.font(Typography.title).lineLimit(1)
         case .section:
             content.font(Typography.section).lineLimit(1)
         case .row:
@@ -55,8 +55,7 @@ private struct SemanticBlock: ViewModifier {
                 .padding(.horizontal, Layout.titleH)
         case .section:
             content
-                .padding(.top, Layout.sectionV)
-                .padding(.bottom, Layout.rowV)
+                .padding(.vertical, Layout.sectionV)
                 .padding(.horizontal, Layout.sectionH)
         case .row:
             content
@@ -90,7 +89,9 @@ extension View {
         modifier(SemanticBlock(role: role))
     }
 
-    func uiInset(vertical v: CGFloat? = nil, horizontal h: CGFloat? = nil) -> some View {
+    func uiInset(vertical v: CGFloat? = nil, horizontal h: CGFloat? = nil)
+        -> some View
+    {
         padding(.vertical, v ?? 0).padding(.horizontal, h ?? 0)
     }
 }

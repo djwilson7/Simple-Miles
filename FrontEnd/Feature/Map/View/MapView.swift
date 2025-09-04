@@ -8,6 +8,7 @@ struct MapView: View {
 
     // MARK: - Dependencies
     @ObservedObject var viewModel: MapViewModel
+    @Environment(\.layout) private var layout
 
     // MARK: - Body
     var body: some View {
@@ -195,12 +196,14 @@ struct MapView: View {
             //left empty to hide base controls from apple
         }
         .mapStyle(.standard)
-        .ignoresSafeArea(edges: [.top, .trailing, .bottom])
+        
+        //Attribution inset for visibility and compliance
+        .ignoresSafeArea(edges: [.top, .trailing])
         .safeAreaInset(edge: .leading) {
-            Color.clear.frame(width: 20)
+            Color.clear.frame(width: layout.attributionLeadingInset)
         }
         .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 2)
+            Color.clear.frame(height: layout.attributionBottomInset)
         }
         .onMapCameraChange(frequency: .onEnd) { context in
             if !(MainStateManager.shared.state == .review) {

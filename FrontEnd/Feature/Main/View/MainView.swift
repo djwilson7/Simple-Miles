@@ -36,14 +36,11 @@ struct MainView: View {
     private var canGoNext: Bool {
         SortViewModel.shared.currentTripIndex < SortViewModel.shared.tripCount - 1
     }
+    
+    //used to balance the buttons next to the dynamic context bar.
+    //can be written into layout -> if we standardize the height of the context bar when reviewing.
     private var buttonHeightOffset: CGFloat {
         (contextBarDesiredHeight - layout.buttonHeight) / 2
-    }
-    
-    // Centralized condition for action buttons visibility
-    private var showActionButtons: Bool {
-        MainStateManager.shared.state == .main &&
-        snapshotViewModel.selectedTripType != nil
     }
 
     // MARK: - Private Dependencies
@@ -55,7 +52,28 @@ struct MainView: View {
         GeometryReader { geo in
             ZStack {
                 MapView(viewModel: mapViewModel)
-
+                    .overlay(alignment: .top) {
+                        LinearGradient(
+                            colors: [.black, .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                            )
+                        .frame(height: layout.height.pct(0.15) )
+                    }
+                    
+                    .overlay(alignment: .bottom) {
+                        LinearGradient(
+                            colors: [.black.opacity(0.7), .clear],
+                            startPoint: .bottom,
+                            endPoint: .top
+                            )
+                        .frame(height: layout.height.pct(0.04))
+                    }
+                
+                ZStack(alignment: .center) {
+                    Text(layout.breakpoint.id)
+                }
+                
                 SortOptionsBGView(highlighted: highlighted)
                     .opacity(isReview && isDragging ? 1 : 0)
                     .animation(.easeInOut(duration: 0.3), value: isDragging)
@@ -63,7 +81,8 @@ struct MainView: View {
                 SortOptionsView(highlighted: highlighted)
                     .opacity(isReview && isDragging ? 1 : 0)
                     .animation(.easeInOut(duration: 0.3), value: isDragging)
-
+                
+                
                 ZStack {
                     contextBar(geo: geo)
                 }
@@ -97,18 +116,18 @@ struct MainView: View {
                 .overlay(alignment: .topLeading) {
                     backButton
                         .padding(.leading, layout.mainButtonInsets)
-                        .padding(.top, layout.topSafeInset)
-                    //needs addtional top padding to center with the title bar
+                        .padding(.top, layout.topButtonInset)
                 }
                 
                 .overlay(alignment: .topTrailing) {
                     extendPauseButton
                         .padding(.trailing, layout.mainButtonInsets)
-                        .padding(.top, layout.topSafeInset)
-                    //needs addtional top padding to center with the title bar
+                        .padding(.top, layout.topButtonInset)
                 }
+                
             }
             .ignoresSafeArea(.all)
+            
         }
         
         .overlay(alignment: .trailing) {
@@ -227,19 +246,19 @@ struct MainView: View {
                         let remaining = max(0, snap.end.timeIntervalSinceNow)
                         Text(TimeUtility.formatter(remaining))
                             .foregroundColor(AppTheme.Colors.primaryText)
-                            .uiText(.title)
+                            .font(.title2)
                             .id(snap.id)
                     } else {
                         Text(mainViewModel.title)
                             .foregroundColor(AppTheme.Colors.primaryText)
-                            .uiText(.title)
+                            .font(.title2)
                     }
                     Spacer()
                 }
                 .uiBlock(.title)
             }
         }
-        .frame(width: layout.halfBarWidth, height: layout.flexibleHeight)
+        .frame(width: layout.halfBarWidth, height: layout.titleHeight)
         .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
         .applyMaterial()
     }

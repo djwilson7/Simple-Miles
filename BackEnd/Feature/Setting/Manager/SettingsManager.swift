@@ -192,8 +192,8 @@ enum DistanceUnit: String, CaseIterable, SegmentedPickerOption {
 
     var displayName: String {
         switch self {
-        case .miles: return "Miles (mi)"
-        case .kilometers: return "Kilometers (km)"
+        case .miles: return "Miles"
+        case .kilometers: return "Kilometers"
         }
     }
 

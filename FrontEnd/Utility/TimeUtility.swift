@@ -10,14 +10,14 @@ struct TimeUtility {
         let h = totalSeconds / 3600
         
         if h > 0 && m != 0 {
-            return "\(prefix)\(h)h \(m)min"
+            return "\(prefix)\(h)h \(m)m"
         } else if h > 0 {
             return "\(prefix)\(h)h"
         } else if m > 0 && s != 0 {
-            return "\(prefix)\(m)min \(s)s"
+            return "\(prefix)\(m)m \(s)s"
         } else if m > 0 {
-            return "\(prefix)\(m)min"
-        } else { 
+            return "\(prefix)\(m)m"
+        } else {
             return "\(prefix)\(s)s"
         }
     }

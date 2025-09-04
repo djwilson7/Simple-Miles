@@ -3,7 +3,6 @@ import SwiftUI
 /// Presents the Settings screens as paged cards with indicators and dynamic sizing
 /// for the surrounding context bar.
 struct SettingsView: View {
-
     // MARK: - Environment / Dependencies
     @Environment(\.layout) private var layout
     @StateObject private var viewModel = SettingsViewModel.shared
@@ -19,9 +18,10 @@ struct SettingsView: View {
         VStack {
             pages
             indicators
+                
         }
         .frame(
-            width: layout.barWidth,
+            width: layout.barWidth
         )
         .onPreferenceChange(Types.SettingsPageHeightKey.self) { contentHeights = $0 }
         .onPreferenceChange(Types.SettingsPageWidthKey.self) { contentWidths = $0 }
@@ -163,18 +163,20 @@ struct SettingCard: View {
         HStack(spacing: 8) {
             Image(systemName: page.iconName)
             Text(page.title)
-                .uiText(.title)
+                .font(.title3.weight(.semibold).monospaced())
             Spacer()
         }
         .uiBlock(.title)
     }
-
-    private func sectionHeader(_ label: String) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
+    
+    private func SettingHeader(_ title: String,_ desc: String) -> some View {
+        VStack(alignment: .leading) {
+            Text(title)
+                .font(.headline.bold())
+            Text(desc)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .uiStyle(.title)
     }
 
     // MARK: - Subviews (Pages)
@@ -200,9 +202,9 @@ struct SettingCard: View {
     private var displayPage: some View {
         VStack {
             tabHeader
-            themeOverrideSetting.uiBlock(.title)
-            materialOverrideSetting.uiBlock(.title)
-            accentColorSetting.uiBlock(.title)
+            themeOverrideSetting.uiBlock(.section)
+            materialOverrideSetting.uiBlock(.section)
+            accentColorSetting.uiBlock(.section)
         }
         .padding(16)
         .background(sizeReportingBackground)
@@ -211,9 +213,9 @@ struct SettingCard: View {
     private var trackingPage: some View {
         VStack {
             tabHeader
-            pauseTimerSetting.uiBlock(.title)
-            minimumTripDistanceSetting.uiBlock(.title)
-            distanceSetting.uiBlock(.title)
+            pauseTimerSetting.uiBlock(.section)
+            minimumTripDistanceSetting.uiBlock(.section)
+            distanceSetting.uiBlock(.section)
         }
         .padding(16)
         .background(sizeReportingBackground)
@@ -221,36 +223,29 @@ struct SettingCard: View {
 
     // MARK: - Subviews (Settings Controls)
     private var themeOverrideSetting: some View {
-        VStack {
-            HStack {
-                Text("System Theme")
-                    .uiText(.section)
-                Spacer()
-            }
-            SegmentedPicker(selection: $settings.themeOverride)
+        HStack {
+            SettingHeader("Appearance", "Light vs Dark")
+            Spacer()
+            MenuPicker(selection: $settings.themeOverride)
         }
     }
 
     private var materialOverrideSetting: some View {
-        VStack {
-            HStack {
-                Text("Material")
-                    .uiText(.section)
-                Spacer()
-            }
-            SegmentedPicker(selection: $settings.materialOverride)
+        HStack {
+            SettingHeader("Style", "Set background preference")
+            Spacer()
+            MenuPicker(selection: $settings.materialOverride)
         }
     }
 
     private var accentColorSetting: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Layout Color")
-                .uiText(.section)
+            SettingHeader("Layout Color", "Personalized tint preference")
 
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                 GridRow {
                     Text("Hue")
-                        .uiText(.row)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .gridCellAnchor(.leading)
                     GradientTrackSlider(
@@ -262,7 +257,7 @@ struct SettingCard: View {
                 }
                 GridRow {
                     Text("Saturation")
-                        .uiText(.row)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .gridCellAnchor(.leading)
                     GradientTrackSlider(
@@ -277,7 +272,7 @@ struct SettingCard: View {
                 }
                 GridRow {
                     Text("Brightness")
-                        .uiText(.row)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .gridCellAnchor(.leading)
                     GradientTrackSlider(
@@ -295,71 +290,54 @@ struct SettingCard: View {
     }
 
     private var distanceSetting: some View {
-        VStack {
-            HStack {
-                Text("Distance Unit")
-                    .uiText(.section)
-                Spacer()
-            }
-            SegmentedPicker(selection: $settings.distanceUnit)
+        HStack {
+            SettingHeader("Distance Unit", "Set your base unit")
+            Spacer()
+            MenuPicker(selection: $settings.distanceUnit)
         }
     }
 
+    // Replace Stepper with a MenuPicker bound to 0.1...1.5 in 0.1 steps (current unit).
     private var minimumTripDistanceSetting: some View {
-        VStack {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Ignore trips shorter than")
-                        .lineLimit(1)
-                        .uiText(.section)
-                    Text("In Meters: \(String(format: "%.1f", settings.minDistanceMeters))")
-                        .uiText(.row)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(
-                    String(
-                        format: "%.1f\(settings.distanceUnit.abb)",
-                        settings.minimumTripDistance
-                    )
-                )
-                .uiText(.section)
-                Stepper(
-                    "",
-                    value: $settings.minimumTripDistance,
-                    in: 0.1...3.0,
-                    step: 0.1
-                )
-                .labelsHidden()
-                .frame(alignment: .trailing)
-            }
+        HStack {
+            SettingHeader("Minimum Distance", "Ignore trips shorter than:")
+            Spacer()
+            MenuPicker(selection: minDistanceBinding)
         }
     }
 
+    // Replaces the Stepper with a MenuPicker bound to 30s...600s in 30s steps.
     private var pauseTimerSetting: some View {
-        VStack {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Paused Timer")
-                        .lineLimit(1)
-                        .uiText(.section)
-                    Text("End trip if paused this long")
-                        .uiText(.row)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(TimeUtility.formatter(settings.pauseTimer))
-                    .uiText(.section)
-                Stepper(
-                    "",
-                    value: $settings.pauseTimer,
-                    in: 30...600,
-                    step: 030
-                )
-                .labelsHidden()
-                .frame(alignment: .trailing)
-            }
+        HStack {
+            SettingHeader("Paused Timer", "End trip if paused:")
+            Spacer()
+            MenuPicker(selection: pauseTimerBinding)
         }
+    }
+
+    // Binding that maps SettingsManager.pauseTimer (seconds) <-> PauseTimerChoice (exact/closest match)
+    private var pauseTimerBinding: Binding<PauseTimerChoice> {
+        Binding<PauseTimerChoice>(
+            get: {
+                PauseTimerChoice.closest(to: settings.pauseTimer)
+            },
+            set: { choice in
+                settings.pauseTimer = choice.seconds
+            }
+        )
+    }
+
+    // Binding that maps SettingsManager.minimumTripDistance (unit value) <-> MinDistanceChoice (unit value)
+    private var minDistanceBinding: Binding<MinDistanceChoice> {
+        Binding<MinDistanceChoice>(
+            get: {
+                MinDistanceChoice.exactUnit(settings.minimumTripDistance)
+            },
+            set: { choice in
+                // Store directly as the unit value (0.1...1.5)
+                settings.minimumTripDistance = choice.unitValue
+            }
+        )
     }
 
     // MARK: - Helpers
@@ -375,6 +353,61 @@ struct SettingCard: View {
                     value: [index: g.size.width]
                 ))
         }
+    }
+}
+
+// MARK: - Local Types (file-scope for stable identity)
+struct PauseTimerChoice: SegmentedPickerOption {
+    let seconds: Double
+    var id: Double { seconds }
+
+    var displayName: String {
+        TimeUtility.formatter(seconds)
+    }
+
+    // Constant, stable list (30s through 600s stepping by 30s)
+    static let allCases: [PauseTimerChoice] =
+        stride(from: 30, through: 300, by: 30).map { PauseTimerChoice(seconds: Double($0)) }
+
+    // Find the exact match or the nearest option if not exact.
+    static func closest(to seconds: Double) -> PauseTimerChoice {
+        if let exact = allCases.first(where: { $0.seconds == seconds }) {
+            return exact
+        }
+        return allCases.min(by: { abs($0.seconds - seconds) < abs($1.seconds - seconds) }) ?? PauseTimerChoice(seconds: 30)
+    }
+}
+
+@MainActor
+struct MinDistanceChoice: @MainActor SegmentedPickerOption, @MainActor Identifiable, @MainActor CaseIterable {
+    // Value in the currently selected unit (miles or kilometers)
+    let unitValue: Double
+    var id: Double { unitValue }
+
+    // Always display with the current unit abbreviation
+    var displayName: String {
+        let abb = SettingsManager.shared.distanceUnit.abb
+        return String(format: "%.1f%@", unitValue, abb)
+    }
+
+    // Constant, stable list (0.1 through 1.5 stepping by 0.1) in unit values
+    static let allCases: [MinDistanceChoice] = {
+        var arr: [MinDistanceChoice] = []
+        var v: Double = 0.1
+        while v <= 1.001 {
+            let rounded = (v * 10).rounded() / 10.0
+            arr.append(MinDistanceChoice(unitValue: rounded))
+            v += 0.1
+        }
+        return arr
+    }()
+
+    // Exact mapping: find the item whose unitValue exactly equals the stored unit value; if not found, fallback.
+    static func exactUnit(_ value: Double) -> MinDistanceChoice {
+        if let match = allCases.first(where: { abs($0.unitValue - value) < 0.0001 }) {
+            return match
+        }
+        return allCases.first ?? MinDistanceChoice(unitValue: 0.1)
     }
 }
 
