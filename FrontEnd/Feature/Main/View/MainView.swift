@@ -70,10 +70,6 @@ struct MainView: View {
                         .frame(height: layout.height.pct(0.04))
                     }
                 
-                ZStack(alignment: .center) {
-                    Text(layout.breakpoint.id)
-                }
-                
                 SortOptionsBGView(highlighted: highlighted)
                     .opacity(isReview && isDragging ? 1 : 0)
                     .animation(.easeInOut(duration: 0.3), value: isDragging)
