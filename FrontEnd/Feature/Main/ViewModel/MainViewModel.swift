@@ -64,10 +64,10 @@ final class MainViewModel: ObservableObject {
                 guard let self else { return }
                 self.latestPauseTotal = total
                 if self.travelState == .paused,
-                    let start = self.pauseSnapshot?.start,
                     let total = total,
                     total > 0
                 {
+                    let start = self.pauseSnapshot?.start ?? Date()
                     self.pauseSnapshot = PauseTimerSnapshot(
                         id: UUID(),
                         start: start,

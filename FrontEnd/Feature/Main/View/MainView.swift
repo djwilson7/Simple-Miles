@@ -105,19 +105,29 @@ struct MainView: View {
                 }
                 
                 .overlay(alignment: .top) {
-                    titleBar
+                    let backVisible = MainStateManager.shared.state != .main
+                    let plusVisible = TravelStateManager.shared.state == .paused
+                    let buttonReserve = layout.buttonWidth + 8
+                    let leadingExtra = backVisible ? buttonReserve : 0
+                    let trailingExtra = plusVisible ? buttonReserve : 0
+
+                    titleBar(leadingExtra: leadingExtra, trailingExtra: trailingExtra)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, layout.horizontalEdgeInset)
+                        .padding(.leading, leadingExtra)
+                        .padding(.trailing, trailingExtra)
                         .padding(.top, layout.topSafeInset)
                 }
                 
                 .overlay(alignment: .topLeading) {
                     backButton
-                        .padding(.leading, layout.mainButtonInsets)
+                        .padding(.leading, layout.horizontalEdgeInset)
                         .padding(.top, layout.topButtonInset)
                 }
                 
                 .overlay(alignment: .topTrailing) {
                     extendPauseButton
-                        .padding(.trailing, layout.mainButtonInsets)
+                        .padding(.trailing, layout.horizontalEdgeInset)
                         .padding(.top, layout.topButtonInset)
                 }
                 
@@ -202,43 +212,43 @@ struct MainView: View {
     }
 
     // MARK: - Subviews
-    private var titleBar: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: layout.cornerRadius)
-                .fill(Color.clear)
+    private func titleBar(leadingExtra: CGFloat, trailingExtra: CGFloat) -> some View {
+        let ringStartOffset: CGFloat = 0.75
+        let ringLineWidth: CGFloat = 3
 
-            TimelineView(.animation) { _ in
-                let start: CGFloat = 0.75
-                let isPaused = TravelStateManager.shared.state == .paused
-                if isPaused, let snap = mainViewModel.pauseSnapshot {
+        return TimelineView(.animation) { _ in
+            ZStack {
+                RoundedRectangle(cornerRadius: layout.cornerRadius)
+                    .fill(Color.clear)
+
+                // Progress Ring
+                if TravelStateManager.shared.state == .paused, let snap = mainViewModel.pauseSnapshot {
                     let remaining = max(0, snap.end.timeIntervalSinceNow)
                     let total = max(0.001, snap.total)
                     let progress = max(0, min(1, 1 - (remaining / total)))
-                    let rawEnd = start + CGFloat(progress)
+                    let rawEnd = ringStartOffset + CGFloat(progress)
 
                     ZStack {
                         if rawEnd <= 1.0 {
                             RoundedRectangle(cornerRadius: layout.cornerRadius)
-                                .trim(from: start, to: rawEnd)
-                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+                                .trim(from: ringStartOffset, to: rawEnd)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: ringLineWidth)
                         } else {
                             RoundedRectangle(cornerRadius: layout.cornerRadius)
-                                .trim(from: start, to: 1.0)
-                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+                                .trim(from: ringStartOffset, to: 1.0)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: ringLineWidth)
 
                             RoundedRectangle(cornerRadius: layout.cornerRadius)
                                 .trim(from: 0.0, to: rawEnd - 1.0)
-                                .stroke(Color.orange.opacity(0.9), lineWidth: 3)
+                                .stroke(Color.orange.opacity(0.9), lineWidth: ringLineWidth)
                         }
                     }
                 }
-            }
 
-            TimelineView(.animation) { _ in
+                // Title Content
                 HStack {
                     Spacer()
-                    if mainViewModel.travelState == .paused && mainViewModel.state == .main, let snap = mainViewModel.pauseSnapshot
-                    {
+                    if mainViewModel.travelState == .paused && mainViewModel.state == .main, let snap = mainViewModel.pauseSnapshot {
                         let remaining = max(0, snap.end.timeIntervalSinceNow)
                         Text(TimeUtility.formatter(remaining))
                             .foregroundColor(AppTheme.Colors.primaryText)
@@ -252,9 +262,10 @@ struct MainView: View {
                     Spacer()
                 }
                 .uiBlock(.title)
+                .offset(x: (trailingExtra - leadingExtra) / 2)
             }
         }
-        .frame(width: layout.halfBarWidth, height: layout.titleHeight)
+        .frame(height: layout.titleHeight)
         .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
         .applyMaterial()
     }
@@ -477,3 +488,4 @@ fileprivate func updateHighlight(
         currentHighlightedArea = 0
     }
 }
+

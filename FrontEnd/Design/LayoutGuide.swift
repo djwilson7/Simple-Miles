@@ -95,6 +95,17 @@ public struct LayoutGuide {
     public var leadingSafeInset: CGFloat { safeArea.leading }
     public var trailingSafeInset: CGFloat { safeArea.trailing }
 
+    // Natural horizontal padding to keep full-width elements off the screen edges
+    public var horizontalEdgeInset: CGFloat {
+        switch breakpoint {
+        case .mini:     return 12
+        case .standard: return 14
+        case .large:    return 16
+        case .xLarge:   return 18
+        case .ipad:     return 24
+        }
+    }
+
     // MARK: - Animation Tokens
     public let animationDurations: AnimationDurations
 
@@ -289,3 +300,4 @@ extension View {
         environment(\.layout, LayoutGuide.make(for: size, safeArea: safeArea))
     }
 }
+
