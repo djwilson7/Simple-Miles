@@ -503,14 +503,14 @@ enum TripsDAO {
         }
     }
     enum HistogramMetric { case count, distanceMeters, durationSecs }
-    private static func buildDatePredicate(from: Int64?, to: Int64?) -> String {
+    static func buildDatePredicate(from: Int64?, to: Int64?) -> String {
         var p = ""
         if from != nil { p += " AND start_ts >= ?" }
         if to != nil { p += " AND start_ts <= ?" }
         return p
     }
 
-    private static func bindDateParams(
+    static func bindDateParams(
         _ stmt: OpaquePointer?,
         _ index: inout Int32,
         from: Int64?,
@@ -526,7 +526,7 @@ enum TripsDAO {
         }
     }
 
-    private static func sumDistanceMeters(
+    static func sumDistanceMeters(
         for type: TripType,
         from: Int64?,
         to: Int64?,
@@ -550,7 +550,7 @@ enum TripsDAO {
         return sqlite3_column_double(s, 0)
     }
 
-    private static func sumDistanceMetersAllExcludingUnsortedTrash(
+    static func sumDistanceMetersAllExcludingUnsortedTrash(
         from: Int64?,
         to: Int64?,
         in db: OpaquePointer
@@ -575,7 +575,7 @@ enum TripsDAO {
         return sqlite3_column_double(s, 0)
     }
 
-    private static func countTrips(
+    static func countTrips(
         for type: TripType,
         from: Int64?,
         to: Int64?,
@@ -599,7 +599,7 @@ enum TripsDAO {
         return Int(sqlite3_column_int64(s, 0))
     }
 
-    private static func countTripsAllExcludingUnsortedTrash(
+    static func countTripsAllExcludingUnsortedTrash(
         from: Int64?,
         to: Int64?,
         in db: OpaquePointer
@@ -624,7 +624,7 @@ enum TripsDAO {
         return Int(sqlite3_column_int64(s, 0))
     }
 
-    private static func sumDurationSeconds(
+    static func sumDurationSeconds(
         for type: TripType,
         from: Int64?,
         to: Int64?,
@@ -648,7 +648,7 @@ enum TripsDAO {
         return sqlite3_column_double(s, 0)
     }
 
-    private static func sumDurationSecondsAllExcludingUnsortedTrash(
+    static func sumDurationSecondsAllExcludingUnsortedTrash(
         from: Int64?,
         to: Int64?,
         in db: OpaquePointer
@@ -727,7 +727,7 @@ enum TripsDAO {
         sqlite3_bind_text(stmt, idx, string, -1, SQLITE_TRANSIENT)
     }
 
-    private static func lastError(_ db: OpaquePointer) -> String {
+    static func lastError(_ db: OpaquePointer) -> String {
         String(cString: sqlite3_errmsg(db))
     }
 }

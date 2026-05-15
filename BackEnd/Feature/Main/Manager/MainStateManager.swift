@@ -25,7 +25,7 @@ final class MainStateManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init
-    private init() {
+    init() {
         bindStateTransitions()
     }
 
@@ -37,11 +37,5 @@ final class MainStateManager: ObservableObject {
                 Log("Main State Changed to: \(newState)")
             }
             .store(in: &cancellables)
-    }
-
-    // MARK: - Deinit
-    deinit {
-        cancellables.forEach { $0.cancel() }
-        cancellables.removeAll()
     }
 }

@@ -34,9 +34,12 @@ final class CameraManager: NSObject, ObservableObject {
     }
 
     // MARK: - Public API (Intents)
-    func saveUserCameraDistance(_ distance: CLLocationDistance) {
-        guard distance > 0 else { return }
-        UserDefaults.standard.set(distance, forKey: UserDefaultKeys.cameraAltitude.rawValue)
+    func saveUserCameraDistance(_ distance: CLLocationDistance?) {
+        if let d = distance, d > 0 {
+            UserDefaults.standard.set(d, forKey: UserDefaultKeys.cameraAltitude.rawValue)
+        } else {
+            UserDefaults.standard.removeObject(forKey: UserDefaultKeys.cameraAltitude.rawValue)
+        }
     }
 
     func loadSavedCameraDistance() -> CLLocationDistance? {
@@ -90,7 +93,7 @@ final class CameraManager: NSObject, ObservableObject {
             // Combine’s sink closure is @Sendable; hop to MainActor before touching MainActor-isolated self.
             Task { @MainActor in
                 guard let self else { return }
-                self.handleCameraUpdate(location: location, heading: heading, orientation: orientation)
+                self.handleCameraUpdate(location: location, heading: heading ?? 0, orientation: orientation)
             }
         }
         .store(in: &cancellables)
@@ -101,11 +104,7 @@ final class CameraManager: NSObject, ObservableObject {
         loadSavedCameraDistance() ?? defaultAltitude
     }
 
-    private func handleCameraUpdate(
-        location: LocationPoint,
-        heading: CLLocationDirection,
-        orientation: CameraOrientationMode
-    ) {
+    func handleCameraUpdate(location: LocationPoint, heading: CLLocationDirection, orientation: CameraOrientationMode) {
         lastLocation = location
         currentHeading = heading
 
@@ -121,7 +120,7 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
 
-    private func publishCameraPosition(from cameraModel: CameraModel) {
+    func publishCameraPosition(from cameraModel: CameraModel) {
         desiredCameraPosition = MapCamera(
             centerCoordinate: cameraModel.center,
             distance: cameraModel.altitude,
@@ -130,7 +129,7 @@ final class CameraManager: NSObject, ObservableObject {
         )
     }
 
-    private func setCameraToNorthUp(_ location: LocationPoint) {
+    func setCameraToNorthUp(_ location: LocationPoint) {
         let altitude = currentAltitude()
         let cameraModel = CameraModel(
             center: location.coordinate,
@@ -141,7 +140,7 @@ final class CameraManager: NSObject, ObservableObject {
         publishCameraPosition(from: cameraModel)
     }
 
-    private func setCameraToHeadingUp(
+    func setCameraToHeadingUp(
         _ location: LocationPoint,
         _ heading: CLLocationDirection
     ) {
@@ -165,6 +164,13 @@ final class CameraManager: NSObject, ObservableObject {
             pitch: 0
         )
         publishCameraPosition(from: cameraModel)
+    }
+
+    func reset() {
+        lastLocation = nil
+        currentHeading = 0
+        desiredCameraPosition = nil
+        orientationMode = .northUp
     }
 
     // MARK: - Deinit

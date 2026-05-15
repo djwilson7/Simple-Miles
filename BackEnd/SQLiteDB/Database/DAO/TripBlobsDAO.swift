@@ -101,9 +101,13 @@ enum TripBlobsDAO {
             if sqlite3_step(stmt) == SQLITE_ROW {
                 let codec = String(cString: sqlite3_column_text(stmt, 0))
                 let encVer = Int(sqlite3_column_int(stmt, 1))
-                let blobPtr = sqlite3_column_blob(stmt, 2)
                 let blobSize = Int(sqlite3_column_bytes(stmt, 2))
-                let data = Data(bytes: blobPtr!, count: blobSize)
+                let data: Data
+                if blobSize > 0, let blobPtr = sqlite3_column_blob(stmt, 2) {
+                    data = Data(bytes: blobPtr, count: blobSize)
+                } else {
+                    data = Data()
+                }
                 return (codec, encVer, data)
             }
             return nil
@@ -133,7 +137,7 @@ enum TripBlobsDAO {
         }
     }
 
-    private static func updateTripSizeBytes(_ db: OpaquePointer, tripID: String) throws {
+    static func updateTripSizeBytes(_ db: OpaquePointer, tripID: String) throws {
         let sumSQL = "SELECT COALESCE(SUM(length(bytes)),0) FROM trip_blobs WHERE trip_id=?;"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
@@ -163,7 +167,7 @@ enum TripBlobsDAO {
         sqlite3_bind_text(stmt, idx, string, -1, SQLITE_TRANSIENT)
     }
 
-    private static func lastError(_ db: OpaquePointer) -> String { String(cString: sqlite3_errmsg(db)) }
+    static func lastError(_ db: OpaquePointer) -> String { String(cString: sqlite3_errmsg(db)) }
 }
 
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)

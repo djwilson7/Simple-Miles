@@ -48,7 +48,7 @@ final class ArrowHeadingManager: ObservableObject {
                 guard let self = self else { return }
                 self.updateArrowRotation(
                     cameraHeading: cameraHeading,
-                    trueHeading: activeHeading,
+                    trueHeading: activeHeading ?? 0,
                     mapHeading: mapHeading,
                     orientation: orientationMode
                 )
@@ -57,7 +57,7 @@ final class ArrowHeadingManager: ObservableObject {
     }
 
     // MARK: - Private Helpers
-    private func updateArrowRotation(
+    func updateArrowRotation(
         cameraHeading: CLLocationDirection,
         trueHeading: CLLocationDirection,
         mapHeading: CLLocationDirection,

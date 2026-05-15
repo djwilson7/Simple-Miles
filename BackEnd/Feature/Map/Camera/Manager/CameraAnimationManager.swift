@@ -11,15 +11,15 @@ final class CameraAnimationManager {
     // (No published state; consumers provide onUpdate closures.)
 
     // MARK: - Private
-    private var cameraAnimationTimer: Timer?
-    private var animationStartCamera: MapCamera?
-    private var animationTargetCamera: MapCamera?
-    private var cameraAnimationStartTime: Date?
-    private var cameraAnimationDuration: TimeInterval = 0.8
+    var cameraAnimationTimer: Timer?
+    var animationStartCamera: MapCamera?
+    var animationTargetCamera: MapCamera?
+    var cameraAnimationStartTime: Date?
+    var cameraAnimationDuration: TimeInterval = 0.8
 
     // Callbacks for timer tick
-    private var animationOnUpdate: ((MapCamera) -> Void)?
-    private var animationOnComplete: (() -> Void)?
+    var animationOnUpdate: ((MapCamera) -> Void)?
+    var animationOnComplete: (() -> Void)?
 
     // Optional timing diagnostics/smoothing
     private var lastCameraUpdateAt: Date?
@@ -89,7 +89,7 @@ final class CameraAnimationManager {
 
     // MARK: - Timer Tick
     @objc
-    private func handleTimerTick(_ timer: Timer) {
+    func handleTimerTick(_ timer: Timer) {
         guard
             let start = animationStartCamera,
             let target = animationTargetCamera,
@@ -120,24 +120,24 @@ final class CameraAnimationManager {
         }
     }
 
-    // MARK: - Private Helpers
-    private static func easeInOutCosine(_ t: Double) -> Double {
+    // MARK: - Helpers
+    static func easeInOutCosine(_ t: Double) -> Double {
         // Smooth, symmetric ease-in-out using cosine
         0.5 * (1 - cos(.pi * max(0, min(1, t))))
     }
 
-    private static func shortestHeadingDelta(from start: CLLocationDirection, to end: CLLocationDirection) -> CLLocationDirection {
+    static func shortestHeadingDelta(from start: CLLocationDirection, to end: CLLocationDirection) -> CLLocationDirection {
         // Compute shortest signed delta in [-180, 180)
         ((end - start + 540).truncatingRemainder(dividingBy: 360)) - 180
     }
 
-    private static func normalizeHeading(_ h: CLLocationDirection) -> CLLocationDirection {
+    static func normalizeHeading(_ h: CLLocationDirection) -> CLLocationDirection {
         var value = h.truncatingRemainder(dividingBy: 360)
         if value < 0 { value += 360 }
         return value
     }
 
-    private static func interpolate(from a: MapCamera, to b: MapCamera, t: Double) -> MapCamera {
+    static func interpolate(from a: MapCamera, to b: MapCamera, t: Double) -> MapCamera {
         var out = b
 
         // Position

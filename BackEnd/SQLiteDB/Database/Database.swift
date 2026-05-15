@@ -79,26 +79,26 @@ final class Database {
         }
     }
 
-    private func pragma(_ db: OpaquePointer, name: String, value: String) throws {
+    func pragma(_ db: OpaquePointer, name: String, value: String) throws {
         let sql = "PRAGMA \(name)=\(value);"
         if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
             throw DBError.sqlite(message: lastError(db))
         }
     }
 
-    private func begin(_ db: OpaquePointer) throws {
+    func begin(_ db: OpaquePointer) throws {
         if sqlite3_exec(db, "BEGIN IMMEDIATE;", nil, nil, nil) != SQLITE_OK {
             throw DBError.sqlite(message: lastError(db))
         }
     }
 
-    private func commit(_ db: OpaquePointer) throws {
+    func commit(_ db: OpaquePointer) throws {
         if sqlite3_exec(db, "COMMIT;", nil, nil, nil) != SQLITE_OK {
             throw DBError.sqlite(message: lastError(db))
         }
     }
 
-    private func rollback(_ db: OpaquePointer) throws {
+    func rollback(_ db: OpaquePointer) throws {
         _ = sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
     }
 
@@ -121,7 +121,7 @@ final class Database {
         }
     }
 
-    private func applyFileProtection(at dbURL: URL) throws {
+    func applyFileProtection(at dbURL: URL) throws {
         #if os(iOS)
         let fm = FileManager.default
         let attrs: [FileAttributeKey: Any] = [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
@@ -133,7 +133,7 @@ final class Database {
         #endif
     }
 
-    private func lastError(_ db: OpaquePointer) -> String {
+    func lastError(_ db: OpaquePointer) -> String {
         String(cString: sqlite3_errmsg(db))
     }
 }

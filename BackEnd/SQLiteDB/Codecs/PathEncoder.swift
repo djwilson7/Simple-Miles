@@ -118,7 +118,7 @@ fileprivate struct VarintWriter {
     }
 }
 
-fileprivate extension Data {
+extension Data { // Encoder helpers
     mutating func appendUInt32(_ v: UInt32) {
         var x = v.littleEndian
         Swift.withUnsafeBytes(of: &x) { append($0.bindMemory(to: UInt8.self)) }

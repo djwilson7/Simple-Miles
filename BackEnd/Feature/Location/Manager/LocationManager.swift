@@ -1,5 +1,7 @@
 import Foundation
+#if os(iOS)
 import UIKit
+#endif
 import CoreLocation
 import Combine
 
@@ -53,12 +55,14 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         requestAuthorizationAndStart()
         seedLastKnownIfAvailable()
 
+        #if os(iOS)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(onDidBecomeActive(_:)),
             name: UIApplication.didBecomeActiveNotification,
             object: nil
         )
+        #endif
     }
 
     // MARK: - Public API (Intents)
@@ -84,7 +88,9 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     func stopTracking() {
         locationManager.stopUpdatingLocation()
+        #if os(iOS)
         locationManager.stopUpdatingHeading()
+        #endif
     }
 
     // MARK: - Bindings (CLLocationManagerDelegate)
@@ -92,12 +98,16 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             locationManager.startMonitoringSignificantLocationChanges()
+            #if os(iOS)
             let state = UIApplication.shared.applicationState
             if state == .active {
                 startContinuousUpdates()
             } else if !suppressStreamingUntilForeground {
                 startContinuousUpdates()
             }
+            #else
+            startContinuousUpdates()
+            #endif
         default:
             break
         }
@@ -106,6 +116,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let latest = locations.last else { return }
 
+        #if os(iOS)
         if suppressStreamingUntilForeground && UIApplication.shared.applicationState == .background {
             if pendingSLCLaunch {
                 pendingSLCLaunch = false
@@ -118,6 +129,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
             }
             return
         }
+        #endif
 
         let previous = currentLocation
         let newPoint = LocationPoint(latest)
@@ -149,17 +161,21 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         locationManager.distanceFilter = 10
         locationManager.headingFilter = 1
         locationManager.activityType = .automotiveNavigation
+        #if os(iOS)
         locationManager.showsBackgroundLocationIndicator = true
         locationManager.allowsBackgroundLocationUpdates = true
+        #endif
         locationManager.pausesLocationUpdatesAutomatically = false
     }
 
     private func requestAuthorizationAndStart() {
         locationManager.requestAlwaysAuthorization()
+        #if os(iOS)
         locationManager.startMonitoringSignificantLocationChanges()
+        #endif
     }
 
-    private func seedLastKnownIfAvailable() {
+    func seedLastKnownIfAvailable() {
         if let stored = loadLastKnownLocation() {
             lastLocation = nil
             currentLocation = stored
@@ -167,24 +183,40 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    private func startContinuousUpdates() {
+    func startContinuousUpdates() {
         locationManager.startUpdatingLocation()
+        #if os(iOS)
         locationManager.startUpdatingHeading()
+        #endif
     }
 
+    #if os(iOS)
     @objc private func onDidBecomeActive(_ notification: Notification) {
         suppressStreamingUntilForeground = false
         startContinuousUpdates()
     }
+    #endif
+
+    func reset() {
+        currentLocation = nil
+        lastLocation = nil
+        trueHeading = 0
+        compassHeading = 0
+        suppressStreamingUntilForeground = false // Ensure streaming works in tests
+        resetNotificationThrottle()
+        locationSubject.send(nil)
+    }
 
     // MARK: - Lifecycle
     deinit {
+        #if os(iOS)
         NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+        #endif
     }
 }
 
 // MARK: - Persistence (UserDefaults)
-private extension LocationManager {
+extension LocationManager {
     func persistLastKnownLocation(_ point: LocationPoint) {
         do {
             let data = try JSONEncoder().encode(point)

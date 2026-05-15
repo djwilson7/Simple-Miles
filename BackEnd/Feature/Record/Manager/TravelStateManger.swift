@@ -12,20 +12,22 @@ final class TravelStateManager: ObservableObject {
     static let shared = TravelStateManager()
 
     // MARK: - Dependencies
-    private let drivingStateManager = DrivingStateManager.shared
-    private let settings = SettingsManager.shared
+    private let drivingStateManager: DrivingStateManager
+    private let settings: SettingsManager
 
     // MARK: - Published State (Outputs)
-    @Published private(set) var state: TravelState = .idle
+    @Published var state: TravelState = .idle
     @Published var pauseRemainingTime: TimeInterval? = nil
-    @Published private(set) var pauseTotalDuration: TimeInterval? = nil
+    @Published var pauseTotalDuration: TimeInterval? = nil
 
     // MARK: - Private State
-    private var pauseTimer: AnyCancellable?
-    private var cancellables = Set<AnyCancellable>()
+    var pauseTimer: AnyCancellable?
+    var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init
-    private init() {
+    init(drivingStateManager: DrivingStateManager? = nil, settings: SettingsManager? = nil) {
+        self.drivingStateManager = drivingStateManager ?? .shared
+        self.settings = settings ?? .shared
         pauseRemainingTime = nil
         pauseTotalDuration = nil
         bindDrivingState()
@@ -53,7 +55,7 @@ final class TravelStateManager: ObservableObject {
     }
 
     // MARK: - Bindings (Streams wiring)
-    private func bindDrivingState() {
+    func bindDrivingState() {
         drivingStateManager.$state
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
@@ -65,7 +67,7 @@ final class TravelStateManager: ObservableObject {
     }
 
     // MARK: - Private Helpers
-    private func handleDrivingStateChange(_ isDriving: Bool) {
+    func handleDrivingStateChange(_ isDriving: Bool) {
         if isDriving {
             handleDrivingStarted()
         } else {
@@ -73,44 +75,59 @@ final class TravelStateManager: ObservableObject {
         }
     }
 
-    private func handleDrivingStarted() {
+    func handleDrivingStarted() {
         guard state != .traveling else { return }
-
-        // Initialize a fresh pause window as we enter traveling.
-        pauseRemainingTime = settings.pauseTimer
-        pauseTotalDuration = settings.pauseTimer
 
         // Stop any pause countdown.
         pauseTimer?.cancel()
         pauseTimer = nil
+        
+        // Clear pause window state when starting to drive
+        pauseRemainingTime = nil
+        pauseTotalDuration = nil
 
         state = .traveling
         print("TravelState Transitioned: .traveling")
     }
 
-    private func handleDrivingStopped() {
+    func handleDrivingStopped() {
         guard state == .traveling else { return }
 
         state = .paused
         print("TravelState Transitioned: .paused")
 
-        // Reset pause window and start countdown.
-        pauseRemainingTime = settings.pauseTimer
-        pauseTotalDuration = settings.pauseTimer
+        // Reset pause window only if not already set (e.g. by extendPauseTimer while traveling)
+        if pauseRemainingTime == nil {
+            pauseRemainingTime = settings.pauseTimer
+            pauseTotalDuration = settings.pauseTimer
+        }
 
         startPauseCountdown()
     }
 
-    private func startPauseCountdown() {
+    func startPauseCountdown() {
         pauseTimer?.cancel()
+        
+        var lastFire = Date()
+        
         pauseTimer = Timer.publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
-                guard let remaining = self.pauseRemainingTime else { return }
-
-                if remaining <= 1 {
+                guard let remaining = self.pauseRemainingTime else {
+                    self.pauseTimer?.cancel()
+                    self.pauseTimer = nil
+                    return
+                }
+                
+                let now = Date()
+                let elapsed = now.timeIntervalSince(lastFire)
+                lastFire = now
+                
+                let newRemaining = remaining - elapsed
+                
+                if newRemaining <= 0 {
                     // End pause window -> transition to idle.
                     self.pauseTimer?.cancel()
                     self.pauseTimer = nil
@@ -119,15 +136,18 @@ final class TravelStateManager: ObservableObject {
                     self.state = .idle
                     print("TravelState Transitioned: .idle (pause timer expired)")
                 } else {
-                    self.pauseRemainingTime = remaining - 1
+                    self.pauseRemainingTime = newRemaining
                 }
             }
     }
 
-    // MARK: - Deinit
-    deinit {
+    func reset() {
+        state = .idle
+        pauseRemainingTime = nil
+        pauseTotalDuration = nil
         pauseTimer?.cancel()
-        cancellables.forEach { $0.cancel() }
+        pauseTimer = nil
         cancellables.removeAll()
+        bindDrivingState()
     }
 }

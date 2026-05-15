@@ -4,101 +4,110 @@ import CoreLocation
 import MapKit
 
 /// Predicts near-future user location for smoother UI by combining live location,
-/// heading, and travel state. Publishes activeLocation, activeHeading, and userSpeed.
+/// heading, and travel state. Publishes activeLocation, activeHeading, and userMovementMode.
 @MainActor
 final class LocationPredictionManager: ObservableObject {
 
     // MARK: - Singleton
     static let shared = LocationPredictionManager()
 
-    // MARK: - Dependencies
-    private let locationManager = LocationManager.shared
-    private let travelStateManager = TravelStateManager.shared
-
     // MARK: - Published State (Outputs)
     @Published private(set) var activeLocation: LocationPoint?
-    @Published private(set) var activeHeading: CLLocationDirection = 0
-    @Published private(set) var userSpeed: CLLocationSpeed = 0
+    @Published private(set) var activeHeading: CLLocationDirection?
+    @Published var userMovementMode: UserMovementMode = .idle
 
     // MARK: - Private State
     private var cancellables = Set<AnyCancellable>()
-    private var predictionTimer: Cancellable?
-    private var lastLocation: LocationPoint?
-    private var lastHeading: CLLocationDirection = 0
-    private var currentTravelState: TravelState = .idle
+    var lastRawLocation: LocationPoint?
+    var lastRawHeading: CLLocationDirection?
+    private var predictionTimer: Timer?
 
-    // MARK: - Init
     private init() {
-        bindStreams()
+        bindInputs()
     }
 
-    // MARK: - Bindings (Streams wiring)
-    private func bindStreams() {
-        Publishers.CombineLatest3(locationManager.$currentLocation, locationManager.$trueHeading, travelStateManager.$state)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] location, heading, travelState in
-                guard let self, let location else { return }
+    // MARK: - Bindings
+    private func bindInputs() {
+        let locationManager = LocationManager.shared
+        let travelStateManager = TravelStateManager.shared
 
-                self.userSpeed = location.speed
-                self.lastLocation = location
-                self.lastHeading = heading
-                self.activeHeading = heading
-                self.currentTravelState = travelState
-
-                if travelState != .traveling {
-                    self.activeLocation = location
-                    self.invalidatePredictionTimer()
-                } else {
-                    self.startPredictionTimer()
-                }
-            }
-            .store(in: &cancellables)
-    }
-
-    // MARK: - Private Helpers
-    private func startPredictionTimer() {
-        guard predictionTimer == nil else { return }
-
-        predictionTimer = Timer
-            .publish(every: 1.0 / 15.0, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self, self.currentTravelState == .traveling,
-                      let loc = self.lastLocation else { return }
-
-                self.activeLocation = self.predictedLocation(from: loc)
-            }
-    }
-
-    private func invalidatePredictionTimer() {
-        predictionTimer?.cancel()
-        predictionTimer = nil
-    }
-
-    private func predictedLocation(from location: LocationPoint) -> LocationPoint {
-        let speed = max(location.speed, 0)
-        let heading = location.course >= 0 ? location.course : activeHeading
-        let predictionTime: TimeInterval = 1.0
-        let distance = speed * predictionTime
-
-        let projected = location.coordinate.coordinate(at: distance, bearing: heading)
-
-        let predictedCL = CLLocation(
-            coordinate: projected,
-            altitude: 0,
-            horizontalAccuracy: 0,
-            verticalAccuracy: 0,
-            course: heading,
-            speed: speed,
-            timestamp: Date()
+        Publishers.CombineLatest3(
+            locationManager.locationPublisher,
+            locationManager.headingPublisher,
+            travelStateManager.$state
         )
+        .sink { [weak self] location, heading, travelState in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.lastRawLocation = location
+                self.lastRawHeading = heading
+                self.userMovementMode = travelState == .traveling ? .driving : .idle
+                self.updatePredictionState()
+            }
+        }
+        .store(in: &cancellables)
+    }
 
-        return LocationPoint(predictedCL)
+    func updatePredictionState() {
+        predictionTimer?.invalidate()
+        predictionTimer = nil
+
+        if userMovementMode == .driving {
+            startPredictionTimer()
+        } else {
+            activeLocation = lastRawLocation
+            activeHeading = lastRawHeading
+        }
+    }
+
+    private func startPredictionTimer() {
+        predictionTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.stepPrediction()
+            }
+        }
+    }
+
+    func stepPrediction() {
+        guard let base = lastRawLocation, let heading = lastRawHeading else { return }
+        let speed = base.speed
+        if speed < 1.0 {
+            activeLocation = base
+            activeHeading = heading
+            return
+        }
+
+        // Simple linear prediction for 100ms
+        let predicted = predictLocation(from: base, heading: heading, interval: 0.1)
+        activeLocation = predicted
+        activeHeading = heading
+    }
+
+    private func predictLocation(from base: LocationPoint, heading: CLLocationDirection, interval: TimeInterval) -> LocationPoint {
+        let distance = base.speed * interval
+        let startCL = base.coordinate
+        let predictedCL = startCL.coordinate(at: distance, bearing: heading)
+        return LocationPoint(coordinate: predictedCL, timestamp: Date(), speed: base.speed, course: heading)
+    }
+
+    func reset() {
+        activeLocation = nil
+        activeHeading = nil
+        lastRawLocation = nil
+        lastRawHeading = nil
+        predictionTimer?.invalidate()
+        predictionTimer = nil
     }
 }
 
+// MARK: - Supporting Types
+enum UserMovementMode {
+    case idle
+    case driving
+}
+
 // MARK: - Geometry Helper
-private extension CLLocationCoordinate2D {
+extension CLLocationCoordinate2D {
     func coordinate(at distance: CLLocationDistance, bearing: CLLocationDirection) -> CLLocationCoordinate2D {
         let radius = 6_371_000.0
         let δ = distance / radius

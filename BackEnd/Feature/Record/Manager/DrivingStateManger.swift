@@ -19,7 +19,7 @@ final class DrivingStateManager: ObservableObject {
     @Published private(set) var state: Bool = false
 
     // MARK: - Private State
-    private var lastMovementTime: Date = Date()
+    var lastMovementTime: Date = Date()
     private var evaluationTimer: Timer?
     private var lastEvaluatedLocation: LocationPoint?
     private var cancellables = Set<AnyCancellable>()
@@ -51,7 +51,7 @@ final class DrivingStateManager: ObservableObject {
     }
 
     // MARK: - Private Helpers
-    private func evaluateMotion(current: LocationPoint) {
+    func evaluateMotion(current: LocationPoint) {
         guard let last = lastEvaluatedLocation else {
             lastEvaluatedLocation = current
             return
@@ -94,17 +94,15 @@ final class DrivingStateManager: ObservableObject {
     }
 
     @objc
-    private func handleEvaluationTimer(_ timer: Timer) {
+    func handleEvaluationTimer(_ timer: Timer) {
         if state && Date().timeIntervalSince(lastMovementTime) > evaluationWindow {
             state = false
         }
     }
 
-    // MARK: - Deinit
-    deinit {
-        evaluationTimer?.invalidate()
-        evaluationTimer = nil
-        cancellables.forEach { $0.cancel() }
-        cancellables.removeAll()
+    func reset() {
+        state = false
+        lastEvaluatedLocation = nil
+        lastMovementTime = Date.distantPast
     }
 }

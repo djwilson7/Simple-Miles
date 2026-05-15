@@ -149,12 +149,6 @@ final class SettingsManager: ObservableObject {
             }
             .store(in: &cancellables)
     }
-
-    // MARK: - Deinit
-    deinit {
-        cancellables.forEach { $0.cancel() }
-        cancellables.removeAll()
-    }
 }
 
 // MARK: - Keys

@@ -58,6 +58,11 @@
 			path = BackEnd;
 			sourceTree = "<group>";
 		};
+		6A5463852E65FF4E0043EB35 /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		6A5464A42E665BF20043EB35 /* Guides */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Guides;
@@ -99,6 +104,14 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		6A47B87D2FB6709C00434263 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				6A5463852E65FF4E0043EB35 /* Tests */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		6AC2F4A32E2161CA00F4064A = {
 			isa = PBXGroup;
 			children = (
@@ -110,6 +123,7 @@
 				6AC2F4AD2E2161CA00F4064A /* Products */,
 				6ACE7CE82E26D51400D6F470 /* SimpleMiles-Info.plist */,
 				6A5464A42E665BF20043EB35 /* Guides */,
+				6A47B87D2FB6709C00434263 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -163,6 +177,9 @@
 			);
 			dependencies = (
 				6AC2F4BB2E2161CC00F4064A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6A5463852E65FF4E0043EB35 /* Tests */,
 			);
 			name = SimpleMilesTests;
 			packageProductDependencies = (

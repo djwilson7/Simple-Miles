@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 import Compression
 
-enum PathDecodeError: Error, LocalizedError {
+enum PathDecodeError: Error, LocalizedError, Equatable {
     case empty
     case badMagic
     case unsupportedVersion(Int)
@@ -152,7 +152,7 @@ public enum PathDecoder {
     }
 }
 
-fileprivate struct VarintReader {
+struct VarintReader {
     private let bytes: [UInt8]
     private var index: Int = 0
 
@@ -183,7 +183,7 @@ fileprivate struct VarintReader {
     }
 }
 
-fileprivate extension Data {
+extension Data { // Decoder helpers
     @inline(__always)
     func readUInt16LE(at offset: Int) -> UInt16 {
         precondition(offset >= 0 && offset + 2 <= count, "readUInt16LE out of bounds")

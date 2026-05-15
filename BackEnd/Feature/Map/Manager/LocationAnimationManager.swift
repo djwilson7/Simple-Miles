@@ -11,22 +11,22 @@ final class LocationAnimationManager {
     var isAnimating: Bool { animationTimer?.isValid ?? false }
 
     // MARK: - Private State
-    private var animationTimer: Timer?
-    private var animationStartLocation: LocationPoint?
-    private var animationTargetLocation: LocationPoint?
-    private var animationStartTime: Date?
-    private var animationDuration: TimeInterval = 1.0
+    var animationTimer: Timer?
+    var animationStartLocation: LocationPoint?
+    var animationTargetLocation: LocationPoint?
+    var animationStartTime: Date?
+    var animationDuration: TimeInterval = 1.0
 
-    private var lastLocationUpdateAt: Date?
-    private var expectedUpdateInterval: TimeInterval = 1.0
-    private var smoothedSpeedMPS: Double?
+    var lastLocationUpdateAt: Date?
+    var expectedUpdateInterval: TimeInterval = 1.0
+    var smoothedSpeedMPS: Double?
 
-    private var currentLiveAnchor: CLLocationCoordinate2D?
-    private var currentStaticLast: CLLocationCoordinate2D?
-    private var lastValidAnchor: CLLocationCoordinate2D?
+    var currentLiveAnchor: CLLocationCoordinate2D?
+    var currentStaticLast: CLLocationCoordinate2D?
+    var lastValidAnchor: CLLocationCoordinate2D?
 
     // Stored callback for selector-based timer tick
-    private var animationOnUpdate: ((_ interpolated: LocationPoint, _ tail: [CLLocationCoordinate2D]) -> Void)?
+    var animationOnUpdate: ((_ interpolated: LocationPoint, _ tail: [CLLocationCoordinate2D]) -> Void)?
 
     // MARK: - Init
     init() {}
@@ -156,7 +156,7 @@ final class LocationAnimationManager {
     }
 
     @objc
-    private func handleTimerTick(_ timer: Timer) {
+    func handleTimerTick(_ timer: Timer) {
         guard
             let start = animationStartLocation,
             let end = animationTargetLocation,

@@ -2,7 +2,7 @@ import Foundation
 import SQLite3
 
 enum Migrations {
-    private static let latest: Int32 = 1
+    static var latest: Int32 = 1
 
     static func migrate(on database: Database) throws {
         try database.inWrite { db in
@@ -12,7 +12,7 @@ enum Migrations {
             switch current {
             case 0:
                 try createV1(db)
-                try setUserVersion(db, to: 1)
+                try setUserVersion(db, version: 1)
                 fallthrough
             case 1:
                 break
@@ -22,7 +22,7 @@ enum Migrations {
         }
     }
 
-    private static func createV1(_ db: OpaquePointer) throws {
+    static func createV1(_ db: OpaquePointer) throws {
         let tripsSQL = """
         CREATE TABLE IF NOT EXISTS trips (
           id            TEXT PRIMARY KEY,
@@ -64,24 +64,24 @@ enum Migrations {
         """
         try exec(db, sql: blobsSQL)
     }
-
-    private static func userVersion(_ db: OpaquePointer) throws -> Int32 {
-        var stmt: OpaquePointer?
-        defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt, nil) == SQLITE_OK,
-              sqlite3_step(stmt) == SQLITE_ROW else {
-            throw DBError.sqlite(message: lastError(db))
-        }
-        return sqlite3_column_int(stmt, 0)
+static func userVersion(_ db: OpaquePointer) throws -> Int32 {
+    var stmt: OpaquePointer?
+    defer { sqlite3_finalize(stmt) }
+    guard sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt, nil) == SQLITE_OK else {
+        throw DBError.sqlite(message: lastError(db))
     }
-
-    private static func setUserVersion(_ db: OpaquePointer, to value: Int32) throws {
-        let sql = "PRAGMA user_version=\(value);"
-        if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
-            throw DBError.sqlite(message: lastError(db))
-        }
+    guard sqlite3_step(stmt) == SQLITE_ROW else {
+        throw DBError.sqlite(message: lastError(db))
     }
+    return sqlite3_column_int(stmt, 0)
+}
 
+static func setUserVersion(_ db: OpaquePointer, version: Int32) throws {
+    let sql = "PRAGMA user_version = \(version);"
+    if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
+        throw DBError.sqlite(message: lastError(db))
+    }
+}
     private static func exec(_ db: OpaquePointer, sql: String) throws {
         if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
             throw DBError.sqlite(message: lastError(db))
