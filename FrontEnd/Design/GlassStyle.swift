@@ -1,10 +1,11 @@
 import SwiftUI
 
-private struct MaterialApplier: ViewModifier {
+private struct MaterialBase<S: Shape>: ViewModifier {
     @EnvironmentObject private var settings: SettingsManager
     @Environment(\.layout) private var layout
 
     let overrideStyle: MaterialOverride?
+    let shape: S
 
     func body(content: Content) -> some View {
         let style = overrideStyle ?? settings.materialOverride
@@ -15,20 +16,20 @@ private struct MaterialApplier: ViewModifier {
             case .clear:
                 content
                     .background(color.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
-                    .glassEffect(.clear, in: RoundedRectangle(cornerRadius: layout.cornerRadius))
+                    .clipShape(shape)
+                    .glassEffect(.clear, in: shape)
 
             case .regular:
                 content
                     .background(color.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
-                    .glassEffect(in: RoundedRectangle(cornerRadius: layout.cornerRadius))
+                    .clipShape(shape)
+                    .glassEffect(in: shape)
 
             case .frosted:
                 content
                     .background(color.opacity(0.15))
                     .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
+                    .clipShape(shape)
 
             case .none:
                 content
@@ -37,18 +38,35 @@ private struct MaterialApplier: ViewModifier {
                             .opacity(1)
                             .saturation(0.5)
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
+                    .clipShape(shape)
             }
         }
     }
 }
 
+private struct DefaultMaterialApplier: ViewModifier {
+    @Environment(\.layout) private var layout
+    let overrideStyle: MaterialOverride?
+
+    func body(content: Content) -> some View {
+        content.modifier(MaterialBase(overrideStyle: overrideStyle, shape: RoundedRectangle(cornerRadius: layout.cornerRadius)))
+    }
+}
+
 extension View {
     func applyMaterial() -> some View {
-        modifier(MaterialApplier(overrideStyle: nil))
+        modifier(DefaultMaterialApplier(overrideStyle: nil))
     }
 
     func applyMaterial(_ style: MaterialOverride) -> some View {
-        modifier(MaterialApplier(overrideStyle: style))
+        modifier(DefaultMaterialApplier(overrideStyle: style))
+    }
+
+    func applyMaterial<S: Shape>(in shape: S) -> some View {
+        modifier(MaterialBase(overrideStyle: nil, shape: shape))
+    }
+
+    func applyMaterial<S: Shape>(_ style: MaterialOverride, in shape: S) -> some View {
+        modifier(MaterialBase(overrideStyle: style, shape: shape))
     }
 }

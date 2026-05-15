@@ -32,16 +32,16 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
     let summaryContent: () -> SummaryContent
 
     // MARK: - State
-    @State private var animatedHeight: CGFloat = 200
-    @State private var animatedWidth: CGFloat = 200
-    @State private var animateTask: Task<Void, Never>? = nil
-    @State private var showContent = true
     @State private var desiredHeight: CGFloat = 200
     @State private var desiredWidth: CGFloat = 200
 
     // MARK: - Configuration
     private var minWidth: CGFloat { layout.halfBarWidth }
     private var minHeight: CGFloat { min(layout.height.pct(0.1), layout.width.pct(0.1)) }
+
+    private var currentCornerRadius: CGFloat {
+        (mainState.state == .settings || mainState.state == .summary) ? 60 : layout.cornerRadius
+    }
     
     // MARK: - Init
     init(
@@ -58,45 +58,41 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
 
     // MARK: - Body
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: layout.cornerRadius)
+        let isImmersive = (mainState.state == .settings || mainState.state == .summary)
+        let topRadius = layout.cornerRadius
+        let bottomRadius = isImmersive ? 0 : layout.cornerRadius
+        
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: topRadius,
+            bottomLeadingRadius: bottomRadius,
+            bottomTrailingRadius: bottomRadius,
+            topTrailingRadius: topRadius
+        )
 
-        ZStack {
-            if !showContent {
-                ProgressView()
-            }
-            if showContent {
-                contentForState
-                    .uiBlock(.title)
-            }
+        ZStack(alignment: .bottom) {
+            contentForState
+                .padding(20)
+                .id(mainState.state)
+                .transition(.opacity.animation(.easeInOut(duration: layout.animationDurations.fast)))
         }
-        .frame(width: animatedWidth, height: animatedHeight, alignment: .center)
+        .frame(width: desiredWidth, height: desiredHeight, alignment: .bottom)
+        .applyMaterial(in: shape)
+        .animation(.spring(duration: layout.animationDurations.fast), value: mainState.state)
         .clipShape(shape)
         .contentShape(shape)
-        .onChange(of: mainState.state) { _, _ in
-            runContentTransitionAnimation()
-        }
         .onPreferenceChange(DynamicContextBarDesiredHeightKey.self) { newValue in
-            desiredHeight = max(minHeight, newValue)
-            if showContent {
-                withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
-                    animatedHeight = desiredHeight
-                }
+            guard newValue > 0 else { return }
+            let totalVerticalPadding: CGFloat = 40 // 20pt top + 20pt bottom
+            withAnimation(.spring(duration: layout.animationDurations.fast)) {
+                desiredHeight = max(minHeight, newValue + totalVerticalPadding)
             }
         }
         .onPreferenceChange(DynamicContextBarDesiredWidthKey.self) { newValue in
-            desiredWidth = max(minWidth, newValue)
-            if showContent {
-                withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
-                    animatedWidth = desiredWidth
-                }
+            guard newValue > 0 else { return }
+            let totalHorizontalPadding: CGFloat = 40 // 20pt left + 20pt right
+            withAnimation(.spring(duration: layout.animationDurations.fast)) {
+                desiredWidth = max(minWidth, newValue + totalHorizontalPadding)
             }
-        }
-        .onAppear {
-            animatedHeight = desiredHeight
-            animatedWidth = max(minWidth, desiredWidth)
-        }
-        .onDisappear {
-            animateTask?.cancel()
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Context Bar"))
@@ -114,32 +110,6 @@ struct DynamicContextBar<TripStatusContent: View, SettingsContent: View, ReviewC
             reviewContent()
         case .summary:
             summaryContent()
-        }
-    }
-
-    // MARK: - Actions
-    private func runContentTransitionAnimation() {
-        animateTask?.cancel()
-        animateTask = Task {
-            await MainActor.run {
-                showContent = false
-                withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
-                    animatedHeight = minHeight
-                    animatedWidth = minWidth
-                }
-            }
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            await MainActor.run {
-                withAnimation(.easeInOut(duration: layout.animationDurations.medium)) {
-                    animatedHeight = desiredHeight
-                    animatedWidth = desiredWidth
-                }
-            }
-            let mediumNs = UInt64(layout.animationDurations.medium * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: mediumNs)
-            await MainActor.run {
-                showContent = true
-            }
         }
     }
 }

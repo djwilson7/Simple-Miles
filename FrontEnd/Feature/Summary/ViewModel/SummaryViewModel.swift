@@ -22,6 +22,9 @@ final class SummaryViewModel: ObservableObject {
     @Published private(set) var hourData: HourHistogramData?
     @Published private(set) var weeklyInsights: WeekInsightsData?
 
+    /// True when datasets are being computed.
+    @Published private(set) var isLoading: Bool = false
+
     // MARK: - Configuration (Static)
     /// The ordered list of summary pages rendered by SummaryView.
     let pages: [SummaryPage] = [.theSplit, .weeklyRitual, .dailyRhythm, .weekInsights]
@@ -42,17 +45,31 @@ final class SummaryViewModel: ObservableObject {
             .sink { [weak self] selectedTripType in
                 guard let self else { return }
                 self.tripType = selectedTripType
+                
+                // Reset data and set loading state
+                self.breakdownData = nil
+                self.dowData = nil
+                self.hourData = nil
+                self.weeklyInsights = nil
+                
                 if let type = selectedTripType {
-                    // Compute datasets on demand for the selected type.
-                    self.breakdownData = try? BreakdownData(tripType: type)
-                    self.dowData = try? DOWData(tripType: type)
-                    self.hourData = try? HourHistogramData(tripType: type)
-                    self.weeklyInsights = try? WeekInsightsData(tripType: type)
+                    self.isLoading = true
+                    Task {
+                        // Compute datasets on demand for the selected type.
+                        let b = try? BreakdownData(tripType: type)
+                        let d = try? DOWData(tripType: type)
+                        let h = try? HourHistogramData(tripType: type)
+                        let w = try? WeekInsightsData(tripType: type)
+                        
+                        // Update on MainActor (Task is already on MainActor)
+                        self.breakdownData = b
+                        self.dowData = d
+                        self.hourData = h
+                        self.weeklyInsights = w
+                        self.isLoading = false
+                    }
                 } else {
-                    self.breakdownData = nil
-                    self.dowData = nil
-                    self.hourData = nil
-                    self.weeklyInsights = nil
+                    self.isLoading = false
                 }
             }
             .store(in: &cancellables)

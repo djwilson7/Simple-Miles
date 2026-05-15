@@ -15,14 +15,13 @@ struct SettingsView: View {
 
     // MARK: - Body
     var body: some View {
-        VStack {
+        ZStack(alignment: .bottom) {
             pages
+                .frame(height: contentHeights[viewModel.currentIndex] ?? 250)
+                .padding(.bottom, indicatorHeight + 12)
             indicators
                 
         }
-        .frame(
-            width: layout.barWidth
-        )
         .onPreferenceChange(Types.SettingsPageHeightKey.self) { contentHeights = $0 }
         .onPreferenceChange(Types.SettingsPageWidthKey.self) { contentWidths = $0 }
         .preference(
@@ -48,7 +47,6 @@ struct SettingsView: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .padding(.bottom, 3)
     }
 
     private var indicators: some View {
@@ -77,13 +75,15 @@ struct SettingsView: View {
     // MARK: - Private Helpers
     private func currentPageHeight() -> CGFloat {
         let idx = viewModel.currentIndex
-        let content = contentHeights[idx] ?? 200
-        return content + indicatorHeight + 3
+        let content = contentHeights[idx] ?? 250
+        // content + indicators + spacing
+        return content + indicatorHeight + 12
     }
 
     private func currentPageWidth() -> CGFloat {
-        let idx = viewModel.currentIndex
-        return contentWidths[idx] ?? layout.width.pct(0.8)
+        // Expand to almost full screen width (screenWidth - 4)
+        // Subtract 40 because DynamicContextBar adds 40pt of internal padding automatically.
+        layout.width.value - 4 - 40
     }
 
     private func computedDesiredHeight() -> CGFloat { currentPageHeight() }
@@ -145,17 +145,25 @@ struct SettingCard: View {
     // MARK: - Environment / Dependencies
     @Environment(\.layout) private var layout
     @StateObject private var settings = SettingsManager.shared
+    @ObservedObject private var viewModel = SettingsViewModel.shared
 
     // MARK: - Body
     var body: some View {
-        switch page {
-        case .account:
-            accountPage
-        case .display:
-            displayPage
-        case .tracking:
-            trackingPage
+        VStack(spacing: 12) {
+            tabHeader
+            
+            Group {
+                switch page {
+                case .account:
+                    accountPage
+                case .display:
+                    displayPage
+                case .tracking:
+                    trackingPage
+                }
+            }
         }
+        .background(sizeReportingBackground)
     }
 
     // MARK: - Subviews (Shared)
@@ -164,9 +172,9 @@ struct SettingCard: View {
             Image(systemName: page.iconName)
             Text(page.title)
                 .font(.title3.weight(.semibold).monospaced())
+                .padding(.vertical, 5) // Prevent font-level clipping
             Spacer()
         }
-        .uiBlock(.title)
     }
     
     private func SettingHeader(_ title: String,_ desc: String) -> some View {
@@ -182,7 +190,6 @@ struct SettingCard: View {
     // MARK: - Subviews (Pages)
     private var accountPage: some View {
         VStack {
-            tabHeader
             ScrollView {
                 Group {
                     HStack {
@@ -195,30 +202,22 @@ struct SettingCard: View {
             }
             .frame(height: layout.height.pct(0.25))
         }
-        .padding(16)
-        .background(sizeReportingBackground)
     }
 
     private var displayPage: some View {
         VStack {
-            tabHeader
             themeOverrideSetting.uiBlock(.section)
             materialOverrideSetting.uiBlock(.section)
             accentColorSetting.uiBlock(.section)
         }
-        .padding(16)
-        .background(sizeReportingBackground)
     }
 
     private var trackingPage: some View {
         VStack {
-            tabHeader
             pauseTimerSetting.uiBlock(.section)
             minimumTripDistanceSetting.uiBlock(.section)
             distanceSetting.uiBlock(.section)
         }
-        .padding(16)
-        .background(sizeReportingBackground)
     }
 
     // MARK: - Subviews (Settings Controls)

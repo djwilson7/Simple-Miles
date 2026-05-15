@@ -12,19 +12,14 @@ struct SnapshotView: View {
     @ObservedObject var viewModel = SnapshotViewModel.shared
 
     // MARK: - State
-    @State private var indicatorHeight: CGFloat = 0
-    @State private var indicatorWidth: CGFloat = 0
-    @State private var intrinsicRowHeights: [Int: CGFloat] = [:]
     @State private var pageWidths: [Int: CGFloat] = [:]
 
     // MARK: - Body
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             pages
             pageIndicators
         }
-        .frame(width: layout.barWidth)
-        .onPreferenceChange(Types.PageIntrinsicRowHeightKey.self) { intrinsicRowHeights = $0 }
         .onPreferenceChange(Types.PageWidthKey.self) { pageWidths = $0 }
         .onChange(of: viewModel.currentPageIndex) { _, _ in
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -48,7 +43,7 @@ struct SnapshotView: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .padding(.bottom, 8)
+        .frame(height: 60) // Stable height for the status rows
     }
 
     private var pageIndicators: some View {
@@ -59,28 +54,12 @@ struct SnapshotView: View {
                 viewModel.currentPageIndex = index
             }
         )
-        .background(
-            GeometryReader { g in
-                Color.clear
-                    .onAppear {
-                        indicatorHeight = g.size.height
-                        indicatorWidth = g.size.width
-                    }
-                    .onChange(of: g.size.height) { _, h in indicatorHeight = h }
-                    .onChange(of: g.size.width) { _, w in indicatorWidth = w }
-            }
-        )
     }
 
     // MARK: - Private Helpers
-    private func currentPageHeight() -> CGFloat {
-        let row = intrinsicRowHeights[viewModel.currentPageIndex] ?? layout.height.pct(0.10)
-        let internalPadding: CGFloat = 12
-        return row + internalPadding
-    }
-
     private func computedDesiredHeight() -> CGFloat {
-        currentPageHeight() + indicatorHeight + 8
+        // 60 (pages) + 50 (indicators) + 5 (buffer)
+        return 115
     }
 
     private func currentPageWidth() -> CGFloat {
@@ -88,18 +67,13 @@ struct SnapshotView: View {
     }
 
     private func computedDesiredWidth() -> CGFloat {
-        max(currentPageWidth(), indicatorWidth)
+        // Match the visual width of the title bar (which is screenWidth - 2 * horizontalEdgeInset)
+        // Subtract 40 because DynamicContextBar adds 40pt of internal padding automatically.
+        return layout.width.value - (layout.horizontalEdgeInset * 2) - 40
     }
 
     // MARK: - Nested Types (View-only helpers)
     enum Types {
-        struct RowHeightKey: PreferenceKey {
-            static var defaultValue: CGFloat = 0
-            static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-                value = max(value, nextValue())
-            }
-        }
-
         struct PageIntrinsicRowHeightKey: PreferenceKey {
             static var defaultValue: [Int: CGFloat] = [:]
             static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
@@ -253,7 +227,6 @@ private struct PageIndicators: View {
 private struct StatusRowBuilder: View {
     let page: StatusPage
     let index: Int
-    @State private var rowHeight: CGFloat = 0
 
     var body: some View {
         HStack(spacing: 0) {
@@ -264,12 +237,9 @@ private struct StatusRowBuilder: View {
                 isLiveStatusPage: page.tripType == nil
             )
             .frame(maxWidth: .infinity)
-            .background(GeometryReader { g in
-                Color.clear.preference(key: SnapshotView.Types.RowHeightKey.self, value: g.size.height)
-            })
 
             Divider()
-                .frame(width: 1, height: rowHeight)
+                .frame(width: 1, height: 32)
                 .background(AppTheme.Colors.primaryText50)
 
             StatusColumn(
@@ -279,12 +249,9 @@ private struct StatusRowBuilder: View {
                 isLiveStatusPage: page.tripType == nil
             )
             .frame(maxWidth: .infinity)
-            .background(GeometryReader { g in
-                Color.clear.preference(key: SnapshotView.Types.RowHeightKey.self, value: g.size.height)
-            })
 
             Divider()
-                .frame(width: 1, height: rowHeight)
+                .frame(width: 1, height: 32)
                 .background(AppTheme.Colors.primaryText50)
 
             StatusColumn(
@@ -294,17 +261,7 @@ private struct StatusRowBuilder: View {
                 isLiveStatusPage: page.tripType == nil
             )
             .frame(maxWidth: .infinity)
-            .background(GeometryReader { g in
-                Color.clear.preference(key: SnapshotView.Types.RowHeightKey.self, value: g.size.height)
-            })
         }
-        .onPreferenceChange(SnapshotView.Types.RowHeightKey.self) { rowHeight = $0 }
-        .background(
-            Color.clear.preference(
-                key: SnapshotView.Types.PageIntrinsicRowHeightKey.self,
-                value: [index: rowHeight]
-            )
-        )
     }
 }
 
@@ -343,7 +300,7 @@ private struct StatusColumn: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 2) {
             if isStatus { Spacer(minLength: 0) }
 
             ZStack {
@@ -392,14 +349,14 @@ private struct StatusColumn: View {
                     .shadow(color: ((isStatus && isLiveStatusPage) ? glowColor()?.opacity(travel.state == .traveling ? (glowPulse ? 0.28 : 0.18) : 0.22) : nil) ?? .clear, radius: 36)
             }
 
-            if let secondary = secondary {
-                Text(secondary)
-                    .font(.caption)
-                    .foregroundColor(AppTheme.Colors.primaryText80)
-            }
+            Text(secondary ?? " ")
+                .font(.caption)
+                .foregroundColor(AppTheme.Colors.primaryText80)
+                .opacity(secondary == nil ? 0 : 1)
+                .lineLimit(1)
+
             if isStatus { Spacer(minLength: 0) }
         }
-        .padding(.vertical, 8)
         .onAppear {
             if isStatus && isLiveStatusPage && travel.state == .traveling {
                 glowPulse = false

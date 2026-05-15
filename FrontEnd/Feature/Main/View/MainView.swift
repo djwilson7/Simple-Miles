@@ -80,28 +80,41 @@ struct MainView: View {
                 
                 
                 ZStack {
-                    contextBar(geo: geo)
+                    let dragging = isReview && (barDrag != .zero)
+                    let leftVisible = isReview && canGoPrev && !dragging
+                    let rightVisible = isReview && canGoNext && !dragging
+                    
+                    let buttonReserve = layout.buttonWidth + 8
+                    let leadingExtra = leftVisible ? buttonReserve : 0
+                    let trailingExtra = rightVisible ? buttonReserve : 0
+
+                    contextBar(geo: geo, leadingExtra: leadingExtra, trailingExtra: trailingExtra)
+                        .padding(.leading, leadingExtra)
+                        .padding(.trailing, trailingExtra)
                 }
-                .padding(.bottom, layout.bottomSafeInset)
+                .padding(.bottom, (mainViewModel.state == .settings || mainViewModel.state == .summary) ? 0 : layout.bottomSafeInset)
+                .animation(.spring(duration: layout.animationDurations.fast), value: mainViewModel.state)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .onPreferenceChange(DynamicContextBarDesiredHeightKey.self) { newValue in
                     if newValue > 0 {
-                        withAnimation(.easeInOut(duration: layout.animationDurations.fast)) {
-                            contextBarDesiredHeight = newValue
+                        withAnimation(.spring(duration: layout.animationDurations.fast)) {
+                            contextBarDesiredHeight = newValue + 32
                         }
                     }
                 }
                 
                 .overlay(alignment: .bottomLeading) {
+                    let bottomPadding = (mainViewModel.state == .settings || mainViewModel.state == .summary) ? 0 : layout.bottomSafeInset
                     previousButton
-                        .padding(.leading, layout.mainButtonInsets)
-                        .padding(.bottom, layout.bottomSafeInset + buttonHeightOffset)
+                        .padding(.leading, layout.horizontalEdgeInset)
+                        .padding(.bottom, bottomPadding + (contextBarDesiredHeight - layout.buttonHeight) / 2)
                 }
                 
                 .overlay(alignment: .bottomTrailing) {
+                    let bottomPadding = (mainViewModel.state == .settings || mainViewModel.state == .summary) ? 0 : layout.bottomSafeInset
                     nextButton
-                        .padding(.trailing, layout.mainButtonInsets)
-                        .padding(.bottom, layout.bottomSafeInset + buttonHeightOffset)
+                        .padding(.trailing, layout.horizontalEdgeInset)
+                        .padding(.bottom, bottomPadding + (contextBarDesiredHeight - layout.buttonHeight) / 2)
                 }
                 
                 .overlay(alignment: .top) {
@@ -270,15 +283,15 @@ struct MainView: View {
         .applyMaterial()
     }
 
-    private func contextBar(geo: GeometryProxy) -> some View {
+    private func contextBar(geo: GeometryProxy, leadingExtra: CGFloat, trailingExtra: CGFloat) -> some View {
         DynamicContextBar(
             tripStatusContent: { SnapshotView() },
             settingsContent: { SettingsView() },
             reviewContent: { SortView() },
             summaryContent: { SummaryView() }
         )
-        .applyMaterial()
-        .clipShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
+        .offset(x: (trailingExtra - leadingExtra) / 2)
+        .offset(y: (mainViewModel.state == .settings || mainViewModel.state == .summary) ? 1 : 0)
         .offset(isReview ? barDrag : .zero)
         .anchorPreference(key: MainView.BarFrameKey.self, value: .bounds) { $0 }
         .simultaneousGesture(

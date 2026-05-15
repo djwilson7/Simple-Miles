@@ -56,15 +56,14 @@ struct CustomButton: View {
             }
         ) {
             content
-                .uiBlock(.row)
-                .frame(minWidth: layout.buttonWidth, minHeight: layout.buttonHeight, alignment: .center)
-                .grayscale(isEnabled ? 0.0 : 0.6) // subtle grayscale when disabled
+                .uiText(.title)
+                .frame(width: layout.buttonWidth, height: layout.buttonHeight, alignment: .center)
+                .applyMaterial()
+                .clipShape(shape)
+                .contentShape(shape) // Ensure the entire circle is tappable
+                .grayscale(isEnabled ? 0.0 : 0.6)
         }
         .buttonStyle(.plain)
-        .uiText(.title)
-        .applyMaterial()
-        .clipShape(shape)
-        .contentShape(shape)
         .scaleEffect(isVisible ? 1.0 : 0.01, anchor: .center)
         .allowsHitTesting(isVisible)                        // visibility governs hit-testing
         .accessibilityHidden(!isVisible)

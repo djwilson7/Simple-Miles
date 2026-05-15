@@ -16,11 +16,12 @@ struct SummaryView: View {
 
     // MARK: - Body
     var body: some View {
-        VStack {
+        ZStack(alignment: .bottom) {
             pages
+                .frame(height: contentHeights[viewModel.currentIndex] ?? 250)
+                .padding(.bottom, indicatorHeight + 12)
             indicators
         }
-        .frame(width: layout.barWidth)
         .onPreferenceChange(Types.SummaryContentHeightKey.self) { contentHeights = $0 }
         .preference(key: DynamicContextBarDesiredHeightKey.self, value: computedDesiredHeight())
         .preference(key: DynamicContextBarDesiredWidthKey.self,  value: computedDesiredWidth())
@@ -61,13 +62,15 @@ struct SummaryView: View {
     // MARK: - Private Helpers
     private func currentPageHeight() -> CGFloat {
         let idx = viewModel.currentIndex
-        let content = contentHeights[idx] ?? 200
-        return content + indicatorHeight + 3
+        let content = contentHeights[idx] ?? 250
+        // Content + indicators + spacing
+        return content + indicatorHeight + 12
     }
 
     private func currentPageWidth() -> CGFloat {
-        let contentWidth = layout.width.pct(0.8)
-        return max(contentWidth, indicatorWidth)
+        // Expand to almost full screen width (screenWidth - 4)
+        // Subtract 40 because DynamicContextBar adds 40pt of internal padding automatically.
+        layout.width.value - 4 - 40
     }
 
     private func computedDesiredHeight() -> CGFloat { currentPageHeight() }
@@ -117,19 +120,36 @@ struct SummaryCard: View {
 
     // MARK: - Environment
     @Environment(\.layout) private var layout
+    @ObservedObject private var viewModel = SummaryViewModel.shared
 
     // MARK: - Body
     var body: some View {
-        switch page {
-        case .theSplit:
-            theSplit
-        case .weeklyRitual:
-            weeklyRitual
-        case .dailyRhythm:
-            dailyRhythm
-        case .weekInsights:
-            weekInsights
+        VStack(spacing: 12) {
+            tabHeader
+            
+            if viewModel.isLoading {
+                Spacer()
+                ProgressView()
+                Spacer()
+            } else {
+                switch page {
+                case .theSplit:
+                    theSplit
+                case .weeklyRitual:
+                    weeklyRitual
+                case .dailyRhythm:
+                    dailyRhythm
+                case .weekInsights:
+                    weekInsights
+                }
+            }
         }
+        .background(
+            GeometryReader { g in
+                Color.clear.preference(key: SummaryView.Types.SummaryContentHeightKey.self, value: [index: g.size.height])
+            }
+        )
+        .frame(maxHeight: .infinity, alignment: .bottom)
     }
 
     // MARK: - Shared Subviews
@@ -138,9 +158,9 @@ struct SummaryCard: View {
             Image(systemName: page.iconName)
             Text(page.title)
                 .uiText(.title)
+                .padding(.vertical, 5) // Prevent font-level clipping
             Spacer()
         }
-        .uiBlock(.title)
     }
 
     private func sectionHeader(_ text: String, _ rawValue: Double, _ isDist: Bool) -> some View {
@@ -189,10 +209,9 @@ struct SummaryCard: View {
     // MARK: - Pages
     private var weekInsights: some View {
         VStack {
-            tabHeader
             ScrollView {
                 Group {
-                    if let d = SummaryViewModel.shared.weeklyInsights {
+                    if let d = viewModel.weeklyInsights {
                         VStack(alignment: .leading) {
                             VStack(alignment: .leading) {
                                 sectionHeader("Your Busiest Day", d.currentBusiestDOW!)
@@ -243,12 +262,6 @@ struct SummaryCard: View {
             }
             .frame(height: layout.height.pct(0.25))
         }
-        .padding(16)
-        .background(
-            GeometryReader { g in
-                Color.clear.preference(key: SummaryView.Types.SummaryContentHeightKey.self, value: [index: g.size.height])
-            }
-        )
     }
 
     @ViewBuilder
@@ -272,10 +285,8 @@ struct SummaryCard: View {
 
     private var dailyRhythm: some View {
         VStack(spacing: 6) {
-            tabHeader
-
             Group {
-                if let hourData = SummaryViewModel.shared.hourData {
+                if let hourData = viewModel.hourData {
                     Chart {
                         ForEach(Array(hourData.values.enumerated()), id: \.0) { idx, v in
                             let norm = v / max(hourData.maxValue, 1)
@@ -338,12 +349,6 @@ struct SummaryCard: View {
             .padding(.top, 8)
             .padding(.bottom, 8)
         }
-        .padding(16)
-        .background(
-            GeometryReader { g in
-                Color.clear.preference(key: SummaryView.Types.SummaryContentHeightKey.self, value: [index: g.size.height])
-            }
-        )
     }
 
     private func hourLabel(_ h: Int) -> String {
@@ -358,10 +363,8 @@ struct SummaryCard: View {
 
     private var weeklyRitual: some View {
         VStack(spacing: 6) {
-            tabHeader
-
             Group {
-                if let dowData = SummaryViewModel.shared.dowData {
+                if let dowData = viewModel.dowData {
                     Chart {
                         ForEach(Array(dowData.meters.enumerated()), id: \.0) { idx, meters in
                             let norm = meters / max(dowData.maxMeters, 1)
@@ -406,12 +409,6 @@ struct SummaryCard: View {
             }
             .padding(.top, 24)
         }
-        .padding(16)
-        .background(
-            GeometryReader { g in
-                Color.clear.preference(key: SummaryView.Types.SummaryContentHeightKey.self, value: [index: g.size.height])
-            }
-        )
     }
 
     private func hueGreenToRed(_ t: Double) -> Color {
@@ -421,10 +418,8 @@ struct SummaryCard: View {
 
     private var theSplit: some View {
         VStack(spacing: 6) {
-            tabHeader
-
             Group {
-                if let breakdownData = SummaryViewModel.shared.breakdownData {
+                if let breakdownData = viewModel.breakdownData {
                     VStack {
                         PercentRow(
                             percent: breakdownData.milesPercent,
@@ -448,19 +443,9 @@ struct SummaryCard: View {
                             color: .orange
                         )
                     }
-                } else {
-                    Text("Unable to pull data for \(SnapshotViewModel.shared.selectedTripType?.name ?? "")")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.secondary)
                 }
             }
         }
-        .padding(16)
-        .background(
-            GeometryReader { g in
-                Color.clear.preference(key: SummaryView.Types.SummaryContentHeightKey.self, value: [index: g.size.height])
-            }
-        )
     }
 
     // MARK: - Nested Types

@@ -168,10 +168,19 @@ final class SnapshotViewModel: ObservableObject {
                 secondary: nil,
                 role: .value
             )
+            let tripCountText: String
+            if model.tripCount == 0 {
+                tripCountText = "No trips"
+            } else if model.tripCount == 1 {
+                tripCountText = "1 trip"
+            } else {
+                tripCountText = "\(model.tripCount) trips"
+            }
+
             let center = StatusBlock(
                 id: "\(model.tripType.name.capitalized).count",
                 primary: model.tripType.name.capitalized,
-                secondary: "\(model.tripCount) trips",
+                secondary: tripCountText,
                 role: .status
             )
             let right = StatusBlock(

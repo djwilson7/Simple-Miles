@@ -14,13 +14,12 @@ struct SortView: View {
         Group {
             if viewModel.emptyMessage != nil {
                 emptyState
-                    .frame(width: layout.halfBarWidth)
             } else {
                 content
-                    .frame(width: layout.halfBarWidth)
             }
         }
-        .background(sizeReportingBackground)
+        .preference(key: DynamicContextBarDesiredHeightKey.self, value: 50) // Stable height for sort
+        .preference(key: DynamicContextBarDesiredWidthKey.self, value: layout.halfBarWidth - 32)
     }
 
     // MARK: - Subviews
@@ -32,7 +31,6 @@ struct SortView: View {
                 .foregroundColor(AppTheme.Colors.primaryText60)
             Spacer()
         }
-        .contentShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
     }
 
     private var content: some View {
@@ -44,23 +42,6 @@ struct SortView: View {
             Text(SortViewModel.shared.tripDistance ?? "")
                 .font(.body)
                 .foregroundColor(AppTheme.Colors.primaryText80)
-        }
-        .contentShape(RoundedRectangle(cornerRadius: layout.cornerRadius))
-        .padding(10)
-    }
-
-    // MARK: - Helpers
-    private var sizeReportingBackground: some View {
-        GeometryReader { g in
-            Color.clear
-                .preference(
-                    key: DynamicContextBarDesiredHeightKey.self,
-                    value: g.size.height
-                )
-                .preference(
-                    key: DynamicContextBarDesiredWidthKey.self,
-                    value: g.size.width
-                )
         }
     }
 }
