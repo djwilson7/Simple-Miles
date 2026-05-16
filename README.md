@@ -12,25 +12,25 @@ The core mission of Simple Miles is privacy-first utility: **all tracking and lo
 
 All you have to do is drive. Simple Miles works entirely in the background, utilizing advanced spatial state machines to monitor speed and coordinate deltas. It infers transitions between `Idle` and `Traveling` states, intelligently stitching raw GPS streams into continuous, cohesive trips without requiring manual user intervention.
 
-**[INSERT: GIF of landing page and active trip in session]**
+![Simple Miles Active Trip Session](Assets/landing_gif.gif)
 
 ### 2. Streamlined Organization (Sorting Trips)
 
 Once a trip is complete, coordinates are instantly written to disk. Drivers can rapidly jump into their trip history, review the accurately captured route paths, and efficiently sort individual trips into distinct, customizable category bins (e.g., DoorDash, UberEats, Personal) to keep tax-deductible miles cleanly segregated.
 
-**[INSERT: GIF of opening and sorting existing trips]**
+![Simple Miles Trip Sorting](Assets/trip_sorting_gif.gif)
 
 ### 3. Granular Performance Visibility (Trip Analytics)
 
 Simple Miles pre-aggregates trip data locally to build a robust performance dashboard. Drivers can instantly inspect high-level mileage summaries, historical trends, and cost-benefit breakdowns for each driving category, providing clear, real-time financial visibility into their driving efficiency.
 
-**[INSERT: GIF of opening and inspecting analytics for trips]**
+![Simple Miles Analytics](Assets/analytics_gif.gif)
 
 ### 4. Tailored to Your Habits (Algorithmic Tuning & Themes)
 
 Every driver has different patterns. Simple Miles allows users to adjust custom metrics that tune the underlying segment detection algorithm based on personal driving styles and desired trip sensitivities. This prevents minor stops (like traffic lights or drive-thrus) from fragmenting single routes. Additionally, the entire glassmorphic interface seamlessly adapts to system dark, light, and custom themes.
 
-**[INSERT: GIF of changing the theme and tuning settings]**
+![Simple Miles Settings and Themes](Assets/settings_gif.gif)
 
 ---
 
