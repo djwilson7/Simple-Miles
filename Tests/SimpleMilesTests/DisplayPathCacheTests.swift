@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import CoreLocation
 
-@Suite("DisplayPathCache Tests")
+@Suite("DisplayPathCache Tests", .serialized)
 struct DisplayPathCacheTests {
     
     @Test("LRU Cache behavior")

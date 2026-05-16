@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import SQLite3
 
-@Suite("TripsDAO robust Tests")
+@Suite("TripsDAO robust Tests", .serialized)
 struct TripsDAOTests {
     
     @Test("CRUD Operations")

@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import SQLite3
 
-@Suite("Migrations Tests")
+@Suite("Migrations Tests", .serialized)
 struct MigrationsTests {
     
     @Test("Version management")

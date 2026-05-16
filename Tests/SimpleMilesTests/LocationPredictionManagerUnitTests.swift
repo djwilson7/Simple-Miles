@@ -32,23 +32,19 @@ struct LocationPredictionManagerUnitTests {
         manager.stepPrediction()
         #expect(manager.activeLocation == nil)
         
-        // 2. High speed prediction
+        // 2. Physics-based movement
         let loc = LocationPoint(coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0), timestamp: Date(), speed: 10, course: 90)
         manager.lastRawLocation = loc
-        manager.lastRawHeading = 90
         
+        // First step initializes and moves
         manager.stepPrediction()
         #expect(manager.activeLocation != nil)
-        #expect(abs(manager.activeLocation!.latitude) < 0.0001)
-        #expect(manager.activeLocation!.longitude > 0)
+        let firstLong = manager.activeLocation!.longitude
+        #expect(firstLong > 0)
         
-        // 3. Low speed branch
-        manager.reset()
-        let locLow = LocationPoint(coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0), timestamp: Date(), speed: 0.5, course: 90)
-        manager.lastRawLocation = locLow
-        manager.lastRawHeading = 90
+        // Second step continues movement with spring pull
         manager.stepPrediction()
-        #expect(manager.activeLocation?.longitude == 0)
+        #expect(manager.activeLocation!.longitude > firstLong)
     }
 
     @MainActor

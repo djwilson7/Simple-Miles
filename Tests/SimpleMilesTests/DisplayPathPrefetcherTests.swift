@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import CoreLocation
 
-@Suite("DisplayPathPrefetcher Tests")
+@Suite("DisplayPathPrefetcher Tests", .serialized)
 struct DisplayPathPrefetcherTests {
     
     let store: TripStoreSQLite

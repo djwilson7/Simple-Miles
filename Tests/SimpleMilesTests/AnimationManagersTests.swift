@@ -15,19 +15,16 @@ struct AnimationManagersTests {
     }
     
     @MainActor
-    @Test("LocationAnimationManager interpolation")
+    @Test("LocationAnimationManager spline tail")
     func testLocationAnimation() {
         let manager = LocationAnimationManager()
-        let start = LocationPoint(coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0), timestamp: Date(), speed: 10, course: 0)
-        let end = LocationPoint(coordinate: CLLocationCoordinate2D(latitude: 1, longitude: 1), timestamp: Date(), speed: 10, course: 0)
+        let gt = [CLLocationCoordinate2D(latitude: 0, longitude: 0), CLLocationCoordinate2D(latitude: 0.1, longitude: 0.1)]
+        let puck = CLLocationCoordinate2D(latitude: 0.2, longitude: 0.2)
         
-        manager.updateAnchors(live: start, staticLast: nil)
+        let tail = manager.generateSplineTail(groundTruth: gt, puck: puck)
         
-        var lastPoint: LocationPoint?
-        manager.animate(from: start, to: end, travelStateIsTraveling: false) { point, _ in
-            lastPoint = point
-        }
-        
-        #expect(lastPoint?.latitude == 1.0)
+        #expect(!tail.isEmpty)
+        #expect(tail.first?.latitude == 0.0)
+        #expect(tail.last?.latitude == 0.2)
     }
 }

@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import SQLite3
 
-@Suite("TripBlobsDAO Deep Tests")
+@Suite("TripBlobsDAO Deep Tests", .serialized)
 struct TripBlobsDAODeepTests {
     
     @Test("Read empty blob")

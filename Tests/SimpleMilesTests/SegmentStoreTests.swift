@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import CoreLocation
 
-@Suite("SegmentStore Tests")
+@Suite("SegmentStore Tests", .serialized)
 struct SegmentStoreTests {
     
     @Test("Insights and Histogram")

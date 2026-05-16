@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import SQLite3
 
-@Suite("Error Handling Tests")
+@Suite("Error Handling Tests", .serialized)
 struct ErrorHandlingTests {
     
     @Test("lastError helpers")

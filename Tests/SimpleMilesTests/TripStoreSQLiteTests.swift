@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import CoreLocation
 
-@Suite("TripStoreSQLite Tests")
+@Suite("TripStoreSQLite Tests", .serialized)
 struct TripStoreSQLiteTests {
     
     let store: TripStoreSQLite

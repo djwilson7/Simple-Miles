@@ -6,6 +6,14 @@ import Foundation
 struct SettingsManagerDeepTests {
     
     @MainActor
+    private func makeCleanManager() -> (SettingsManager, UserDefaults) {
+        let suiteName = "SettingsManagerDeepTests"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return (SettingsManager(userDefaults: defaults), defaults)
+    }
+    
+    @MainActor
     @Test("MaterialOverride display names")
     func testMaterialOverride() {
         #expect(MaterialOverride.clear.displayName == "Clear")
@@ -17,7 +25,7 @@ struct SettingsManagerDeepTests {
     @MainActor
     @Test("Accent color updates")
     func testAccentColor() {
-        let manager = SettingsManager.shared
+        let (manager, _) = makeCleanManager()
         manager.primaryHue = 0.1
         manager.saturation = 0.2
         manager.brightness = 0.3
@@ -55,20 +63,29 @@ struct SettingsManagerDeepTests {
     @MainActor
     @Test("Loading overrides from UserDefaults")
     func testLoadingOverrides() {
-        let themeKey = AppSettingKey.themeOverride.rawValue
-        let materialKey = AppSettingKey.materialOverride.rawValue
+        let suiteName = "SettingsManagerDeepTests-Loading"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
         
-        UserDefaults.standard.set("dark", forKey: themeKey)
-        UserDefaults.standard.set("frosted", forKey: materialKey)
+        defaults.set("kilometers", forKey: AppSettingKey.distanceUnit.rawValue)
+        defaults.set("dark", forKey: AppSettingKey.themeOverride.rawValue)
+        defaults.set("frosted", forKey: AppSettingKey.materialOverride.rawValue)
+        defaults.set(0.5, forKey: AppSettingKey.primaryHue.rawValue)
+        defaults.set(0.6, forKey: AppSettingKey.saturation.rawValue)
+        defaults.set(0.7, forKey: AppSettingKey.brightness.rawValue)
+        defaults.set(1.0, forKey: AppSettingKey.minimumTripDistance.rawValue)
+        defaults.set(300.0, forKey: AppSettingKey.pauseTimer.rawValue)
         
-        // We can't re-init the shared singleton, but we can verify the property
-        // if we set it manually or through a test hook.
-        // For now, let's just hit the setter branches.
-        let manager = SettingsManager.shared
-        manager.themeOverride = .dark
-        manager.materialOverride = .frosted
+        // Initialize manager WITH the defaults already set
+        let manager = SettingsManager(userDefaults: defaults)
         
+        #expect(manager.distanceUnit == .kilometers)
         #expect(manager.themeOverride == .dark)
         #expect(manager.materialOverride == .frosted)
+        #expect(manager.primaryHue == 0.5)
+        #expect(manager.saturation == 0.6)
+        #expect(manager.brightness == 0.7)
+        #expect(manager.minimumTripDistance == 1.0)
+        #expect(manager.pauseTimer == 300.0)
     }
 }

@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import SQLite3
 
-@Suite("Database Unit Tests")
+@Suite("Database Unit Tests", .serialized)
 struct DatabaseUnitTests {
     
     @Test("Rollback logic")

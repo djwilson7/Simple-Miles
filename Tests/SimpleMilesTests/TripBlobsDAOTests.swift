@@ -2,7 +2,7 @@ import Testing
 @testable import SimpleMilesBackEnd
 import Foundation
 
-@Suite("TripBlobsDAO Tests")
+@Suite("TripBlobsDAO Tests", .serialized)
 struct TripBlobsDAOTests {
     
     @Test("Write and Read Large Compressed Blob")

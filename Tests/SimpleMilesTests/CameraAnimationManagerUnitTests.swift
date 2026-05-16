@@ -43,7 +43,7 @@ struct CameraAnimationManagerUnitTests {
         let end = MapCamera(centerCoordinate: CLLocationCoordinate2D(latitude: 1, longitude: 1), distance: 1000, heading: 0, pitch: 0)
         
         var updated = false
-        manager.animate(from: start, to: end, isReviewing: false, onUpdate: { _ in
+        manager.animate(from: start, to: end, duration: 0.8, onUpdate: { _ in
             updated = true
         })
         
@@ -64,13 +64,13 @@ struct CameraAnimationManagerUnitTests {
         let end1 = MapCamera(centerCoordinate: CLLocationCoordinate2D(latitude: 1, longitude: 1), distance: 1000, heading: 0, pitch: 0)
         let end2 = MapCamera(centerCoordinate: CLLocationCoordinate2D(latitude: 2, longitude: 2), distance: 1000, heading: 0, pitch: 0)
 
-        manager.animate(from: start, to: end1, isReviewing: true, onUpdate: { _ in })
+        manager.animate(from: start, to: end1, duration: 0.8, onUpdate: { _ in })
         
         // Mock progress
         manager.cameraAnimationStartTime = Date().addingTimeInterval(-0.4)
         manager.cameraAnimationDuration = 0.8
         
-        manager.animate(from: start, to: end2, isReviewing: false, onUpdate: { _ in })
+        manager.animate(from: start, to: end2, duration: 0.95, onUpdate: { _ in })
         
         #expect(manager.animationStartCamera?.centerCoordinate.latitude != 0)
         #expect(manager.cameraAnimationDuration == 0.95)
