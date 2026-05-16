@@ -107,29 +107,79 @@ final class MapViewModel: NSObject, ObservableObject {
 
     // MARK: - Bindings (Streams wiring)
     private func bind() {
-        // Camera target updates -> animate camera when appropriate
+        // 1. High-Frequency Live State Sync (Puck, Tail, Camera)
+        // We unify these into a single sink on RunLoop.main to ensure they update in the SAME frame.
+        locationPredictor.$activeLocation
+            .receive(on: RunLoop.main)
+            .sink { [weak self] location in
+                guard let self, let location else { return }
+
+                // Initial camera setup
+                if self.currentLocation == nil {
+                    self.cameraPosition = .camera(
+                        MapCamera(centerCoordinate: location.coordinate, distance: 1500, heading: 0, pitch: 0)
+                    )
+                }
+
+                self.currentLocation = location
+
+                if self.travelStateManager.state == .traveling {
+                    // 1a. Update Spline Tail
+                    let groundTruth = self.cachedNonCommitedPath.map(\.coordinate)
+                    self.nonCommitedTraceTail = self.locationAnimationManager.generateSplineTail(
+                        groundTruth: groundTruth,
+                        puck: location.coordinate
+                    )
+                    
+                    // 1b. Synchronized Camera Follow
+                    // If auto-follow is enabled, we bypass the CameraAnimationManager middleman
+                    // and lock the camera directly to the physics-driven smoothed puck.
+                    if self.autoFollowEnabled && self.mainState == .main {
+                        let currentAltitude = self.cameraManager.loadSavedCameraDistance() ?? 1500
+                        let heading = self.cameraManager.orientationMode == .headingUp ? location.course : 0
+                        
+                        let camera = MapCamera(
+                            centerCoordinate: location.coordinate,
+                            distance: currentAltitude,
+                            heading: heading,
+                            pitch: 0
+                        )
+                        self.cameraPosition = .camera(camera)
+                        self.lastCamera = camera
+                    }
+                } else {
+                    self.nonCommitedTraceTail = []
+                }
+            }
+            .store(in: &cancellables)
+
+        // 2. Camera target updates (Idle/Review transitions only)
         cameraManager.$desiredCameraPosition
             .receive(on: RunLoop.main)
             .sink { [weak self] newCamera in
-                guard let self else { return }
-                guard let newCamera = newCamera else { return }
-
-                let current = self.lastCamera
-                if self.cameraChangeIsSignificant(current: current, new: newCamera) {
-                    if self.travelStateManager.state == .idle && self.mainState != .review {
-                        self.cameraPosition = .camera(newCamera)
-                    } else {
-                        self.cameraAnimationManager.animate(
-                            from: current ?? newCamera,
-                            to: newCamera,
-                            isReviewing: self.mainState == .review,
-                            onUpdate: { [weak self] interpolated in
-                                self?.cameraPosition = .camera(interpolated)
-                            }
-                        )
+                guard let self, let newCamera = newCamera else { return }
+                
+                // Only use the animation manager if we AREN'T in active travel follow.
+                // Travel follow is handled by the high-frequency location sink above.
+                let isTraveling = self.travelStateManager.state == .traveling
+                if !isTraveling || !self.autoFollowEnabled {
+                    let current = self.lastCamera
+                    if self.cameraChangeIsSignificant(current: current, new: newCamera) {
+                        if self.travelStateManager.state == .idle && self.mainState != .review {
+                            self.cameraPosition = .camera(newCamera)
+                        } else {
+                            self.cameraAnimationManager.animate(
+                                from: current ?? newCamera,
+                                to: newCamera,
+                                duration: self.mainState == .review ? 0.8 : 0.95,
+                                onUpdate: { [weak self] interpolated in
+                                    self?.cameraPosition = .camera(interpolated)
+                                }
+                            )
+                        }
                     }
+                    self.lastCamera = newCamera
                 }
-                self.lastCamera = newCamera
             }
             .store(in: &cancellables)
 
@@ -138,34 +188,6 @@ final class MapViewModel: NSObject, ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.handleAppDidBecomeActive()
-            }
-            .store(in: &cancellables)
-
-        // Live location (predicted) -> animate marker and tail
-        locationPredictor.$activeLocation
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] location in
-                guard let self, let location else { return }
-
-                if self.currentLocation == nil {
-                    self.cameraPosition = .camera(
-                        MapCamera(centerCoordinate: location.coordinate, distance: 1500, heading: 0, pitch: 0)
-                    )
-                }
-
-                let isTraveling = (self.travelStateManager.state == .traveling)
-
-                self.locationAnimationManager.animate(
-                    from: self.lastAnimatedLocation,
-                    to: location,
-                    travelStateIsTraveling: isTraveling,
-                    onUpdate: { [weak self] interpolated, tail in
-                        guard let self else { return }
-                        self.currentLocation = interpolated
-                        self.lastAnimatedLocation = interpolated
-                        self.nonCommitedTraceTail = tail
-                    }
-                )
             }
             .store(in: &cancellables)
 
@@ -248,10 +270,6 @@ final class MapViewModel: NSObject, ObservableObject {
 
                 self.cachedNonCommitedPath = path
                 self.currentStaticLast = self.cachedNonCommitedPath.last
-                self.locationAnimationManager.updateAnchors(
-                    live: self.liveTailAnchor,
-                    staticLast: self.currentStaticLast
-                )
                 self.updateDisplayedTracePath()
 
                 Log("static=\(self.cachedNonCommitedPath.count) anchor=\(self.liveTailAnchor != nil)")
@@ -272,7 +290,6 @@ final class MapViewModel: NSObject, ObservableObject {
         isUserInteracting = false
         liveTailAnchor = nil
         currentStaticLast = nil
-        locationAnimationManager.updateAnchors(live: nil, staticLast: nil)
 
         previousTripPath = cachedPreviousTripPath
         setMarkers(from: previousTripPath)
@@ -294,12 +311,6 @@ final class MapViewModel: NSObject, ObservableObject {
 
         autoFollowEnabled = true
         isUserInteracting = false
-
-        currentStaticLast = cachedNonCommitedPath.last
-        locationAnimationManager.updateAnchors(
-            live: liveTailAnchor,
-            staticLast: currentStaticLast
-        )
     }
 
     private func updateDisplayedTracePath() {
@@ -312,10 +323,17 @@ final class MapViewModel: NSObject, ObservableObject {
             cameraManager.setCameraToReview(path: previousTripPath)
         } else {
             commitedTracePath = self.cachedCommitedPath.map(\.coordinate)
-            nonCommitedTraceStatic = self.cachedNonCommitedPath.map(\.coordinate)
-            if !locationAnimationManager.isAnimating {
-                nonCommitedTraceTail = []
+            
+            let groundTruth = self.cachedNonCommitedPath.map(\.coordinate)
+            if travelStateManager.state == .traveling && groundTruth.count >= 2 {
+                // To prevent flickering at the "seam", we hide the last ground-truth point
+                // and let the spline tail handle the connection from the second-to-last GT point.
+                nonCommitedTraceStatic = Array(groundTruth.dropLast())
+            } else {
+                nonCommitedTraceStatic = groundTruth
             }
+            
+            // nonCommitedTraceTail is managed by the activeLocation physics loop
             previousTripPath = []
             tripMarkers = []
         }

@@ -263,7 +263,7 @@ struct MainView: View {
                     Spacer()
                     if mainViewModel.travelState == .paused && mainViewModel.state == .main, let snap = mainViewModel.pauseSnapshot {
                         let remaining = max(0, snap.end.timeIntervalSinceNow)
-                        Text(TimeUtility.formatter(remaining))
+                        Text(TimeUtility.formatDuration(remaining))
                             .foregroundColor(AppTheme.Colors.primaryText)
                             .font(.title2)
                             .id(snap.id)

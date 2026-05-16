@@ -1,205 +1,98 @@
 import Foundation
 import CoreLocation
 
-/// Coordinates time-based interpolation between LocationPoint samples,
-/// producing smooth intermediate positions and an optional tail segment to an anchor.
-/// UI-facing; runs on the main actor and invokes onUpdate on the main run loop.
+/// Generates spline-smoothed trace segments that connect ground-truth GPS coordinates
+/// to the physics-driven simulated puck. This ensures the visual path is smooth and
+/// doesn't show "physics squiggles" from the puck's drift correction.
 @MainActor
 final class LocationAnimationManager {
-
-    // MARK: - Published/Public State (Outputs)
-    var isAnimating: Bool { animationTimer?.isValid ?? false }
-
-    // MARK: - Private State
-    var animationTimer: Timer?
-    var animationStartLocation: LocationPoint?
-    var animationTargetLocation: LocationPoint?
-    var animationStartTime: Date?
-    var animationDuration: TimeInterval = 1.0
-
-    var lastLocationUpdateAt: Date?
-    var expectedUpdateInterval: TimeInterval = 1.0
-    var smoothedSpeedMPS: Double?
-
-    var currentLiveAnchor: CLLocationCoordinate2D?
-    var currentStaticLast: CLLocationCoordinate2D?
-    var lastValidAnchor: CLLocationCoordinate2D?
-
-    // Stored callback for selector-based timer tick
-    var animationOnUpdate: ((_ interpolated: LocationPoint, _ tail: [CLLocationCoordinate2D]) -> Void)?
 
     // MARK: - Init
     init() {}
 
-    // MARK: - Public API (Intents)
     func reset() {
-        animationTimer?.invalidate()
-        animationTimer = nil
-        animationStartLocation = nil
-        animationTargetLocation = nil
-        animationStartTime = nil
-        lastLocationUpdateAt = nil
-        expectedUpdateInterval = 1.0
-        smoothedSpeedMPS = nil
-        lastValidAnchor = nil
-        animationOnUpdate = nil
+        // No-op for now as we are stateless spline generators
     }
 
-    func updateAnchors(live: LocationPoint?, staticLast: LocationPoint?) {
-        currentLiveAnchor = live?.coordinate
-        currentStaticLast = staticLast?.coordinate
-    }
-
-    /// Animate from an optional start to an end point. If not traveling, immediately publishes end + tail.
+    /// Generates a smooth spline tail connecting historical ground truth to the current puck.
     /// - Parameters:
-    ///   - start: Optional starting sample; falls back to end if nil.
-    ///   - end: Target sample.
-    ///   - travelStateIsTraveling: Whether user is currently in traveling state.
-    ///   - onUpdate: Called on each frame with interpolated point and optional tail polyline (anchor -> point).
-    func animate(
-        from start: LocationPoint?,
-        to end: LocationPoint,
-        travelStateIsTraveling: Bool,
-        onUpdate: @escaping (_ interpolated: LocationPoint, _ tail: [CLLocationCoordinate2D]) -> Void
-    ) {
-        guard travelStateIsTraveling else {
-            let anchor = currentLiveAnchor ?? currentStaticLast
-            let tail: [CLLocationCoordinate2D] = anchor.map { [$0, end.coordinate] } ?? []
-            if let a = anchor { lastValidAnchor = a }
-            onUpdate(end, tail)
-            return
-        }
-
-        // Smooth speed to stabilize duration estimates
-        let raw = max(end.speed, 0)
-        if smoothedSpeedMPS == nil { smoothedSpeedMPS = raw }
-        smoothedSpeedMPS = (0.75 * (smoothedSpeedMPS ?? raw)) + (0.25 * raw)
-        smoothedSpeedMPS = min(max(smoothedSpeedMPS ?? raw, 1.0), 60.0)
-
-        let currentStartFallback = start ?? end
-        if currentStartFallback.distance(to: end) < 0.5 {
-            // Too close to animate; publish directly with tail
-            let anchor = currentLiveAnchor ?? currentStaticLast ?? lastValidAnchor
-            let tail: [CLLocationCoordinate2D] = anchor.map { [$0, end.coordinate] } ?? []
-            if let a = anchor { lastValidAnchor = a }
-            onUpdate(end, tail)
-            return
-        }
-
-        // If retargeting mid-flight, advance start to current interpolated position
-        let currentPosition: LocationPoint = {
-            if let timer = animationTimer, timer.isValid,
-               let animStart = animationStartLocation,
-               let animEnd = animationTargetLocation,
-               let animStartTime = animationStartTime {
-                let elapsed = Date().timeIntervalSince(animStartTime)
-                let clampedT = min(elapsed / animationDuration, 1.0)
-                let lat = animStart.coordinate.latitude + (animEnd.coordinate.latitude - animStart.coordinate.latitude) * clampedT
-                let lon = animStart.coordinate.longitude + (animEnd.coordinate.longitude - animStart.coordinate.longitude) * clampedT
-                let syntheticCL = CLLocation(
-                    coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                    altitude: 0,
-                    horizontalAccuracy: Double.greatestFiniteMagnitude,
-                    verticalAccuracy: Double.greatestFiniteMagnitude,
-                    course: animStart.course,
-                    speed: smoothedSpeedMPS ?? animStart.speed,
-                    timestamp: Date()
-                )
-                return LocationPoint(syntheticCL)
+    ///   - groundTruth: The last few recorded GPS coordinates (ordered oldest to newest).
+    ///   - puck: The current simulated puck location from the physics engine.
+    /// - Returns: A polyline of coordinates forming a smooth curve.
+    func generateSplineTail(
+        groundTruth: [CLLocationCoordinate2D],
+        puck: CLLocationCoordinate2D
+    ) -> [CLLocationCoordinate2D] {
+        // We need at least 3 points to create a grounded spline: GT(n-2), GT(n-1), Puck.
+        // If we have fewer, we fall back to simpler lines.
+        guard groundTruth.count >= 2 else {
+            if let latest = groundTruth.last {
+                return [latest, puck]
             } else {
-                return start ?? end
+                return [puck]
             }
-        }()
-
-        // Reset timer and set new targets
-        animationTimer?.invalidate()
-        animationStartLocation = currentPosition
-        animationTargetLocation = end
-
-        // Timing diagnostics to adapt cadence
-        let now = Date()
-        if let last = lastLocationUpdateAt {
-            let dt = now.timeIntervalSince(last)
-            expectedUpdateInterval = (0.8 * expectedUpdateInterval) + (0.2 * dt)
         }
-        lastLocationUpdateAt = now
-        animationStartTime = now
 
-        // Determine duration using distance and smoothed speed, constrained by expected cadence
-        let distance = currentPosition.distance(to: end)
-        let mps = smoothedSpeedMPS ?? 12.0
-        var duration = distance / mps
+        // To match MapViewModel's flickering fix, we start the spline at the second-to-last ground truth point.
+        // P1 = GT(n-2) : The stable anchor where the static line ends.
+        // P2 = GT(n-1) : The latest ground truth we are passing through.
+        // P3 = Puck    : The target destination.
+        
+        let p1 = groundTruth[groundTruth.count - 2]
+        let p2 = groundTruth.last!
+        let p3 = puck
+        
+        // Catmull-Rom needs 4 points. We'll use p0 as a phantom point behind p1 to maintain curvature.
+        let p0 = groundTruth.count >= 3 ? groundTruth[groundTruth.count - 3] : p1
+        
+        // Generate the spline from P1 to P2, then from P2 to P3.
+        let firstSection = interpolateSection(p0: p0, p1: p1, p2: p2, p3: p3, segments: 10)
+        
+        // For the final section (P2 to P3), we need a P4 control point. 
+        // We'll project a small distance ahead to ensure the curve enters the puck naturally.
+        let finalBearing = p2.bearing(to: p3)
+        let p4 = p3.coordinate(at: 1.0, bearing: finalBearing) // Tighter look-ahead
+        
+        // Drop the first point of the second section to avoid duplicating P2
+        let secondSection = Array(interpolateSection(p0: p1, p1: p2, p2: p3, p3: p4, segments: 15).dropFirst())
 
-        let cadenceMin = max(0.18, 0.85 * expectedUpdateInterval)
-        let cadenceMax = max(0.50, 1.15 * expectedUpdateInterval)
-        duration = min(max(duration, cadenceMin), cadenceMax)
-
-        let hardMin: TimeInterval = 0.18
-        let hardMax: TimeInterval = 1.8
-        animationDuration = min(max(duration, hardMin), hardMax)
-
-        // Store callback and start loop
-        startAnimationLoop(onUpdate: onUpdate)
+        return firstSection + secondSection
     }
 
     // MARK: - Private Helpers
-    private func startAnimationLoop(
-        onUpdate: @escaping (_ interpolated: LocationPoint, _ tail: [CLLocationCoordinate2D]) -> Void
-    ) {
-        animationTimer?.invalidate()
-        animationOnUpdate = onUpdate
-
-        let timer = Timer(timeInterval: 1.0 / 60.0, target: self, selector: #selector(handleTimerTick(_:)), userInfo: nil, repeats: true)
-        animationTimer = timer
-        RunLoop.main.add(timer, forMode: .common)
-        timer.tolerance = 0
+    private func interpolateSection(
+        p0: CLLocationCoordinate2D,
+        p1: CLLocationCoordinate2D,
+        p2: CLLocationCoordinate2D,
+        p3: CLLocationCoordinate2D,
+        segments: Int
+    ) -> [CLLocationCoordinate2D] {
+        var path: [CLLocationCoordinate2D] = []
+        for i in 0...segments {
+            let t = Double(i) / Double(segments)
+            path.append(catmullRom(p0: p0, p1: p1, p2: p2, p3: p3, t: t))
+        }
+        return path
     }
 
-    @objc
-    func handleTimerTick(_ timer: Timer) {
-        guard
-            let start = animationStartLocation,
-            let end = animationTargetLocation,
-            let startTime = animationStartTime
-        else {
-            timer.invalidate()
-            animationTimer = nil
-            animationOnUpdate = nil
-            return
-        }
+    private func catmullRom(
+        p0: CLLocationCoordinate2D,
+        p1: CLLocationCoordinate2D,
+        p2: CLLocationCoordinate2D,
+        p3: CLLocationCoordinate2D,
+        t: Double
+    ) -> CLLocationCoordinate2D {
+        let t2 = t * t
+        let t3 = t2 * t
 
-        let elapsed = Date().timeIntervalSince(startTime)
-        let t = min(elapsed / animationDuration, 1.0)
+        let f1 = -0.5 * t3 + t2 - 0.5 * t
+        let f2 = 1.5 * t3 - 2.5 * t2 + 1.0
+        let f3 = -1.5 * t3 + 2.0 * t2 + 0.5 * t
+        let f4 = 0.5 * t3 - 0.5 * t2
 
-        let lat = start.coordinate.latitude + (end.coordinate.latitude - start.coordinate.latitude) * t
-        let lon = start.coordinate.longitude + (end.coordinate.longitude - start.coordinate.longitude) * t
-        let syntheticCL = CLLocation(
-            coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-            altitude: 0,
-            horizontalAccuracy: Double.greatestFiniteMagnitude,
-            verticalAccuracy: Double.greatestFiniteMagnitude,
-            course: start.course,
-            speed: smoothedSpeedMPS ?? start.speed,
-            timestamp: Date()
-        )
-        let interpolatedLocation = LocationPoint(syntheticCL)
-        let anchor = currentLiveAnchor ?? currentStaticLast ?? lastValidAnchor
-        let tail: [CLLocationCoordinate2D] = anchor.map { [$0, interpolatedLocation.coordinate] } ?? []
-        if let a = anchor { lastValidAnchor = a }
+        let lat = p0.latitude * f1 + p1.latitude * f2 + p2.latitude * f3 + p3.latitude * f4
+        let lon = p0.longitude * f1 + p1.longitude * f2 + p2.longitude * f3 + p3.longitude * f4
 
-        animationOnUpdate?(interpolatedLocation, tail)
-
-        if t >= 1.0 - .ulpOfOne {
-            timer.invalidate()
-            animationTimer = nil
-            animationOnUpdate = nil
-        }
-    }
-
-    // MARK: - Deinit
-    deinit {
-        animationTimer?.invalidate()
-        animationTimer = nil
-        animationOnUpdate = nil
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
     }
 }

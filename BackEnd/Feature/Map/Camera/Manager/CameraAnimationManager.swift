@@ -29,17 +29,17 @@ final class CameraAnimationManager {
     init() {}
 
     // MARK: - Public API
-    /// Animate from a start camera to an end camera, optionally tuned for review interactions.
+    /// Animate from a start camera to an end camera with a specified duration.
     /// - Parameters:
     ///   - start: Starting camera state.
     ///   - end: Target camera state.
-    ///   - isReviewing: If true, uses a slightly shorter default duration.
+    ///   - duration: Animation duration in seconds.
     ///   - onUpdate: Called on each frame with the interpolated camera.
     ///   - onComplete: Called once when the animation completes.
     func animate(
         from start: MapCamera,
         to end: MapCamera,
-        isReviewing: Bool,
+        duration: TimeInterval,
         onUpdate: @escaping (MapCamera) -> Void,
         onComplete: (() -> Void)? = nil
     ) {
@@ -67,7 +67,7 @@ final class CameraAnimationManager {
         }
         lastCameraUpdateAt = now
 
-        cameraAnimationDuration = isReviewing ? 0.8 : 0.95
+        cameraAnimationDuration = duration
 
         animationTargetCamera = end
         cameraAnimationStartTime = Date()

@@ -34,7 +34,7 @@ struct DOWData: Equatable {
         self.maxMeters = raw.meters.max() ?? 0
 
         // Labels (Sun...Sat) — keep stable order 0...6
-        self.labels = (0...6).map { TimeUtility.formatter($0) }
+        self.labels = (0...6).map { TimeUtility.formatDayOfWeek($0) }
 
         // Derived / display
         let denom = maxMeters > 0 ? maxMeters : 1.0

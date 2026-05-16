@@ -107,7 +107,7 @@ final class MainViewModel: ObservableObject {
         case .main:
             if travelState == .paused, let snap = pauseSnapshot {
                 let remaining = max(0, snap.end.timeIntervalSinceNow)
-                title = TimeUtility.formatter(remaining)
+                title = TimeUtility.formatDuration(remaining)
             } else {
                 title = "Simple Miles"
             }

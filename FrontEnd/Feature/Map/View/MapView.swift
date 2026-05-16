@@ -78,11 +78,15 @@ struct MapView: View {
 
                 if viewModel.nonCommitedTraceTail.count >= 2 {
                     let path = viewModel.nonCommitedTraceTail
+                    
+                    // Simplified halo for live performance
                     MapPolyline(coordinates: path)
                         .stroke(
-                            AppTheme.Colors.primaryPath60,
-                            lineWidth: 12
+                            AppTheme.Colors.pathHalo.opacity(0.3),
+                            lineWidth: 10
                         )
+                    MapPolyline(coordinates: path)
+                        .stroke(AppTheme.Colors.primaryPath, lineWidth: 5)
                 }
             } else {
                 if !viewModel.previousTripPath.isEmpty {

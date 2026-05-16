@@ -13,7 +13,7 @@ final class SettingsManager: ObservableObject {
     static let shared = SettingsManager()
 
     // MARK: - Dependencies
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
 
     // MARK: - Published State (Outputs)
     @Published var distanceUnit: DistanceUnit
@@ -81,7 +81,7 @@ final class SettingsManager: ObservableObject {
                     let endStr = dfTime.string(from: endDate)
                     
                     let distanceFormatted = String(format: "%.2f", t.distanceM / unit.factor)
-                    let durationFormatted = TimeUtility.formatter(t.durationS)
+                    let durationFormatted = TimeUtility.formatDuration(t.durationS)
                     
                     let row = "\"\(t.id)\",\(categoryName),\(dateStr),\(startStr),\(endStr),\(distanceFormatted),\(durationFormatted),\(t.distanceM),\(t.durationS)\n"
                     csv.append(row)
@@ -113,7 +113,9 @@ final class SettingsManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init
-    private init() {
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        
         // Load persisted values or fall back to defaults
         if let storedRawUnit = userDefaults.string(forKey: AppSettingKey.distanceUnit.rawValue),
            let storedUnit = DistanceUnit(rawValue: storedRawUnit) {

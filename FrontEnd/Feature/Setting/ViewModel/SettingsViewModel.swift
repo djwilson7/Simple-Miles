@@ -15,7 +15,7 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - Configuration (Static)
     /// The ordered list of settings pages rendered by SettingsView.
-    let pages: [SettingsPage] = [.account, .display, .tracking]
+    let pages: [SettingsPage] = [.data, .display, .tracking]
 
     // MARK: - Init
     private init() { }

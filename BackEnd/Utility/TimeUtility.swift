@@ -1,7 +1,7 @@
 import Foundation
 
-struct TimeUtility {
-    static func formatter(_ seconds: TimeInterval) -> String {
+public struct TimeUtility {
+    public static func formatDuration(_ seconds: TimeInterval) -> String {
         let prefix = seconds < 0 ? "-" : ""
 
         let totalSeconds = Int(abs(seconds))
@@ -22,7 +22,7 @@ struct TimeUtility {
         }
     }
     
-    static func formatter(_ dow: Int) -> String {
+    public static func formatDayOfWeek(_ dow: Int) -> String {
         switch dow {
         case 0: return "Sun"
         case 1: return "Mon"
@@ -35,13 +35,13 @@ struct TimeUtility {
         }
     }
     
-    static func formatDate(_ date: Date) -> String {
+    public static func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, yyyy"
         return formatter.string(from: date)
     }
     
-    static func formatTime(_ date: Date) -> String {
+    public static func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mma"
         formatter.amSymbol = "am"

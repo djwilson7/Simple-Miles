@@ -60,8 +60,8 @@ struct BreakdownData: Equatable {
         self.durationPercent       = timeShare
         self.durationPercentLabel  = PercentageUtility.formatPercent(timeShare)
         self.durationLabel         = "Duration"
-        let typeDurText            = TimeUtility.formatter(typeDurationSecs)
-        let totalDurText           = TimeUtility.formatter(totalDurationSecs)
+        let typeDurText            = TimeUtility.formatDuration(typeDurationSecs)
+        let totalDurText           = TimeUtility.formatDuration(totalDurationSecs)
         self.durationDescription   = "\(typeDurText) / \(totalDurText)"
 
         // Trip count share

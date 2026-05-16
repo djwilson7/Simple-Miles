@@ -117,7 +117,7 @@ final class SortViewModel: ObservableObject {
                 self.selectedPath = path
                 if let meta {
                     self.tripDistance = DistanceUtility.formatter(meters: meta.distanceM)
-                    self.tripDuration = TimeUtility.formatter(meta.durationS)
+                    self.tripDuration = TimeUtility.formatDuration(meta.durationS)
                     let start = meta.startDate
                     self.startDate = TimeUtility.formatDate(start)
                     self.startTime = TimeUtility.formatTime(start)

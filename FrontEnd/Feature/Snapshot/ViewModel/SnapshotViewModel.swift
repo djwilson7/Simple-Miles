@@ -165,8 +165,8 @@ final class SnapshotViewModel: ObservableObject {
         )
         let homeRight = StatusBlock(
             id: "home.time",
-            primary: TimeUtility.formatter(tripDurationLive),
-            secondary: tripDurationCommitted > 0 ? TimeUtility.formatter(tripDurationCommitted) : nil,
+            primary: TimeUtility.formatDuration(tripDurationLive),
+            secondary: tripDurationCommitted > 0 ? TimeUtility.formatDuration(tripDurationCommitted) : nil,
             role: .value
         )
         var result: [StatusPage] = [
@@ -197,7 +197,7 @@ final class SnapshotViewModel: ObservableObject {
             )
             let right = StatusBlock(
                 id: "\(model.tripType.name.capitalized).duration",
-                primary: TimeUtility.formatter(model.totalDuration),
+                primary: TimeUtility.formatDuration(model.totalDuration),
                 secondary: nil,
                 role: .value
             )

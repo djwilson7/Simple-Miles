@@ -63,17 +63,17 @@ struct WeekInsightsData: Equatable {
 
         // Prior (formatted)
         self.priorAvgMeters       = DistanceUtility.formatter(meters: priorRaw.avgTripMeters)
-        self.priorAvgDuration     = TimeUtility.formatter(priorRaw.avgTripDurationSecs)
-        self.priorBusiestDOW      = TimeUtility.formatter(priorRaw.busiestDowByCount)
+        self.priorAvgDuration     = TimeUtility.formatDuration(priorRaw.avgTripDurationSecs)
+        self.priorBusiestDOW      = TimeUtility.formatDayOfWeek(priorRaw.busiestDowByCount)
         self.priorLongestTrip     = DistanceUtility.formatter(meters: priorRaw.longestTripMeters)
-        self.priorLongestDuration = TimeUtility.formatter(priorRaw.longestTripDurationSecs)
+        self.priorLongestDuration = TimeUtility.formatDuration(priorRaw.longestTripDurationSecs)
 
         // Current (formatted)
         self.currentAvgMeters       = DistanceUtility.formatter(meters: currentRaw.avgTripMeters)
-        self.currentAvgDuration     = TimeUtility.formatter(currentRaw.avgTripDurationSecs)
-        self.currentBusiestDOW      = TimeUtility.formatter(currentRaw.busiestDowByCount)
+        self.currentAvgDuration     = TimeUtility.formatDuration(currentRaw.avgTripDurationSecs)
+        self.currentBusiestDOW      = TimeUtility.formatDayOfWeek(currentRaw.busiestDowByCount)
         self.currentLongestTrip     = DistanceUtility.formatter(meters: currentRaw.longestTripMeters)
-        self.currentLongestDuration = TimeUtility.formatter(currentRaw.longestTripDurationSecs)
+        self.currentLongestDuration = TimeUtility.formatDuration(currentRaw.longestTripDurationSecs)
 
         // Raw differences
         self.diffDistance   = currentRaw.avgTripMeters - priorRaw.avgTripMeters
@@ -83,9 +83,9 @@ struct WeekInsightsData: Equatable {
 
         // Display differences
         if let d = diffDistance { self.avgMetersChange = DistanceUtility.formatter(meters: d) }
-        if let d = diffDuration { self.avgDurationChange = TimeUtility.formatter(d) }
+        if let d = diffDuration { self.avgDurationChange = TimeUtility.formatDuration(d) }
         if let d = diffLongestTrip { self.longestTripChange = DistanceUtility.formatter(meters: d) }
-        if let d = diffLongestDur { self.longestDurationChange = TimeUtility.formatter(d) }
+        if let d = diffLongestDur { self.longestDurationChange = TimeUtility.formatDuration(d) }
 
         #if DEBUG
         Log("WeekInsights init -> weekStart=\(weekStartMs), type=\(tripType), fetched prior+current")

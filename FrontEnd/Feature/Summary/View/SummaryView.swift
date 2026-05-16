@@ -169,7 +169,7 @@ struct SummaryCard: View {
                 .uiText(.section)
             Spacer()
             changeIndicator(rawValue)
-            Text(isDist ? DistanceUtility.formatter(meters: rawValue) : TimeUtility.formatter(rawValue))
+            Text(isDist ? DistanceUtility.formatter(meters: rawValue) : TimeUtility.formatDuration(rawValue))
                 .uiText(.section)
         }
     }

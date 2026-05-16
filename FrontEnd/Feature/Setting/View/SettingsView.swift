@@ -469,7 +469,7 @@ struct PauseTimerChoice: SegmentedPickerOption {
     var id: Double { seconds }
 
     var displayName: String {
-        TimeUtility.formatter(seconds)
+        TimeUtility.formatDuration(seconds)
     }
 
     // Constant, stable list (30s through 600s stepping by 30s)
