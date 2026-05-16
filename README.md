@@ -122,3 +122,8 @@ struct DatabaseTests {
 * **96% Backend Coverage:** Deep assertions cover every structural logic gate within the geometry primitives, state machine velocity calculations, and raw database serialization loops.
 * **Serialized Execution:** All suites modifying or inspecting the persistent SQLite database singleton are explicitly flagged with the `.serialized` trait, forcing sequential evaluation to block thread contention or foreign-key race conditions during concurrent test runs.
 * **Mock Isolation:** Dependency injection is used across all managers, ensuring testing routines use isolated, ephemeral `UserDefaults` suites to completely decouple test assertions from host-device environment variables.
+
+
+## Author
+
+Made with ❤️ by Dontai Wilson
