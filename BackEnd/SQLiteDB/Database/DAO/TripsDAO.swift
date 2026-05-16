@@ -690,6 +690,22 @@ enum TripsDAO {
         }
     }
 
+    static func fetchAllTrips() throws -> [TripMeta] {
+        return try Database.shared.inRead { db in
+            var rows: [TripMeta] = []
+            let sql = "SELECT id,type,start_ts,end_ts,distance_m,duration_s,bbox_min_lat,bbox_min_lon,bbox_max_lat,bbox_max_lon,size_bytes,version FROM trips ORDER BY start_ts DESC;"
+            var stmt: OpaquePointer?
+            defer { sqlite3_finalize(stmt) }
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                throw DBError.sqlite(message: lastError(db))
+            }
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                rows.append(readTripMetaRow(stmt))
+            }
+            return rows
+        }
+    }
+
     private static func readTripMetaRow(_ stmt: OpaquePointer?) -> TripMeta {
         let id = String(cString: sqlite3_column_text(stmt, 0))
         let type = Int(sqlite3_column_int(stmt, 1))

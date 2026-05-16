@@ -55,6 +55,18 @@ final class SnapshotViewModel: ObservableObject {
     /// Selected trip type (drives "Review" and "Summary" actions in MainView).
     @Published private(set) var selectedTripType: TripType? = nil
 
+    /// Returns the trip count for the currently selected category.
+    var selectedCategoryTripCount: Int {
+        guard let type = selectedTripType else { return 0 }
+        switch type {
+        case .personal: return personalTrips.tripCount
+        case .business: return businessTrips.tripCount
+        case .custom: return customTrips.tripCount
+        case .unsorted: return unclassifiedTrips.tripCount
+        case .trash: return trashTrips.tripCount
+        }
+    }
+
     /// Totals models for each category (observed by views).
     @Published private(set) var personalTrips = SortedTripTotalsModel(tripType: .personal)
     @Published private(set) var businessTrips = SortedTripTotalsModel(tripType: .business)

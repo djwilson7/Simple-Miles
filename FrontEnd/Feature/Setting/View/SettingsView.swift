@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 /// Presents the Settings screens as paged cards with indicators and dynamic sizing
 /// for the surrounding context bar.
@@ -115,20 +116,20 @@ struct SettingsView: View {
 
 // MARK: - Types
 enum SettingsPage: CaseIterable, Identifiable {
-    case account, display, tracking
+    case data, display, tracking
     var id: Self { self }
 
     var title: String {
         switch self {
-        case .account: return "Account"
-        case .display: return "Display"
+        case .data: return "Data"
+        case .display: return "Appearance"
         case .tracking: return "Tracking"
         }
     }
 
     var iconName: String {
         switch self {
-        case .account: return "person.crop.circle"
+        case .data: return "externaldrive"
         case .display: return "paintpalette"
         case .tracking: return "dot.radiowaves.left.and.right"
         }
@@ -147,6 +148,11 @@ struct SettingCard: View {
     @StateObject private var settings = SettingsManager.shared
     @ObservedObject private var viewModel = SettingsViewModel.shared
 
+    // MARK: - State
+    @State private var showEraseAlert = false
+    @State private var showNoTripsAlert = false
+    @State private var csvURL: URL? = nil
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: 12) {
@@ -154,8 +160,8 @@ struct SettingCard: View {
             
             Group {
                 switch page {
-                case .account:
-                    accountPage
+                case .data:
+                    dataPage
                 case .display:
                     displayPage
                 case .tracking:
@@ -164,6 +170,22 @@ struct SettingCard: View {
             }
         }
         .background(sizeReportingBackground)
+        .alert("Erase All Data?", isPresented: $showEraseAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Erase Everything", role: .destructive) {
+                SettingsManager.shared.eraseAllData()
+            }
+        } message: {
+            Text("This will permanently delete all trip history and settings. This action cannot be undone.")
+        }
+        .alert("No Data Found", isPresented: $showNoTripsAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("You haven't recorded any trips yet. Record or classify a trip before exporting.")
+        }
+        .onAppear {
+            csvURL = SettingsManager.shared.exportCSV()
+        }
     }
 
     // MARK: - Subviews (Shared)
@@ -177,6 +199,25 @@ struct SettingCard: View {
         }
     }
     
+    // MARK: - Private Helpers
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
+
+    private var locationStatusText: String {
+        let status = CLLocationManager().authorizationStatus
+        switch status {
+        case .authorizedAlways: return "Always Granted"
+        case .authorizedWhenInUse: return "While In Use"
+        case .denied: return "Denied"
+        case .restricted: return "Restricted"
+        case .notDetermined: return "Not Determined"
+        @unknown default: return "Unknown"
+        }
+    }
+
     private func SettingHeader(_ title: String,_ desc: String) -> some View {
         VStack(alignment: .leading) {
             Text(title)
@@ -188,16 +229,83 @@ struct SettingCard: View {
     }
 
     // MARK: - Subviews (Pages)
-    private var accountPage: some View {
+    private var dataPage: some View {
         VStack {
             ScrollView {
-                Group {
-                    HStack {
-                        Text("Left")
-                        Spacer()
-                        Text("Right")
+                VStack(spacing: 12) {
+                    // Data Management
+                    VStack(alignment: .leading) {
+                        SettingHeader("Trip History", "Manage your recorded data")
+                        HStack(spacing: 12) {
+                            if let url = csvURL {
+                                ShareLink(item: url) {
+                                    Label("Export CSV", systemImage: "square.and.arrow.up")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.primary)
+                            } else {
+                                Button {
+                                    showNoTripsAlert = true
+                                } label: {
+                                    Label("Export CSV", systemImage: "square.and.arrow.up")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.primary)
+                            }
+                            
+                            Button(role: .destructive) {
+                                showEraseAlert = true
+                            } label: {
+                                Label("Erase All", systemImage: "trash")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .padding(.top, 8)
                     }
-                    .uiBlock(.row)
+                    .uiBlock(.section)
+
+                    // System Permissions
+                    VStack(alignment: .leading) {
+                        SettingHeader("Permissions", "Location access status")
+                        HStack {
+                            Text(locationStatusText)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button("Open Settings") {
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                            .font(.subheadline)
+                        }
+                    }
+                    .uiBlock(.section)
+
+                    // About
+                    VStack(alignment: .leading) {
+                        SettingHeader("About Simple Miles", "Version & Legal")
+                        HStack {
+                            Text("Version")
+                            Spacer()
+                            Text(appVersion)
+                                .foregroundColor(.secondary)
+                        }
+                        .uiBlock(.row)
+                        
+                        Link(destination: URL(string: "https://simplemiles.app/privacy")!) {
+                            HStack {
+                                Text("Privacy Policy")
+                                Spacer()
+                                Image(systemName: "arrow.up.forward.app")
+                            }
+                        }
+                        .uiBlock(.row)
+                    }
+                    .uiBlock(.section)
                 }
             }
             .frame(height: layout.height.pct(0.25))
@@ -445,3 +553,4 @@ struct SettingPageIndicators: View {
         .uiBlock(.section)
     }
 }
+

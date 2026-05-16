@@ -43,7 +43,6 @@ struct CustomButton: View {
         self.haptic = haptic
     }
 
-    // MARK: - Body
     var body: some View {
         let shape = Circle()
 
@@ -55,19 +54,24 @@ struct CustomButton: View {
                 action()
             }
         ) {
-            content
-                .uiText(.title)
-                .frame(width: layout.buttonWidth, height: layout.buttonHeight, alignment: .center)
-                .applyMaterial()
-                .clipShape(shape)
-                .contentShape(shape) // Ensure the entire circle is tappable
-                .grayscale(isEnabled ? 0.0 : 0.6)
+            ZStack {
+                shape
+                    .fill(Color.clear)
+                    .applyMaterial(in: shape)
+                
+                content
+                    .uiText(.title)
+            }
+            .frame(width: layout.buttonWidth, height: layout.buttonHeight)
+            .contentShape(shape)
+            .clipShape(shape)
+            .grayscale(isEnabled ? 0.0 : 0.6)
         }
         .buttonStyle(.plain)
         .scaleEffect(isVisible ? 1.0 : 0.01, anchor: .center)
-        .allowsHitTesting(isVisible)                        // visibility governs hit-testing
+        .allowsHitTesting(isVisible)
         .accessibilityHidden(!isVisible)
-        .disabled(!isEnabled || !isVisible)                 // SwiftUI disabled state
+        .disabled(!isEnabled || !isVisible)
         .accessibilityLabel(Text(accessibilityText))
         .animation(.easeInOut(duration: 0.25), value: isVisible)
         .animation(.easeInOut(duration: 0.2), value: isEnabled)

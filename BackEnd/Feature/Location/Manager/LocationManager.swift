@@ -7,7 +7,7 @@ import Combine
 
 /// Coordinates Core Location services and exposes location and heading updates.
 /// Acts as a single source of truth for current/last location and heading streams.
-final class LocationManager: NSObject, CLLocationManagerDelegate {
+final class LocationManager: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     // MARK: - Singleton
     static let shared = LocationManager()
@@ -20,10 +20,11 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     @Published private(set) var lastLocation: LocationPoint?
     @Published private(set) var trueHeading: CLLocationDirection = 0
     @Published private(set) var compassHeading: CLLocationDirection = 0
+    @Published private(set) var authorizationStatus: CLAuthorizationStatus
 
     // MARK: - Streams (Combine)
     private let locationSubject = CurrentValueSubject<LocationPoint?, Never>(nil)
-    private let headingSubject = PassthroughSubject<CLLocationDirection, Never>()
+    private let headingSubject = CurrentValueSubject<CLLocationDirection, Never>(0)
     var locationPublisher: AnyPublisher<LocationPoint, Never> {
         locationSubject.compactMap { $0 }.eraseToAnyPublisher()
     }
@@ -50,9 +51,9 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     // MARK: - Init
     private override init() {
+        self.authorizationStatus = locationManager.authorizationStatus
         super.init()
         setupLocationManager()
-        requestAuthorizationAndStart()
         seedLastKnownIfAvailable()
 
         #if os(iOS)
@@ -95,6 +96,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     // MARK: - Bindings (CLLocationManagerDelegate)
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        self.authorizationStatus = manager.authorizationStatus
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             locationManager.startMonitoringSignificantLocationChanges()
@@ -168,7 +170,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
         locationManager.pausesLocationUpdatesAutomatically = false
     }
 
-    private func requestAuthorizationAndStart() {
+    func requestAuthorizationAndStart() {
         locationManager.requestAlwaysAuthorization()
         #if os(iOS)
         locationManager.startMonitoringSignificantLocationChanges()

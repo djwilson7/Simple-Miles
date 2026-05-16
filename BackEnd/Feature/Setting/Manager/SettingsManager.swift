@@ -31,6 +31,84 @@ final class SettingsManager: ObservableObject {
     @Published var minimumTripDistance: Double
     @Published var pauseTimer: Double
 
+    // MARK: - Actions
+    func eraseAllData() {
+        do {
+            try Database.shared.exec("DELETE FROM trips;")
+            try Database.shared.exec("DELETE FROM trash;")
+            try Database.shared.exec("DELETE FROM trip_blobs;")
+            SegmentStore.shared.tripTotalsUpdated.send()
+        } catch {
+            Log("Failed to erase all data: \(error)")
+        }
+    }
+
+    func exportCSV() -> URL? {
+        do {
+            let trips = try TripsDAO.fetchAllTrips()
+            guard !trips.isEmpty else { return nil }
+
+            let unit = distanceUnit
+            let unitLabel = unit.displayName
+            
+            var csv = "Trip ID,Category,Date,Start Time,End Time,Distance (\(unitLabel)),Duration,Raw Meters,Raw Seconds\n"
+            
+            let dfDate = DateFormatter()
+            dfFormat(dfDate, "yyyy-MM-dd")
+            
+            let dfTime = DateFormatter()
+            dfFormat(dfTime, "HH:mm:ss")
+
+            // Group by category, then sort groups by date
+            let groupedTrips = Dictionary(grouping: trips, by: { $0.type })
+            let sortedCategoryIds = groupedTrips.keys.sorted()
+
+            for typeId in sortedCategoryIds {
+                let categoryTrips = groupedTrips[typeId]?.sorted(by: { $0.startTs < $1.startTs }) ?? []
+                let categoryName = TripType(dbValue: typeId)?.name.capitalized ?? "Unknown"
+                
+                // Optional: Add a separator row for each category if not the first
+                if typeId != sortedCategoryIds.first {
+                    csv.append("\n")
+                }
+
+                for t in categoryTrips {
+                    let startDate = Date(timeIntervalSince1970: Double(t.startTs) / 1000)
+                    let endDate = Date(timeIntervalSince1970: Double(t.endTs) / 1000)
+                    
+                    let dateStr = dfDate.string(from: startDate)
+                    let startStr = dfTime.string(from: startDate)
+                    let endStr = dfTime.string(from: endDate)
+                    
+                    let distanceFormatted = String(format: "%.2f", t.distanceM / unit.factor)
+                    let durationFormatted = TimeUtility.formatter(t.durationS)
+                    
+                    let row = "\"\(t.id)\",\(categoryName),\(dateStr),\(startStr),\(endStr),\(distanceFormatted),\(durationFormatted),\(t.distanceM),\(t.durationS)\n"
+                    csv.append(row)
+                }
+            }
+
+            let timestamp = dfDate.string(from: Date())
+            let fileName = "SimpleMiles_Export_\(timestamp).csv"
+            
+            // Use Documents directory for more reliable file access/sharing on iOS
+            let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let fileURL = docsURL.appendingPathComponent(fileName)
+            
+            try csv.write(to: fileURL, atomically: true, encoding: .utf8)
+            return fileURL
+        } catch {
+            Log("Failed to export CSV: \(error)")
+            return nil
+        }
+    }
+
+    private func dfFormat(_ df: DateFormatter, _ format: String) {
+        df.dateFormat = format
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "en_US_POSIX")
+    }
+
     // MARK: - Private State
     private var cancellables = Set<AnyCancellable>()
 

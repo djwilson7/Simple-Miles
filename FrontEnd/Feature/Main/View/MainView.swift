@@ -361,7 +361,6 @@ struct MainView: View {
     private var controlButtons: some View {
         VStack(spacing: 10) {
             settingsButton
-            shareButton
             recenterButton
             summaryButton
             reviewButton
@@ -378,16 +377,6 @@ struct MainView: View {
         )
     }
 
-    private var shareButton: some View {
-        CustomButton(
-            isVisible: MainStateManager.shared.state == .main,
-            isEnabled: false,
-            color: AppTheme.Colors.primaryText,
-            action: { /* TODO */ },
-            icon: "square.and.arrow.up"
-        )
-    }
-
     private var settingsButton: some View {
         CustomButton(
             isVisible: MainStateManager.shared.state == .main,
@@ -400,7 +389,7 @@ struct MainView: View {
     private var reviewButton: some View {
         CustomButton(
             isVisible: MainStateManager.shared.state == .main,
-            isEnabled: snapshotViewModel.selectedTripType != nil,
+            isEnabled: snapshotViewModel.selectedTripType != nil && snapshotViewModel.selectedCategoryTripCount > 0,
             color: AppTheme.Colors.primaryText,
             action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
@@ -414,7 +403,7 @@ struct MainView: View {
     private var summaryButton: some View {
         CustomButton(
             isVisible: MainStateManager.shared.state == .main,
-            isEnabled: snapshotViewModel.selectedTripType != nil,
+            isEnabled: snapshotViewModel.selectedTripType != nil && snapshotViewModel.selectedCategoryTripCount > 0,
             color: AppTheme.Colors.primaryText,
             action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
