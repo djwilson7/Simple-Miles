@@ -1,5 +1,7 @@
 # Simple Miles (v1.0.0)
 
+[View on Portfolio](https://www.dontaiwilson.com/projects/Simple-Miles)
+
 Simple Miles is an intelligent, high-performance mileage tracking application engineered specifically for gig delivery drivers. Built from the ground up with a zero-third-party dependency philosophy, it offers automated, seamless trip detection and local, low-latency data persistence. 
 
 The core mission of Simple Miles is privacy-first utility: **all tracking and location processing occurs strictly on-device, ensuring user data never leaves the hardware.**
